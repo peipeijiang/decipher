@@ -1,223 +1,151 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
-// Provider definitions
-const PROVIDERS = [
-  {
-    id: 'openai',
-    name: 'OpenAI',
-    label: 'OpenAI',
-    description: '视觉分析 + 综合分析',
-    apiKeyUrl: 'https://platform.openai.com/api-keys',
-    keyField: 'openai_api_key',
-    endpointField: 'openai_endpoint',
-    visionModelField: 'openai_vision_model',
-    textModelField: 'openai_text_model',
-    configuredField: 'openai_configured',
-    defaultEndpoint: 'https://api.openai.com/v1',
-    defaultVisionModel: 'gpt-4o',
-    defaultTextModel: 'gpt-4o',
-    supportsVision: true,
-    icon: '🤖',
-  },
-  {
-    id: 'claude',
-    name: 'Claude',
-    label: 'Claude',
-    description: '视觉分析 + 综合分析',
-    apiKeyUrl: 'https://console.anthropic.com/settings/keys',
-    keyField: 'claude_api_key',
-    endpointField: 'claude_endpoint',
-    visionModelField: 'claude_vision_model',
-    textModelField: 'claude_text_model',
-    configuredField: 'claude_configured',
-    defaultEndpoint: 'https://api.anthropic.com',
-    defaultVisionModel: 'claude-3-5-sonnet-20241022',
-    defaultTextModel: 'claude-3-5-sonnet-20241022',
-    supportsVision: true,
-    icon: '🧠',
-  },
-  {
-    id: 'doubao',
-    name: '豆包',
-    label: '豆包 2.0',
-    description: '视觉分析 + 综合分析',
-    apiKeyUrl: 'https://console.volcengine.com/ark',
-    keyField: 'doubao_api_key',
-    endpointField: 'doubao_endpoint',
-    visionModelField: 'doubao_vision_model',
-    textModelField: 'doubao_text_model',
-    configuredField: 'doubao_configured',
-    defaultEndpoint: 'https://ark.cn-beijing.volces.com/api/v3',
-    defaultVisionModel: 'doubao-vision-pro-32k',
-    defaultTextModel: 'doubao-pro-32k',
-    supportsVision: true,
-    icon: '🔥',
-  },
-  {
-    id: 'minimax',
-    name: 'MiniMax',
-    label: 'MiniMax',
-    description: '综合分析（不支持视觉）',
-    apiKeyUrl: 'https://platform.minimaxi.com/',
-    keyField: 'minimax_api_key',
-    endpointField: 'minimax_endpoint',
-    visionModelField: null,
-    textModelField: 'minimax_text_model',
-    configuredField: 'minimax_configured',
-    defaultEndpoint: 'https://api.minimax.chat/v1',
-    defaultVisionModel: '',
-    defaultTextModel: 'MiniMax-Text-01',
-    supportsVision: false,
-    icon: '📊',
-  },
-  {
-    id: 'zhipu',
-    name: '智谱',
-    label: '智谱 GLM',
-    description: '视觉分析 + 综合分析',
-    apiKeyUrl: 'https://open.bigmodel.cn/dev/api',
-    keyField: 'zhipu_api_key',
-    endpointField: 'zhipu_endpoint',
-    visionModelField: 'zhipu_vision_model',
-    textModelField: 'zhipu_text_model',
-    configuredField: 'zhipu_configured',
-    defaultEndpoint: 'https://open.bigmodel.cn/api/paas/v4',
-    defaultVisionModel: 'glm-4v-plus',
-    defaultTextModel: 'glm-4-plus',
-    supportsVision: true,
-    icon: '💎',
-  },
-  {
-    id: 'deepseek',
-    name: 'DeepSeek',
-    label: 'DeepSeek',
-    description: '综合分析（不支持视觉）',
-    apiKeyUrl: 'https://platform.deepseek.com/api_keys',
-    keyField: 'deepseek_api_key',
-    endpointField: 'deepseek_endpoint',
-    visionModelField: null,
-    textModelField: 'deepseek_text_model',
-    configuredField: 'deepseek_configured',
-    defaultEndpoint: 'https://api.deepseek.com/v1',
-    defaultVisionModel: '',
-    defaultTextModel: 'deepseek-chat',
-    supportsVision: false,
-    icon: '🔮',
-  },
-] as const
+// ── Types ─────────────────────────────────────────────────────────────────────
 
-interface Config {
+interface ProviderStatus {
+  configured: boolean
+  endpoint: string
+  vision_model: string
+  text_model: string
+}
+
+interface CurrentConfig {
   id: string
   vision_model: string
   analysis_model: string
-  openai_configured: boolean
-  claude_configured: boolean
-  doubao_configured: boolean
-  minimax_configured: boolean
-  zhipu_configured: boolean
-  deepseek_configured: boolean
-  openai_endpoint: string | null
-  claude_endpoint: string | null
-  doubao_endpoint: string | null
-  minimax_endpoint: string | null
-  zhipu_endpoint: string | null
-  deepseek_endpoint: string | null
-  openai_vision_model: string | null
-  openai_text_model: string | null
-  claude_vision_model: string | null
-  claude_text_model: string | null
-  doubao_vision_model: string | null
-  doubao_text_model: string | null
-  minimax_vision_model: string | null
-  minimax_text_model: string | null
-  zhipu_vision_model: string | null
-  zhipu_text_model: string | null
-  deepseek_text_model: string | null
+  providers: Record<string, ProviderStatus>
   temperature: number
   max_tokens: number
   updated_at: string
 }
 
+interface ProviderPreset {
+  id: string
+  name: string
+  endpoint: string
+  vision_model: string
+  text_model: string
+  supports_vision: boolean
+  icon: string
+  api_key_url: string
+}
+
+interface ProviderFields {
+  api_key: string
+  endpoint: string
+  vision_model: string
+  text_model: string
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
 export default function ConfigPage() {
   const navigate = useNavigate()
-  const [config, setConfig] = useState<Config | null>(null)
+
+  const [config, setConfig] = useState<CurrentConfig | null>(null)
+  const [presets, setPresets] = useState<ProviderPreset[]>([])
   const [visionModel, setVisionModel] = useState('openai')
   const [analysisModel, setAnalysisModel] = useState('openai')
-  const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
-  const [endpoints, setEndpoints] = useState<Record<string, string>>({})
-  const [modelNames, setModelNames] = useState<Record<string, string>>({})
   const [temperature, setTemperature] = useState(0.7)
   const [maxTokens, setMaxTokens] = useState(4096)
+  const [providerFields, setProviderFields] = useState<Record<string, ProviderFields>>({})
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+  const [showKey, setShowKey] = useState<Record<string, boolean>>({})
+  const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
-  const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
     Promise.all([
-      axios.get('/api/config/models/current'),
-    ]).then(([configRes]) => {
-      const c: Config = configRes.data
+      axios.get<CurrentConfig>('/api/config/models/current'),
+      axios.get<ProviderPreset[]>('/api/config/providers'),
+    ]).then(([configRes, presetsRes]) => {
+      const c = configRes.data
+      const ps = presetsRes.data
       setConfig(c)
+      setPresets(ps)
       setVisionModel(c.vision_model)
       setAnalysisModel(c.analysis_model)
       setTemperature(c.temperature)
       setMaxTokens(c.max_tokens)
-      // Initialize empty API keys (user needs to fill them)
-      setApiKeys({})
-      setEndpoints({
-        openai: c.openai_endpoint || PROVIDERS[0].defaultEndpoint,
-        claude: c.claude_endpoint || PROVIDERS[1].defaultEndpoint,
-        doubao: c.doubao_endpoint || PROVIDERS[2].defaultEndpoint,
-        minimax: c.minimax_endpoint || PROVIDERS[3].defaultEndpoint,
-        zhipu: c.zhipu_endpoint || PROVIDERS[4].defaultEndpoint,
-        deepseek: c.deepseek_endpoint || PROVIDERS[5].defaultEndpoint,
-      })
-      setModelNames({
-        openai: c.openai_vision_model || PROVIDERS[0].defaultVisionModel || '',
-        claude: c.claude_vision_model || PROVIDERS[1].defaultVisionModel || '',
-        doubao: c.doubao_vision_model || PROVIDERS[2].defaultVisionModel || '',
-        minimax: c.minimax_text_model || PROVIDERS[3].defaultTextModel || '',
-        zhipu: c.zhipu_vision_model || PROVIDERS[4].defaultVisionModel || '',
-        deepseek: c.deepseek_text_model || PROVIDERS[5].defaultTextModel || '',
-      })
+
+      const fields: Record<string, ProviderFields> = {}
+      for (const p of ps) {
+        const cur = c.providers[p.id] ?? {}
+        fields[p.id] = {
+          api_key: '',
+          endpoint: cur.endpoint || p.endpoint,
+          vision_model: cur.vision_model || p.vision_model,
+          text_model: cur.text_model || p.text_model,
+        }
+      }
+      setProviderFields(fields)
     }).catch(() => setError('加载配置失败'))
   }, [])
 
-  const markDirty = () => setDirty(true)
+  const mark = useCallback(() => setDirty(true), [])
+
+  const setField = (pid: string, key: keyof ProviderFields, value: string) => {
+    setProviderFields(prev => ({ ...prev, [pid]: { ...prev[pid], [key]: value } }))
+    mark()
+  }
+
+  const resetProvider = (preset: ProviderPreset) => {
+    setProviderFields(prev => ({
+      ...prev,
+      [preset.id]: {
+        api_key: '',
+        endpoint: preset.endpoint,
+        vision_model: preset.vision_model,
+        text_model: preset.text_model,
+      },
+    }))
+    mark()
+  }
+
+  const toggleExpand = (pid: string) =>
+    setExpanded(prev => ({ ...prev, [pid]: !prev[pid] }))
 
   const handleSave = async () => {
     setSaving(true)
     setError('')
     setSaved(false)
     try {
-      const payload: Record<string, unknown> = {
+      const providers: Record<string, Partial<ProviderFields>> = {}
+      for (const [pid, f] of Object.entries(providerFields)) {
+        const preset = presets.find(p => p.id === pid)
+        providers[pid] = {
+          endpoint: f.endpoint,
+          vision_model: f.vision_model,
+          text_model: f.text_model,
+          // Only send api_key when user typed something
+          ...(f.api_key ? { api_key: f.api_key } : {}),
+        }
+        // Omit fields that match the preset to keep payload clean,
+        // but always send endpoint/models so user overrides are saved
+        void preset
+      }
+      const res = await axios.patch<CurrentConfig>('/api/config/models', {
         vision_model: visionModel,
         analysis_model: analysisModel,
         temperature,
         max_tokens: maxTokens,
-      }
-      // Only include API keys that have values
-      for (const p of PROVIDERS) {
-        if (apiKeys[p.keyField as keyof typeof apiKeys]) {
-          (payload as any)[p.keyField] = apiKeys[p.keyField as keyof typeof apiKeys]
-        }
-        if (endpoints[p.id] !== PROVIDERS.find(pr => pr.id === p.id)?.defaultEndpoint) {
-          (payload as any)[p.endpointField] = endpoints[p.id] || null
-        }
-        const mn = modelNames[p.id]
-        const defModel = PROVIDERS.find(pr => pr.id === p.id)
-        if (mn && mn !== defModel?.defaultVisionModel && mn !== defModel?.defaultTextModel) {
-          if (p.visionModelField) (payload as any)[p.visionModelField] = mn
-          if (p.textModelField) (payload as any)[p.textModelField] = mn
-        }
-      }
-      const res = await axios.patch('/api/config/models', payload)
+        providers,
+      })
       setConfig(res.data)
       setDirty(false)
       setSaved(true)
+      // Clear api_key inputs after successful save
+      setProviderFields(prev => {
+        const next = { ...prev }
+        for (const pid of Object.keys(next)) {
+          next[pid] = { ...next[pid], api_key: '' }
+        }
+        return next
+      })
       setTimeout(() => setSaved(false), 2000)
     } catch (e: any) {
       setError(e.response?.data?.detail || '保存失败')
@@ -226,14 +154,13 @@ export default function ConfigPage() {
     }
   }
 
-  const isConfigured = (providerId: string) => {
-    const field = PROVIDERS.find(p => p.id === providerId)?.configuredField as keyof Config
-    return config?.[field] as boolean
-  }
+  const visionProviders = presets.filter(p => p.supports_vision)
+  const isConfigured = (pid: string) => config?.providers[pid]?.configured ?? false
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
+      {/* Header */}
+      <header className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-900">⚙️ 模型配置</h1>
           <div className="flex gap-4 text-sm">
@@ -244,38 +171,33 @@ export default function ConfigPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+
         {/* Global Parameters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">全局参数</h2>
           <p className="text-sm text-gray-500 mb-6">所有模型共享的参数配置</p>
-
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Temperature</label>
               <div className="flex items-center gap-3">
                 <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.1"
+                  type="range" min="0" max="1" step="0.1"
                   value={temperature}
-                  onChange={e => { setTemperature(parseFloat(e.target.value)); markDirty() }}
+                  onChange={e => { setTemperature(parseFloat(e.target.value)); mark() }}
                   className="flex-1"
                 />
                 <span className="text-sm text-gray-600 w-10">{temperature}</span>
               </div>
               <p className="text-xs text-gray-400 mt-1">控制随机性，越低越确定</p>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Max Tokens</label>
               <input
                 type="number"
                 value={maxTokens}
-                onChange={e => { setMaxTokens(parseInt(e.target.value) || 4096); markDirty() }}
+                onChange={e => { setMaxTokens(parseInt(e.target.value) || 4096); mark() }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                min="100"
-                max="128000"
+                min="100" max="128000"
               />
               <p className="text-xs text-gray-400 mt-1">单次响应最大token数</p>
             </div>
@@ -286,152 +208,178 @@ export default function ConfigPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">模型选择</h2>
           <p className="text-sm text-gray-500 mb-6">分别选择视觉分析模型和综合分析模型</p>
-
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                🔍 视觉分析模型
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">🔍 视觉分析模型</label>
               <p className="text-xs text-gray-400 mb-2">用于分析视频关键帧（6帧图片）</p>
               <select
                 value={visionModel}
-                onChange={e => { setVisionModel(e.target.value); markDirty() }}
+                onChange={e => { setVisionModel(e.target.value); mark() }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
               >
-                {PROVIDERS.filter(p => p.description.includes('视觉')).map(p => (
-                  <option key={p.id} value={p.id}>{p.label}</option>
+                {visionProviders.map(p => (
+                  <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
                 ))}
               </select>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                🧠 综合分析模型
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">🧠 综合分析模型</label>
               <p className="text-xs text-gray-400 mb-2">策略分析、分镜解析、Prompt生成、语音分段</p>
               <select
                 value={analysisModel}
-                onChange={e => { setAnalysisModel(e.target.value); markDirty() }}
+                onChange={e => { setAnalysisModel(e.target.value); mark() }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
               >
-                {PROVIDERS.map(p => (
-                  <option key={p.id} value={p.id}>{p.label}</option>
+                {presets.map(p => (
+                  <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
                 ))}
               </select>
             </div>
           </div>
         </div>
 
-        {/* Provider API Keys */}
+        {/* Provider Cards */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">API Key 配置</h2>
-          <p className="text-sm text-gray-500 mb-6">填写你需要使用的模型的 API Key，已配置的会显示 ✓</p>
+          <p className="text-sm text-gray-500 mb-4">点击卡片展开配置，已配置的显示绿色徽章</p>
+          <div className="space-y-3">
+            {presets.map(preset => {
+              const f = providerFields[preset.id] ?? { api_key: '', endpoint: preset.endpoint, vision_model: preset.vision_model, text_model: preset.text_model }
+              const configured = isConfigured(preset.id)
+              const isOpen = expanded[preset.id] ?? false
+              const seeKey = showKey[preset.id] ?? false
 
-          <div className="space-y-6">
-            {PROVIDERS.map(provider => {
-              const hasKey = isConfigured(provider.id)
               return (
-                <div key={provider.id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xl">{provider.icon}</span>
+                <div
+                  key={preset.id}
+                  className={`border rounded-xl overflow-hidden transition-all ${isOpen ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}
+                >
+                  {/* Card header — always visible, click to expand */}
+                  <button
+                    onClick={() => toggleExpand(preset.id)}
+                    className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{preset.icon}</span>
                       <div>
-                        <div className="font-medium text-gray-900 flex items-center gap-2">
-                          {provider.label}
-                          {hasKey && <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">✓ 已配置</span>}
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">{preset.name}</span>
+                          {configured ? (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ 已配置</span>
+                          ) : (
+                            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
+                          )}
+                          {!preset.supports_vision && (
+                            <span className="text-xs bg-orange-50 text-orange-500 px-2 py-0.5 rounded-full">仅文本</span>
+                          )}
                         </div>
-                        <div className="text-xs text-gray-500">{provider.description}</div>
+                        {!isOpen && configured && (
+                          <div className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{f.endpoint}</div>
+                        )}
                       </div>
                     </div>
-                    <a
-                      href={provider.apiKeyUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:text-blue-700"
-                    >
-                      获取API Key →
-                    </a>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        API Key {hasKey && <span className="text-green-600">(已保存)</span>}
-                      </label>
-                      <input
-                        type="password"
-                        placeholder={hasKey ? '••••••••••••••••' : `sk-... 或 apikey-...`}
-                        value={apiKeys[provider.keyField] || ''}
-                        onChange={e => {
-                          setApiKeys(prev => ({ ...prev, [provider.keyField]: e.target.value }))
-                          markDirty()
-                        }}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
-                      />
+                    <div className="flex items-center gap-3 text-sm">
+                      <a
+                        href={preset.api_key_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-blue-600 hover:text-blue-700 text-xs"
+                      >
+                        获取 Key →
+                      </a>
+                      <span className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}>▾</span>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">API Endpoint</label>
-                      <input
-                        type="url"
-                        value={endpoints[provider.id] || ''}
-                        onChange={e => {
-                          setEndpoints(prev => ({ ...prev, [provider.id]: e.target.value }))
-                          markDirty()
-                        }}
-                        placeholder={provider.defaultEndpoint}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                      />
-                    </div>
-                  </div>
+                  </button>
 
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    {provider.supportsVision && provider.visionModelField && (
+                  {/* Expanded content */}
+                  {isOpen && (
+                    <div className="px-4 pb-4 pt-2 border-t border-gray-100 space-y-3">
+                      {/* API Key row */}
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">
-                          视觉模型名称 <span className="text-gray-400">(留空使用默认)</span>
+                          API Key {configured && <span className="text-green-600 font-normal">(已保存，留空则不修改)</span>}
                         </label>
-                        <input
-                          type="text"
-                          value={modelNames[provider.id] || ''}
-                          onChange={e => {
-                            setModelNames(prev => ({ ...prev, [provider.id]: e.target.value }))
-                            markDirty()
-                          }}
-                          placeholder={provider.defaultVisionModel}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                        />
+                        <div className="relative">
+                          <input
+                            type={seeKey ? 'text' : 'password'}
+                            placeholder={configured ? '输入新 Key 以覆盖...' : 'sk-... 或 apikey-...'}
+                            value={f.api_key}
+                            onChange={e => setField(preset.id, 'api_key', e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono pr-10"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowKey(prev => ({ ...prev, [preset.id]: !seeKey }))}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
+                            tabIndex={-1}
+                          >
+                            {seeKey ? '🙈' : '👁'}
+                          </button>
+                        </div>
                       </div>
-                    )}
-                    {provider.textModelField && (
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          文本模型名称 <span className="text-gray-400">(留空使用默认)</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={modelNames[provider.id] || ''}
-                          onChange={e => {
-                            setModelNames(prev => ({ ...prev, [provider.id]: e.target.value }))
-                            markDirty()
-                          }}
-                          placeholder={provider.defaultTextModel}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                        />
+
+                      {/* Endpoint + models row */}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="col-span-3 sm:col-span-1">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">API Endpoint</label>
+                          <input
+                            type="url"
+                            value={f.endpoint}
+                            onChange={e => setField(preset.id, 'endpoint', e.target.value)}
+                            placeholder={preset.endpoint}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          />
+                        </div>
+                        {preset.supports_vision && (
+                          <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">视觉模型</label>
+                            <input
+                              type="text"
+                              value={f.vision_model}
+                              onChange={e => setField(preset.id, 'vision_model', e.target.value)}
+                              placeholder={preset.vision_model}
+                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                            />
+                          </div>
+                        )}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">文本模型</label>
+                          <input
+                            type="text"
+                            value={f.text_model}
+                            onChange={e => setField(preset.id, 'text_model', e.target.value)}
+                            placeholder={preset.text_model}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                          />
+                        </div>
                       </div>
-                    )}
-                  </div>
+
+                      {/* Reset button */}
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => resetProvider(preset)}
+                          className="text-xs text-gray-400 hover:text-gray-600 underline"
+                        >
+                          重置为默认
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
           </div>
         </div>
 
-        {/* Error / Save */}
+        {/* Error */}
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{error}</div>
         )}
 
-        <div className="flex items-center justify-between">
+        {/* Footer — last updated + save */}
+        <div className="flex items-center justify-between pb-8">
           <div className="text-xs text-gray-400">
             {config?.updated_at && <>最后更新：{new Date(config.updated_at).toLocaleString('zh-CN')}</>}
           </div>
@@ -442,7 +390,7 @@ export default function ConfigPage() {
               saved
                 ? 'bg-green-600 text-white'
                 : dirty
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
