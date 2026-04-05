@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.video import Video
-from app.models.report import Report, ModelConfig
+from app.models.report import Report
+from app.models.config import ModelConfig
 from app.schemas.report import ReportOut, ModelConfigOut, ModelConfigUpdate, SUPPORTED_MODELS
 from app.schemas.video import VideoOut
 
@@ -83,7 +84,28 @@ def get_current_config(db: Session = Depends(get_db)):
         db.add(cfg)
         db.commit()
         db.refresh(cfg)
-    return cfg
+    # Mask API keys - return only configured status
+    out = ModelConfigOut(
+        id=cfg.id,
+        vision_model=cfg.vision_model,
+        analysis_model=cfg.analysis_model,
+        openai_configured=bool(cfg.openai_api_key),
+        claude_configured=bool(cfg.anthropic_api_key),
+        doubao_configured=bool(cfg.doubao_api_key),
+        minimax_configured=bool(cfg.minimax_api_key),
+        zhipu_configured=bool(cfg.zhipu_api_key),
+        deepseek_configured=bool(cfg.deepseek_api_key),
+        openai_endpoint=cfg.openai_endpoint,
+        claude_endpoint=cfg.anthropic_endpoint,
+        doubao_endpoint=cfg.doubao_endpoint,
+        minimax_endpoint=cfg.minimax_endpoint,
+        zhipu_endpoint=cfg.zhipu_endpoint,
+        deepseek_endpoint=cfg.deepseek_endpoint,
+        temperature=cfg.temperature or 0.7,
+        max_tokens=cfg.max_tokens or 4096,
+        updated_at=cfg.updated_at,
+    )
+    return out
 
 
 @config_router.patch("/models", response_model=ModelConfigOut)
@@ -100,7 +122,38 @@ def update_config(body: ModelConfigUpdate, db: Session = Depends(get_db)):
         if body.analysis_model not in SUPPORTED_MODELS:
             raise HTTPException(400, f"Unsupported model: {body.analysis_model}")
         cfg.analysis_model = body.analysis_model
+    # API Keys - only update if provided
+    if body.openai_api_key:
+        cfg.openai_api_key = body.openai_api_key
+    if body.claude_api_key:
+        cfg.anthropic_api_key = body.claude_api_key
+    if body.doubao_api_key:
+        cfg.doubao_api_key = body.doubao_api_key
+    if body.minimax_api_key:
+        cfg.minimax_api_key = body.minimax_api_key
+    if body.zhipu_api_key:
+        cfg.zhipu_api_key = body.zhipu_api_key
+    if body.deepseek_api_key:
+        cfg.deepseek_api_key = body.deepseek_api_key
+    # Endpoints
+    if body.openai_endpoint is not None:
+        cfg.openai_endpoint = body.openai_endpoint
+    if body.claude_endpoint is not None:
+        cfg.anthropic_endpoint = body.claude_endpoint
+    if body.doubao_endpoint is not None:
+        cfg.doubao_endpoint = body.doubao_endpoint
+    if body.minimax_endpoint is not None:
+        cfg.minimax_endpoint = body.minimax_endpoint
+    if body.zhipu_endpoint is not None:
+        cfg.zhipu_endpoint = body.zhipu_endpoint
+    if body.deepseek_endpoint is not None:
+        cfg.deepseek_endpoint = body.deepseek_endpoint
+    # Global params
+    if body.temperature is not None:
+        cfg.temperature = body.temperature
+    if body.max_tokens is not None:
+        cfg.max_tokens = body.max_tokens
     cfg.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(cfg)
-    return cfg
+    return get_current_config(db)
