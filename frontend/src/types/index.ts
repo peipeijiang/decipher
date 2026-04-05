@@ -5,7 +5,8 @@ export interface Video {
   filesize: number
   duration?: number
   platform?: string
-  likes?: number
+  likes?: string
+  notes?: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
   created_at: string
 }

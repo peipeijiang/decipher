@@ -51,13 +51,13 @@ def analyze_segment_endpoint(segment_id: str, db: Session = Depends(get_db)):
     seg = db.get(Segment, segment_id)
     if not seg:
         raise HTTPException(404, "Segment not found")
-    if seg.analysis_status == "analyzing":
-        return {"ok": True, "status": "analyzing"}
+    if seg.analysis_status == "processing":
+        return {"ok": True, "status": "processing"}
 
     from app.tasks.analysis import analyze_segment
     t = threading.Thread(target=analyze_segment, args=(segment_id,), daemon=True)
     t.start()
-    return {"ok": True, "status": "analyzing"}
+    return {"ok": True, "status": "processing"}
 
 
 @router.delete("/api/segments/{segment_id}")
