@@ -10,3 +10,9 @@ venv/
 .DS_Store
 *.sqlite
 *.db
+*.sqlite
+*.db
+uploads/
+processed/
+.omc/sessions/
+.omc/state/

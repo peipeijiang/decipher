@@ -123,7 +123,7 @@ def analyze_segment(segment_id: str):
         if not video:
             return
 
-        seg.analysis_status = "analyzing"
+        seg.analysis_status = "processing"
         db.commit()
 
         processed_base = Path(settings.processed_dir) / video.id / "segments" / segment_id

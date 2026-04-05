@@ -70,6 +70,22 @@ export default function HomePage() {
           智能策略分析 · 镜头逆向解析 · Prompt逆向工程 · 脚本智能提取
         </p>
 
+        {/* Feature cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+          {[
+            { icon: '📊', title: '智能策略分析', desc: '拆解营销策略、内容结构、节奏设计' },
+            { icon: '🎬', title: '镜头逆向解析', desc: '逐帧还原拍摄手法和镜头语言' },
+            { icon: '✨', title: 'Prompt逆向工程', desc: '生成可用于 Sora/即梦 的英文提示词' },
+            { icon: '📝', title: '脚本智能提取', desc: '提取语音文稿并标记关键转折点' },
+          ].map((f) => (
+            <div key={f.title} className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 text-left">
+              <div className="text-3xl mb-3">{f.icon}</div>
+              <div className="font-semibold text-gray-900 mb-1 text-sm">{f.title}</div>
+              <div className="text-xs text-gray-500">{f.desc}</div>
+            </div>
+          ))}
+        </div>
+
         {/* Upload Area */}
         <div
           className={`border-2 border-dashed rounded-2xl p-16 transition-colors ${

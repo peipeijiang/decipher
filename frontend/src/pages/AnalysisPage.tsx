@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import type { Video, Report, Progress, Segment } from '../types'
 
@@ -222,6 +222,7 @@ function SegmentList({ segments, selectedId, onSelect, onDelete, onSeek, onAnaly
 
 export default function AnalysisPage() {
   const { videoId } = useParams()
+  const navigate = useNavigate()
   const [video, setVideo] = useState<Video | null>(null)
   const [report, setReport] = useState<Report | null>(null)
   const [progress, setProgress] = useState<Progress>({ upload: 0, parse: 0, strategy: 0, prompt: 0 })
@@ -303,12 +304,18 @@ export default function AnalysisPage() {
     }
   }
 
+  const notesInitialized = useRef(false)
+
   const fetchData = useCallback(async () => {
     if (!videoId) return
     try {
       const res = await axios.get(`/api/videos/${videoId}`)
       const v: Video = res.data.video
       setVideo(v)
+      if (!notesInitialized.current) {
+        setNotes(v.notes ?? '')
+        notesInitialized.current = true
+      }
       setProgress(res.data.progress || { upload: 0, parse: 0, strategy: 0, prompt: 0 })
       if (res.data.report) setReport(res.data.report)
       if (v.status === 'completed' || v.status === 'failed') {
@@ -410,6 +417,14 @@ export default function AnalysisPage() {
       {/* Progress Bar */}
       <div className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+            >
+              ← 返回首页
+            </button>
+          </div>
           <div className="flex items-center gap-2">
             {STEPS.map((step, idx) => {
               const status = getStepStatus(idx)
@@ -581,11 +596,21 @@ export default function AnalysisPage() {
           <div className="bg-white rounded-lg shadow p-4">
             <h3 className="font-medium text-gray-900 mb-2">分镜场景分析</h3>
             <div className="text-sm text-gray-700">
-              {report?.shots ? JSON.parse(report.shots).map((s: { description: string }, i: number) => (
-                <div key={i} className="mb-2 border-b pb-2">
-                  <span className="font-medium">场景{i + 1}：</span>{s.description}
-                </div>
-              )) : '分析中...'}
+              {report?.shots ? (() => {
+                try {
+                  const parsed = JSON.parse(report.shots)
+                  if (Array.isArray(parsed)) {
+                    return parsed.map((s: { description: string }, i: number) => (
+                      <div key={i} className="mb-2 border-b pb-2">
+                        <span className="font-medium">场景{i + 1}：</span>{s.description}
+                      </div>
+                    ))
+                  }
+                  return <div className="whitespace-pre-wrap">{report.shots}</div>
+                } catch {
+                  return <div className="whitespace-pre-wrap">{report.shots}</div>
+                }
+              })() : '分析中...'}
             </div>
           </div>
 
