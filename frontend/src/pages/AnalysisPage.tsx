@@ -11,6 +11,29 @@ function formatTime(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
+function SegmentStatusBadge({
+  status,
+  onAnalyze,
+}: {
+  status: string | null | undefined
+  onAnalyze: () => void
+}) {
+  if (status === 'completed') {
+    return <span className="text-green-600 font-medium text-xs">✓ 已分析</span>
+  }
+  if (status === 'processing') {
+    return <span className="text-gray-400 text-xs animate-pulse">分析中...</span>
+  }
+  return (
+    <button
+      className="px-2 py-0.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded disabled:opacity-40"
+      onClick={onAnalyze}
+    >
+      分析
+    </button>
+  )
+}
+
 // ── VideoTimeline ────────────────────────────────────────────────────────────
 
 interface TimelineProps {
@@ -101,7 +124,7 @@ function VideoTimeline({
           <div
             key={seg.id}
             className="absolute top-0 h-full bg-green-200 opacity-50 pointer-events-none"
-            style={{ left: `${ratio(seg.startTime)}%`, width: `${ratio(seg.endTime - seg.startTime)}%` }}
+            style={{ left: `${ratio(seg.start_time)}%`, width: `${ratio(seg.end_time - seg.start_time)}%` }}
           />
         ))}
 
@@ -149,9 +172,10 @@ interface SegmentListProps {
   onSelect: (id: string) => void
   onDelete: (id: string) => void
   onSeek: (t: number) => void
+  onAnalyze: (id: string) => void
 }
 
-function SegmentList({ segments, selectedId, onSelect, onDelete, onSeek }: SegmentListProps) {
+function SegmentList({ segments, selectedId, onSelect, onDelete, onSeek, onAnalyze }: SegmentListProps) {
   if (segments.length === 0) {
     return (
       <div className="text-xs text-gray-400 text-center py-3">
@@ -168,12 +192,18 @@ function SegmentList({ segments, selectedId, onSelect, onDelete, onSeek }: Segme
           className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm transition-colors ${
             selectedId === seg.id ? 'bg-blue-50 border border-blue-300' : 'bg-gray-50 hover:bg-gray-100'
           }`}
-          onClick={() => { onSelect(seg.id); onSeek(seg.startTime) }}
+          onClick={() => { onSelect(seg.id); onSeek(seg.start_time) }}
         >
           <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
           <span className="flex-1 font-medium truncate">{seg.label}</span>
           <span className="text-gray-400 tabular-nums">
-            {formatTime(seg.startTime)} – {formatTime(seg.endTime)}
+            {formatTime(seg.start_time)} – {formatTime(seg.end_time)}
+          </span>
+          <span onClick={(e) => e.stopPropagation()}>
+            <SegmentStatusBadge
+              status={seg.analysis_status}
+              onAnalyze={() => onAnalyze(seg.id)}
+            />
           </span>
           <button
             className="text-gray-400 hover:text-red-500 ml-1"
@@ -212,23 +242,83 @@ export default function AnalysisPage() {
   const [selectedSegId, setSelectedSegId] = useState<string | null>(null)
   const [segLabel, setSegLabel] = useState('')
 
-  const fetchData = async () => {
+  // Polling for segment analysis
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const fetchSegments = useCallback(async () => {
+    if (!videoId) return
+    try {
+      const res = await axios.get(`/api/videos/${videoId}/segments`)
+      setSegments(res.data)
+    } catch (e) {
+      // ignore
+    }
+  }, [videoId])
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+  }, [])
+
+  const startPolling = useCallback((segmentId: string) => {
+    stopPolling()
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await axios.get(`/api/segments/${segmentId}`)
+        const seg: Segment = res.data
+        if (seg.analysis_status === 'completed' || seg.analysis_status === 'failed') {
+          stopPolling()
+          // Refresh full segment list so all statuses and prompts are up to date
+          fetchSegments()
+        } else {
+          // Update just this segment in place
+          setSegments((prev) => prev.map((s) => (s.id === segmentId ? seg : s)))
+        }
+      } catch (e) {
+        stopPolling()
+      }
+    }, 3000)
+  }, [stopPolling, fetchSegments])
+
+  useEffect(() => {
+    return () => stopPolling()
+  }, [stopPolling])
+
+  const analyzeSegment = async (segmentId: string) => {
+    // Optimistically mark as processing
+    setSegments((prev) =>
+      prev.map((s) => (s.id === segmentId ? { ...s, analysis_status: 'processing' } : s))
+    )
+    try {
+      await axios.post(`/api/segments/${segmentId}/analyze`)
+      startPolling(segmentId)
+    } catch (e) {
+      setSegments((prev) =>
+        prev.map((s) => (s.id === segmentId ? { ...s, analysis_status: null } : s))
+      )
+    }
+  }
+
+  const fetchData = useCallback(async () => {
     if (!videoId) return
     try {
       const res = await axios.get(`/api/videos/${videoId}`)
       setVideo(res.data.video)
-      setProgress(res.data.progress || progress)
+      setProgress(res.data.progress || { upload: 0, parse: 0, strategy: 0, prompt: 0 })
       if (res.data.report) setReport(res.data.report)
     } catch (e) {
-      console.error(e)
+      // ignore
     }
-  }
+  }, [videoId])
 
   useEffect(() => {
     fetchData()
+    fetchSegments()
     const interval = setInterval(fetchData, 3000)
     return () => clearInterval(interval)
-  }, [videoId])
+  }, [videoId, fetchData, fetchSegments])
 
   // Init selection when duration is known
   const handleLoadedMetadata = () => {
@@ -252,14 +342,14 @@ export default function AnalysisPage() {
     try {
       await axios.patch(`/api/reports/${videoId}`, { notes })
     } catch (e) {
-      console.error(e)
+      // ignore
     } finally {
       setSavingNotes(false)
     }
   }
 
-  const copyPrompt = () => {
-    if (report?.prompt) navigator.clipboard.writeText(report.prompt)
+  const copyPrompt = (text: string) => {
+    navigator.clipboard.writeText(text)
   }
 
   const getStepStatus = (idx: number) => {
@@ -270,23 +360,34 @@ export default function AnalysisPage() {
     return 'pending'
   }
 
-  const createSegment = () => {
+  const createSegment = async () => {
+    if (!videoId) return
     const label = segLabel.trim() || `片段 ${segments.length + 1}`
-    const seg: Segment = {
-      id: crypto.randomUUID(),
-      label,
-      startTime: selStart,
-      endTime: selEnd,
+    try {
+      const res = await axios.post(`/api/videos/${videoId}/segments`, {
+        label,
+        start_time: selStart,
+        end_time: selEnd,
+      })
+      setSegments((prev) => [...prev, res.data])
+      setSelectedSegId(res.data.id)
+      setSegLabel('')
+    } catch (e) {
+      // ignore
     }
-    setSegments((prev) => [...prev, seg])
-    setSelectedSegId(seg.id)
-    setSegLabel('')
   }
 
-  const deleteSegment = (id: string) => {
-    setSegments((prev) => prev.filter((s) => s.id !== id))
-    if (selectedSegId === id) setSelectedSegId(null)
+  const deleteSegment = async (id: string) => {
+    try {
+      await axios.delete(`/api/segments/${id}`)
+      setSegments((prev) => prev.filter((s) => s.id !== id))
+      if (selectedSegId === id) setSelectedSegId(null)
+    } catch (e) {
+      // ignore
+    }
   }
+
+  const selectedSeg = segments.find((s) => s.id === selectedSegId) ?? null
 
   if (!video) return <div className="p-8 text-center">加载中...</div>
 
@@ -409,7 +510,26 @@ export default function AnalysisPage() {
               onSelect={setSelectedSegId}
               onDelete={deleteSegment}
               onSeek={seek}
+              onAnalyze={analyzeSegment}
             />
+
+            {/* Selected segment prompt */}
+            {selectedSeg?.analysis_status === 'completed' && selectedSeg.prompt && (
+              <div className="mt-3 border-t pt-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs font-medium text-gray-700">片段提示词 — {selectedSeg.label}</span>
+                  <button
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                    onClick={() => copyPrompt(selectedSeg.prompt!)}
+                  >
+                    复制
+                  </button>
+                </div>
+                <div className="text-xs text-gray-700 whitespace-pre-wrap font-mono bg-gray-50 p-2 rounded max-h-40 overflow-y-auto">
+                  {selectedSeg.prompt}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Video info */}
@@ -459,7 +579,7 @@ export default function AnalysisPage() {
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-medium text-gray-900">AI 提示词</h3>
               {report?.prompt && (
-                <button onClick={copyPrompt} className="text-sm text-blue-600 hover:text-blue-700">
+                <button onClick={() => copyPrompt(report.prompt!)} className="text-sm text-blue-600 hover:text-blue-700">
                   复制
                 </button>
               )}
