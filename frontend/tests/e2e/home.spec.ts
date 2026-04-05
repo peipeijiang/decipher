@@ -8,7 +8,7 @@ test.describe('首页', () => {
 
   test('显示功能介绍', async ({ page }) => {
     await page.goto('/')
-    await expect(page.getByText(/策略分析|镜头逆向|Prompt|脚本/)).toBeVisible()
+    await expect(page.getByText(/策略分析|镜头逆向|Prompt|脚本/).first()).toBeVisible()
   })
 
   test('显示上传区域', async ({ page }) => {
