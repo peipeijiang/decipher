@@ -12,6 +12,19 @@ from app.services.video_processor import extract_frames, extract_audio, extract_
 
 logger = logging.getLogger(__name__)
 
+# In-memory progress store: video_id → {upload, parse, strategy, prompt}
+_progress: dict[str, dict] = {}
+
+
+def get_analysis_progress(video_id: str) -> dict:
+    return _progress.get(video_id, {"upload": 0, "parse": 0, "strategy": 0, "prompt": 0})
+
+
+def _set_progress(video_id: str, **kwargs: int) -> None:
+    if video_id not in _progress:
+        _progress[video_id] = {"upload": 0, "parse": 0, "strategy": 0, "prompt": 0}
+    _progress[video_id].update(kwargs)
+
 
 def run_analysis(video_id: str):
     db: Session = SessionLocal()
@@ -22,12 +35,14 @@ def run_analysis(video_id: str):
 
         video.status = "processing"
         db.commit()
+        _set_progress(video_id, upload=100, parse=0, strategy=0, prompt=0)
 
         # Step 1: Get video metadata
         processed_base = Path(settings.processed_dir) / video_id
         info = get_video_info(video.filepath)
         video.duration = info["duration"]
         db.commit()
+        _set_progress(video_id, parse=10)
 
         # Step 2: Extract frames
         frames = extract_frames(
@@ -35,6 +50,7 @@ def run_analysis(video_id: str):
             output_dir=processed_base / "frames",
             num_frames=6,
         )
+        _set_progress(video_id, parse=40)
 
         # Step 3: Extract audio (video may have no audio track)
         audio_path: str | None = None
@@ -45,12 +61,14 @@ def run_analysis(video_id: str):
             )
         except RuntimeError as exc:
             logger.info("Audio extraction skipped for %s: %s", video_id, exc)
+        _set_progress(video_id, parse=70)
 
         # Step 4: Whisper transcription (lazy import — heavy)
         script = ""
         if audio_path:
             from app.services.whisper import transcribe
             script = transcribe(audio_path)
+        _set_progress(video_id, parse=100, strategy=0)
 
         # Step 5: AI analysis
         from app.ai_models import get_model
@@ -58,12 +76,14 @@ def run_analysis(video_id: str):
 
         vision_model = get_model(settings.default_vision_model)
         analysis_model = get_model(settings.default_analysis_model)
+        _set_progress(video_id, strategy=30)
         ai_result = run_ai_analysis(
             frames=[str(f) for f in frames],
             script=script,
             vision_model=vision_model,
             analysis_model=analysis_model,
         )
+        _set_progress(video_id, strategy=100, prompt=100)
 
         report = db.query(Report).filter(Report.video_id == video_id).first()
         if report:
