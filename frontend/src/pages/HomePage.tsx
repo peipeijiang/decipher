@@ -50,9 +50,14 @@ export default function HomePage() {
       <header className="bg-white shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-xl font-bold text-gray-900">ViralLens</h1>
-          <button onClick={() => navigate('/history')} className="text-gray-600 hover:text-gray-900">
-            历史记录
-          </button>
+          <div className="flex gap-4">
+            <button onClick={() => navigate('/config')} className="text-gray-500 hover:text-gray-800 text-sm">
+              模型配置
+            </button>
+            <button onClick={() => navigate('/history')} className="text-gray-600 hover:text-gray-900 text-sm font-medium">
+              历史记录
+            </button>
+          </div>
         </div>
       </header>
 

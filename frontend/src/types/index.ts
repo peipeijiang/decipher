@@ -30,7 +30,14 @@ export interface Progress {
 
 export interface Segment {
   id: string
+  video_id: string
   label: string
-  startTime: number
-  endTime: number
+  start_time: number
+  end_time: number
+  analysis?: string | null
+  analysis_status?: string | null
+  prompt?: string | null
+  strategy?: string | null
+  shots?: string | null
+  created_at?: string
 }
