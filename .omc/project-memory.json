@@ -1,0 +1,161 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1775362970043,
+  "projectRoot": "/Users/shane/projects/tiktok-analyzer",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {},
+  "hotPaths": [
+    {
+      "path": "backend/requirements.txt",
+      "accessCount": 2,
+      "lastAccessed": 1775363437811,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/database.py",
+      "accessCount": 2,
+      "lastAccessed": 1775363440936,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/api/videos.py",
+      "accessCount": 2,
+      "lastAccessed": 1775363518210,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/api/reports.py",
+      "accessCount": 2,
+      "lastAccessed": 1775363525042,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/services/video_processor.py",
+      "accessCount": 2,
+      "lastAccessed": 1775363587882,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/services/whisper.py",
+      "accessCount": 2,
+      "lastAccessed": 1775363592466,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/services/ai_analyzer.py",
+      "accessCount": 2,
+      "lastAccessed": 1775363594383,
+      "type": "file"
+    },
+    {
+      "path": "backend/main.py",
+      "accessCount": 2,
+      "lastAccessed": 1775363696958,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/config.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363441704,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/models/video.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363452895,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/models/report.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363455345,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/schemas/video.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363457613,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/schemas/report.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363457738,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/tasks/analysis.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363534198,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363611790,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/api/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363612149,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/models/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363613008,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/schemas/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363613379,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/services/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363613748,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/tasks/__init__.py",
+      "accessCount": 1,
+      "lastAccessed": 1775363614253,
+      "type": "file"
+    },
+    {
+      "path": "backend/.env.example",
+      "accessCount": 1,
+      "lastAccessed": 1775363697058,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
