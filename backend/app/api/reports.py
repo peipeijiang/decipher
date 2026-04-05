@@ -101,6 +101,17 @@ def get_current_config(db: Session = Depends(get_db)):
         minimax_endpoint=cfg.minimax_endpoint,
         zhipu_endpoint=cfg.zhipu_endpoint,
         deepseek_endpoint=cfg.deepseek_endpoint,
+        openai_vision_model=cfg.openai_vision_model,
+        openai_text_model=cfg.openai_text_model,
+        claude_vision_model=cfg.claude_vision_model,
+        claude_text_model=cfg.claude_text_model,
+        doubao_vision_model=cfg.doubao_vision_model,
+        doubao_text_model=cfg.doubao_text_model,
+        minimax_vision_model=cfg.minimax_vision_model,
+        minimax_text_model=cfg.minimax_text_model,
+        zhipu_vision_model=cfg.zhipu_vision_model,
+        zhipu_text_model=cfg.zhipu_text_model,
+        deepseek_text_model=cfg.deepseek_text_model,
         temperature=cfg.temperature or 0.7,
         max_tokens=cfg.max_tokens or 4096,
         updated_at=cfg.updated_at,
@@ -148,6 +159,29 @@ def update_config(body: ModelConfigUpdate, db: Session = Depends(get_db)):
         cfg.zhipu_endpoint = body.zhipu_endpoint
     if body.deepseek_endpoint is not None:
         cfg.deepseek_endpoint = body.deepseek_endpoint
+    # Model names
+    if body.openai_vision_model is not None:
+        cfg.openai_vision_model = body.openai_vision_model
+    if body.openai_text_model is not None:
+        cfg.openai_text_model = body.openai_text_model
+    if body.claude_vision_model is not None:
+        cfg.claude_vision_model = body.claude_vision_model
+    if body.claude_text_model is not None:
+        cfg.claude_text_model = body.claude_text_model
+    if body.doubao_vision_model is not None:
+        cfg.doubao_vision_model = body.doubao_vision_model
+    if body.doubao_text_model is not None:
+        cfg.doubao_text_model = body.doubao_text_model
+    if body.minimax_vision_model is not None:
+        cfg.minimax_vision_model = body.minimax_vision_model
+    if body.minimax_text_model is not None:
+        cfg.minimax_text_model = body.minimax_text_model
+    if body.zhipu_vision_model is not None:
+        cfg.zhipu_vision_model = body.zhipu_vision_model
+    if body.zhipu_text_model is not None:
+        cfg.zhipu_text_model = body.zhipu_text_model
+    if body.deepseek_text_model is not None:
+        cfg.deepseek_text_model = body.deepseek_text_model
     # Global params
     if body.temperature is not None:
         cfg.temperature = body.temperature

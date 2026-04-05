@@ -92,6 +92,19 @@ def get_duration(video_path: str | Path) -> float | None:
         return None
 
 
+def frames_for_duration(duration: float, is_segment: bool = False) -> int:
+    """Return the recommended frame count based on video duration."""
+    if is_segment:
+        return 2 if duration < 15 else 3
+    if duration < 15:
+        return 3
+    if duration < 60:
+        return 6
+    if duration < 180:
+        return 9
+    return 12
+
+
 def extract_frames(
     video_path: str | Path,
     output_dir: str | Path,

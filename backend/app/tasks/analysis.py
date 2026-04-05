@@ -8,7 +8,8 @@ from app.database import SessionLocal
 from app.models.video import Video
 from app.models.report import Report
 from app.models.segment import Segment
-from app.services.video_processor import extract_frames, extract_audio, extract_segment, get_video_info
+from app.models.config import ModelConfig
+from app.services.video_processor import extract_frames, extract_audio, extract_segment, get_video_info, frames_for_duration
 
 logger = logging.getLogger(__name__)
 
@@ -44,11 +45,13 @@ def run_analysis(video_id: str):
         db.commit()
         _set_progress(video_id, parse=10)
 
-        # Step 2: Extract frames
+        # Step 2: Extract frames (dynamic count based on duration)
+        duration = info.get("duration") or 30
+        num_frames = frames_for_duration(duration)
         frames = extract_frames(
             video.filepath,
             output_dir=processed_base / "frames",
-            num_frames=6,
+            num_frames=num_frames,
         )
         _set_progress(video_id, parse=40)
 
@@ -74,8 +77,9 @@ def run_analysis(video_id: str):
         from app.ai_models import get_model
         from app.services.ai_analyzer import run_ai_analysis
 
-        vision_model = get_model(settings.default_vision_model)
-        analysis_model = get_model(settings.default_analysis_model)
+        cfg = db.query(ModelConfig).first() or ModelConfig()
+        vision_model = get_model(cfg.vision_model, cfg)
+        analysis_model = get_model(cfg.analysis_model, cfg)
         _set_progress(video_id, strategy=30)
         ai_result = run_ai_analysis(
             frames=[str(f) for f in frames],
@@ -132,11 +136,13 @@ def analyze_segment(segment_id: str):
             end_time=seg.end_time,
         )
 
-        # Step 2: Extract 3 frames from the clip
+        # Step 2: Extract frames from the clip (dynamic count)
+        seg_duration = seg.end_time - seg.start_time
+        num_frames = frames_for_duration(seg_duration, is_segment=True)
         frames = extract_frames(
             clip_path,
             output_dir=processed_base / "frames",
-            num_frames=3,
+            num_frames=num_frames,
         )
 
         # Step 3: Extract audio + Whisper transcription
@@ -155,8 +161,9 @@ def analyze_segment(segment_id: str):
         from app.ai_models import get_model
         from app.services.ai_analyzer import run_ai_analysis
 
-        vision_model = get_model(settings.default_vision_model)
-        analysis_model = get_model(settings.default_analysis_model)
+        cfg = db.query(ModelConfig).first() or ModelConfig()
+        vision_model = get_model(cfg.vision_model, cfg)
+        analysis_model = get_model(cfg.analysis_model, cfg)
         ai_result = run_ai_analysis(
             frames=[str(f) for f in frames],
             script=script,

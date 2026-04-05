@@ -29,13 +29,25 @@ class ModelConfigOut(BaseModel):
     minimax_configured: bool = False
     zhipu_configured: bool = False
     deepseek_configured: bool = False
-    # Endpoints (null = use default)
+    # Endpoints
     openai_endpoint: str | None = None
     claude_endpoint: str | None = None
     doubao_endpoint: str | None = None
     minimax_endpoint: str | None = None
     zhipu_endpoint: str | None = None
     deepseek_endpoint: str | None = None
+    # Model names (user-defined)
+    openai_vision_model: str | None = None
+    openai_text_model: str | None = None
+    claude_vision_model: str | None = None
+    claude_text_model: str | None = None
+    doubao_vision_model: str | None = None
+    doubao_text_model: str | None = None
+    minimax_vision_model: str | None = None
+    minimax_text_model: str | None = None
+    zhipu_vision_model: str | None = None
+    zhipu_text_model: str | None = None
+    deepseek_text_model: str | None = None
     # Global params
     temperature: float = 0.7
     max_tokens: int = 4096
@@ -48,7 +60,7 @@ class ModelConfigUpdate(BaseModel):
     # Model selection
     vision_model: str | None = None
     analysis_model: str | None = None
-    # API Keys (only update if non-empty)
+    # API Keys
     openai_api_key: str | None = None
     claude_api_key: str | None = None
     doubao_api_key: str | None = None
@@ -62,6 +74,18 @@ class ModelConfigUpdate(BaseModel):
     minimax_endpoint: str | None = None
     zhipu_endpoint: str | None = None
     deepseek_endpoint: str | None = None
+    # Model names
+    openai_vision_model: str | None = None
+    openai_text_model: str | None = None
+    claude_vision_model: str | None = None
+    claude_text_model: str | None = None
+    doubao_vision_model: str | None = None
+    doubao_text_model: str | None = None
+    minimax_vision_model: str | None = None
+    minimax_text_model: str | None = None
+    zhipu_vision_model: str | None = None
+    zhipu_text_model: str | None = None
+    deepseek_text_model: str | None = None
     # Global params
     temperature: float | None = None
     max_tokens: int | None = None

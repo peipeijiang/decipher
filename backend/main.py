@@ -39,6 +39,18 @@ def _migrate():
         ("model_configs", "temperature", "FLOAT DEFAULT 0.7"),
         ("model_configs", "max_tokens", "INTEGER DEFAULT 4096"),
         ("model_configs", "created_at", "DATETIME"),
+        # model name overrides
+        ("model_configs", "openai_vision_model", "TEXT"),
+        ("model_configs", "openai_text_model", "TEXT"),
+        ("model_configs", "claude_vision_model", "TEXT"),
+        ("model_configs", "claude_text_model", "TEXT"),
+        ("model_configs", "doubao_vision_model", "TEXT"),
+        ("model_configs", "doubao_text_model", "TEXT"),
+        ("model_configs", "minimax_vision_model", "TEXT"),
+        ("model_configs", "minimax_text_model", "TEXT"),
+        ("model_configs", "zhipu_vision_model", "TEXT"),
+        ("model_configs", "zhipu_text_model", "TEXT"),
+        ("model_configs", "deepseek_text_model", "TEXT"),
     ]
     with engine.connect() as conn:
         for table, col, col_type in new_cols:

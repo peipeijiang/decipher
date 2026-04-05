@@ -17,27 +17,38 @@ class ModelConfig(Base):
     # OpenAI
     openai_api_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     openai_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
-    
+    openai_vision_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+    openai_text_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # Claude
     anthropic_api_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     anthropic_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
-    
+    claude_vision_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+    claude_text_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # 豆包
     doubao_api_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     doubao_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
     doubao_region: Mapped[str | None] = mapped_column(Text, nullable=True)
-    
+    doubao_vision_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+    doubao_text_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # MiniMax
     minimax_api_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     minimax_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
-    
+    minimax_vision_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+    minimax_text_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # 智谱
     zhipu_api_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     zhipu_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
-    
+    zhipu_vision_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+    zhipu_text_model: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     # DeepSeek
     deepseek_api_key: Mapped[str | None] = mapped_column(Text, nullable=True)
     deepseek_endpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
+    deepseek_text_model: Mapped[str | None] = mapped_column(Text, nullable=True)
     
     # 全局参数
     temperature: Mapped[float] = mapped_column(String, default=0.7)

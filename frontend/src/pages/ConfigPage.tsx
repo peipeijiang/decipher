@@ -7,25 +7,35 @@ const PROVIDERS = [
   {
     id: 'openai',
     name: 'OpenAI',
-    label: 'OpenAI GPT-4o',
+    label: 'OpenAI',
     description: '视觉分析 + 综合分析',
     apiKeyUrl: 'https://platform.openai.com/api-keys',
     keyField: 'openai_api_key',
     endpointField: 'openai_endpoint',
+    visionModelField: 'openai_vision_model',
+    textModelField: 'openai_text_model',
     configuredField: 'openai_configured',
     defaultEndpoint: 'https://api.openai.com/v1',
+    defaultVisionModel: 'gpt-4o',
+    defaultTextModel: 'gpt-4o',
+    supportsVision: true,
     icon: '🤖',
   },
   {
     id: 'claude',
     name: 'Claude',
-    label: 'Claude 3.5 Sonnet',
+    label: 'Claude',
     description: '视觉分析 + 综合分析',
     apiKeyUrl: 'https://console.anthropic.com/settings/keys',
     keyField: 'claude_api_key',
     endpointField: 'claude_endpoint',
+    visionModelField: 'claude_vision_model',
+    textModelField: 'claude_text_model',
     configuredField: 'claude_configured',
     defaultEndpoint: 'https://api.anthropic.com',
+    defaultVisionModel: 'claude-3-5-sonnet-20241022',
+    defaultTextModel: 'claude-3-5-sonnet-20241022',
+    supportsVision: true,
     icon: '🧠',
   },
   {
@@ -36,44 +46,64 @@ const PROVIDERS = [
     apiKeyUrl: 'https://console.volcengine.com/ark',
     keyField: 'doubao_api_key',
     endpointField: 'doubao_endpoint',
+    visionModelField: 'doubao_vision_model',
+    textModelField: 'doubao_text_model',
     configuredField: 'doubao_configured',
     defaultEndpoint: 'https://ark.cn-beijing.volces.com/api/v3',
+    defaultVisionModel: 'doubao-vision-pro-32k',
+    defaultTextModel: 'doubao-pro-32k',
+    supportsVision: true,
     icon: '🔥',
   },
   {
     id: 'minimax',
     name: 'MiniMax',
-    label: 'MiniMax Text-01',
-    description: '综合分析',
+    label: 'MiniMax',
+    description: '综合分析（不支持视觉）',
     apiKeyUrl: 'https://platform.minimaxi.com/',
     keyField: 'minimax_api_key',
     endpointField: 'minimax_endpoint',
+    visionModelField: null,
+    textModelField: 'minimax_text_model',
     configuredField: 'minimax_configured',
     defaultEndpoint: 'https://api.minimax.chat/v1',
+    defaultVisionModel: '',
+    defaultTextModel: 'MiniMax-Text-01',
+    supportsVision: false,
     icon: '📊',
   },
   {
     id: 'zhipu',
     name: '智谱',
-    label: 'GLM-4V-Plus',
+    label: '智谱 GLM',
     description: '视觉分析 + 综合分析',
     apiKeyUrl: 'https://open.bigmodel.cn/dev/api',
     keyField: 'zhipu_api_key',
     endpointField: 'zhipu_endpoint',
+    visionModelField: 'zhipu_vision_model',
+    textModelField: 'zhipu_text_model',
     configuredField: 'zhipu_configured',
     defaultEndpoint: 'https://open.bigmodel.cn/api/paas/v4',
+    defaultVisionModel: 'glm-4v-plus',
+    defaultTextModel: 'glm-4-plus',
+    supportsVision: true,
     icon: '💎',
   },
   {
     id: 'deepseek',
     name: 'DeepSeek',
-    label: 'DeepSeek Chat',
+    label: 'DeepSeek',
     description: '综合分析（不支持视觉）',
     apiKeyUrl: 'https://platform.deepseek.com/api_keys',
     keyField: 'deepseek_api_key',
     endpointField: 'deepseek_endpoint',
+    visionModelField: null,
+    textModelField: 'deepseek_text_model',
     configuredField: 'deepseek_configured',
     defaultEndpoint: 'https://api.deepseek.com/v1',
+    defaultVisionModel: '',
+    defaultTextModel: 'deepseek-chat',
+    supportsVision: false,
     icon: '🔮',
   },
 ] as const
@@ -94,6 +124,17 @@ interface Config {
   minimax_endpoint: string | null
   zhipu_endpoint: string | null
   deepseek_endpoint: string | null
+  openai_vision_model: string | null
+  openai_text_model: string | null
+  claude_vision_model: string | null
+  claude_text_model: string | null
+  doubao_vision_model: string | null
+  doubao_text_model: string | null
+  minimax_vision_model: string | null
+  minimax_text_model: string | null
+  zhipu_vision_model: string | null
+  zhipu_text_model: string | null
+  deepseek_text_model: string | null
   temperature: number
   max_tokens: number
   updated_at: string
@@ -106,6 +147,7 @@ export default function ConfigPage() {
   const [analysisModel, setAnalysisModel] = useState('openai')
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({})
   const [endpoints, setEndpoints] = useState<Record<string, string>>({})
+  const [modelNames, setModelNames] = useState<Record<string, string>>({})
   const [temperature, setTemperature] = useState(0.7)
   const [maxTokens, setMaxTokens] = useState(4096)
   const [saving, setSaving] = useState(false)
@@ -133,6 +175,14 @@ export default function ConfigPage() {
         zhipu: c.zhipu_endpoint || PROVIDERS[4].defaultEndpoint,
         deepseek: c.deepseek_endpoint || PROVIDERS[5].defaultEndpoint,
       })
+      setModelNames({
+        openai: c.openai_vision_model || PROVIDERS[0].defaultVisionModel || '',
+        claude: c.claude_vision_model || PROVIDERS[1].defaultVisionModel || '',
+        doubao: c.doubao_vision_model || PROVIDERS[2].defaultVisionModel || '',
+        minimax: c.minimax_text_model || PROVIDERS[3].defaultTextModel || '',
+        zhipu: c.zhipu_vision_model || PROVIDERS[4].defaultVisionModel || '',
+        deepseek: c.deepseek_text_model || PROVIDERS[5].defaultTextModel || '',
+      })
     }).catch(() => setError('加载配置失败'))
   }, [])
 
@@ -156,6 +206,12 @@ export default function ConfigPage() {
         }
         if (endpoints[p.id] !== PROVIDERS.find(pr => pr.id === p.id)?.defaultEndpoint) {
           (payload as any)[p.endpointField] = endpoints[p.id] || null
+        }
+        const mn = modelNames[p.id]
+        const defModel = PROVIDERS.find(pr => pr.id === p.id)
+        if (mn && mn !== defModel?.defaultVisionModel && mn !== defModel?.defaultTextModel) {
+          if (p.visionModelField) (payload as any)[p.visionModelField] = mn
+          if (p.textModelField) (payload as any)[p.textModelField] = mn
         }
       }
       const res = await axios.patch('/api/config/models', payload)
@@ -326,6 +382,43 @@ export default function ConfigPage() {
                         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
                       />
                     </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    {provider.supportsVision && provider.visionModelField && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          视觉模型名称 <span className="text-gray-400">(留空使用默认)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={modelNames[provider.id] || ''}
+                          onChange={e => {
+                            setModelNames(prev => ({ ...prev, [provider.id]: e.target.value }))
+                            markDirty()
+                          }}
+                          placeholder={provider.defaultVisionModel}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                    )}
+                    {provider.textModelField && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                          文本模型名称 <span className="text-gray-400">(留空使用默认)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={modelNames[provider.id] || ''}
+                          onChange={e => {
+                            setModelNames(prev => ({ ...prev, [provider.id]: e.target.value }))
+                            markDirty()
+                          }}
+                          placeholder={provider.defaultTextModel}
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )
