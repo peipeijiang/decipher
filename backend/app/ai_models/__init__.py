@@ -15,11 +15,16 @@ _REGISTRY = {
 }
 
 
-def get_model(name: str) -> AIModel:
-    """Instantiate and return the named AI model."""
+def get_model(name: str, cfg: "ModelConfig" = None) -> AIModel:
+    """Instantiate and return the named AI model.
+
+    Args:
+        name: Provider name, e.g. "openai", "claude".
+        cfg: ModelConfig object with API keys, endpoints, and model names.
+    """
     entry = _REGISTRY.get(name)
     if not entry:
         raise ValueError(f"Unknown model '{name}'. Available: {AVAILABLE_MODELS}")
     module_name, class_name = entry
     mod = importlib.import_module(f"app.ai_models.{module_name}")
-    return getattr(mod, class_name)()
+    return getattr(mod, class_name)(cfg=cfg)

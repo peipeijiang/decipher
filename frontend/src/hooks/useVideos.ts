@@ -13,7 +13,7 @@ export function useVideos() {
       const formData = new FormData()
       formData.append('file', file)
       const res = await api.post('/api/videos/upload', formData, {
-        onUploadProgress: e => setProgress(Math.round((e.loaded * 100) / (e.total || 1)),
+        onUploadProgress: e => setProgress(Math.round((e.loaded * 100) / (e.total || 1))),
       })
       return res.data
     } catch (e: any) {
