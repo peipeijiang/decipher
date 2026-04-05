@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
 from app.api.videos import router as videos_router
 from app.api.reports import router as reports_router, config_router
+from app.api.segments import router as segments_router
 
 logging.basicConfig(level=logging.INFO)
 
