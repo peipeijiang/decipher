@@ -67,6 +67,14 @@ def get_video(video_id: str, db: Session = Depends(get_db)):
     return video
 
 
+MEDIA_TYPES = {
+    ".mp4": "video/mp4",
+    ".mov": "video/quicktime",
+    ".avi": "video/x-msvideo",
+    ".webm": "video/webm",
+}
+
+
 @router.get("/{video_id}/stream")
 def stream_video(video_id: str, db: Session = Depends(get_db)):
     video = db.get(Video, video_id)
@@ -74,4 +82,6 @@ def stream_video(video_id: str, db: Session = Depends(get_db)):
         raise HTTPException(404, "Video not found")
     if not os.path.exists(video.filepath):
         raise HTTPException(404, "Video file not found")
-    return FileResponse(video.filepath, media_type="video/mp4")
+    ext = Path(video.filepath).suffix.lower()
+    media_type = MEDIA_TYPES.get(ext, "video/mp4")
+    return FileResponse(video.filepath, media_type=media_type)

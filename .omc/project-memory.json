@@ -31,27 +31,33 @@
   "directoryMap": {},
   "hotPaths": [
     {
+      "path": "backend/app/api/videos.py",
+      "accessCount": 5,
+      "lastAccessed": 1775364580893,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/api/reports.py",
+      "accessCount": 3,
+      "lastAccessed": 1775364544517,
+      "type": "file"
+    },
+    {
+      "path": "backend/main.py",
+      "accessCount": 3,
+      "lastAccessed": 1775364544551,
+      "type": "file"
+    },
+    {
       "path": "backend/requirements.txt",
-      "accessCount": 2,
-      "lastAccessed": 1775363437811,
+      "accessCount": 3,
+      "lastAccessed": 1775364556002,
       "type": "file"
     },
     {
       "path": "backend/app/database.py",
       "accessCount": 2,
       "lastAccessed": 1775363440936,
-      "type": "file"
-    },
-    {
-      "path": "backend/app/api/videos.py",
-      "accessCount": 2,
-      "lastAccessed": 1775363518210,
-      "type": "file"
-    },
-    {
-      "path": "backend/app/api/reports.py",
-      "accessCount": 2,
-      "lastAccessed": 1775363525042,
       "type": "file"
     },
     {
@@ -73,9 +79,9 @@
       "type": "file"
     },
     {
-      "path": "backend/main.py",
+      "path": "backend/.env.example",
       "accessCount": 2,
-      "lastAccessed": 1775363696958,
+      "lastAccessed": 1775364566017,
       "type": "file"
     },
     {
@@ -151,9 +157,9 @@
       "type": "file"
     },
     {
-      "path": "backend/.env.example",
+      "path": "backend/.env",
       "accessCount": 1,
-      "lastAccessed": 1775363697058,
+      "lastAccessed": 1775364589966,
       "type": "file"
     }
   ],
