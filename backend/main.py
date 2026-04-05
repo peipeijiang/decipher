@@ -4,18 +4,55 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.database import Base, engine
 from app.api.videos import router as videos_router
 from app.api.reports import router as reports_router, config_router
 from app.api.segments import router as segments_router
+from app.models.config import ModelConfig  # noqa: F401 - registers with Base.metadata
 
 logging.basicConfig(level=logging.INFO)
+
+
+def _migrate():
+    """Add new columns to existing tables without a migration framework."""
+    new_cols = [
+        ("segments", "analysis_status", "TEXT"),
+        ("segments", "prompt", "TEXT"),
+        ("segments", "strategy", "TEXT"),
+        ("segments", "shots", "TEXT"),
+        # model_configs new columns
+        ("model_configs", "openai_api_key", "TEXT"),
+        ("model_configs", "openai_endpoint", "TEXT"),
+        ("model_configs", "anthropic_api_key", "TEXT"),
+        ("model_configs", "anthropic_endpoint", "TEXT"),
+        ("model_configs", "doubao_api_key", "TEXT"),
+        ("model_configs", "doubao_endpoint", "TEXT"),
+        ("model_configs", "doubao_region", "TEXT"),
+        ("model_configs", "minimax_api_key", "TEXT"),
+        ("model_configs", "minimax_endpoint", "TEXT"),
+        ("model_configs", "zhipu_api_key", "TEXT"),
+        ("model_configs", "zhipu_endpoint", "TEXT"),
+        ("model_configs", "deepseek_api_key", "TEXT"),
+        ("model_configs", "deepseek_endpoint", "TEXT"),
+        ("model_configs", "temperature", "FLOAT DEFAULT 0.7"),
+        ("model_configs", "max_tokens", "INTEGER DEFAULT 4096"),
+        ("model_configs", "created_at", "DATETIME"),
+    ]
+    with engine.connect() as conn:
+        for table, col, col_type in new_cols:
+            try:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}"))
+                conn.commit()
+            except Exception:
+                pass  # column already exists
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    _migrate()
     os.makedirs("uploads", exist_ok=True)
     os.makedirs("processed", exist_ok=True)
     yield
@@ -34,6 +71,7 @@ app.add_middleware(
 app.include_router(videos_router)
 app.include_router(reports_router)
 app.include_router(config_router)
+app.include_router(segments_router)
 
 
 @app.get("/health")

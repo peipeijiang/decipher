@@ -17,10 +17,4 @@ class Report(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
-class ModelConfig(Base):
-    __tablename__ = "model_configs"
 
-    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    vision_model: Mapped[str] = mapped_column(String, default="openai")
-    analysis_model: Mapped[str] = mapped_column(String, default="openai")
-    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
