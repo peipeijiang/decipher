@@ -11,7 +11,9 @@ from app.database import Base, engine
 from app.api.videos import router as videos_router
 from app.api.reports import router as reports_router, config_router
 from app.api.segments import router as segments_router
+from app.api.creative import router as creative_router
 from app.models.config import ModelConfig  # noqa: F401 - registers with Base.metadata
+from app.models.creative_prompt import CreativePrompt  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,6 +21,7 @@ logging.basicConfig(level=logging.INFO)
 def _migrate():
     """Add new columns to existing tables without a migration framework."""
     new_cols = [
+        ("videos", "error", "TEXT"),
         ("segments", "analysis_status", "TEXT"),
         ("segments", "prompt", "TEXT"),
         ("segments", "strategy", "TEXT"),
@@ -53,6 +56,7 @@ def _migrate():
         ("model_configs", "temperature", "FLOAT DEFAULT 0.7"),
         ("model_configs", "max_tokens", "INTEGER DEFAULT 4096"),
         ("model_configs", "created_at", "DATETIME"),
+        ("creative_prompts", "video_id", "TEXT"),
     ]
     with engine.connect() as conn:
         for table, col, col_type in new_cols:
@@ -155,6 +159,7 @@ app.include_router(videos_router)
 app.include_router(reports_router)
 app.include_router(config_router)
 app.include_router(segments_router)
+app.include_router(creative_router)
 
 
 @app.get("/health")

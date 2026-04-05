@@ -9,6 +9,8 @@ class ReportOut(BaseModel):
     shots: str | None
     prompt: str | None
     script: str | None
+    script_segments: str | None = None  # JSON array of {start, end, text}
+    frame_urls: list[str] | None = None  # Frame image URLs
     created_at: datetime
 
     model_config = {"from_attributes": True}

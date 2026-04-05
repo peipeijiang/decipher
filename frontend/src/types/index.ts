@@ -8,6 +8,7 @@ export interface Video {
   likes?: string
   notes?: string
   status: 'pending' | 'processing' | 'completed' | 'failed'
+  error?: string | null
   created_at: string
 }
 
@@ -18,6 +19,8 @@ export interface Report {
   shots?: string
   prompt?: string
   script?: string
+  script_segments?: string  // JSON array of {start, end, text}
+  frame_urls?: string[] | null
   notes?: string
   created_at: string
 }
@@ -27,6 +30,7 @@ export interface Progress {
   parse: number
   strategy: number
   prompt: number
+  error?: string | null
 }
 
 export interface Segment {
