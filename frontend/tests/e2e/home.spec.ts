@@ -36,7 +36,7 @@ test.describe('历史记录页', () => {
   test('有空状态引导', async ({ page }) => {
     await page.goto('/history')
     // 要么显示空状态，要么显示历史记录列表
-    const either = page.getByText(/暂无分析记录|历史记录/)
+    const either = page.getByText(/暂无分析记录|历史记录/).first()
     await expect(either).toBeVisible({ timeout: 10000 })
   })
 

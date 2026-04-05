@@ -228,6 +228,7 @@ export default function AnalysisPage() {
   const [progress, setProgress] = useState<Progress>({ upload: 0, parse: 0, strategy: 0, prompt: 0 })
   const [notes, setNotes] = useState('')
   const [savingNotes, setSavingNotes] = useState(false)
+  const [analysisStarting, setAnalysisStarting] = useState(false)
 
   // Video playback state
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -301,6 +302,18 @@ export default function AnalysisPage() {
       setSegments((prev) =>
         prev.map((s) => (s.id === segmentId ? { ...s, analysis_status: null } : s))
       )
+    }
+  }
+
+  const startAnalysis = async () => {
+    setAnalysisStarting(true)
+    try {
+      await axios.post(`/api/videos/${videoId}/analyze`)
+      // Will be picked up by existing poll
+    } catch (e: any) {
+      alert('启动分析失败：' + (e.response?.data?.detail || e.message))
+    } finally {
+      setAnalysisStarting(false)
     }
   }
 
@@ -591,6 +604,32 @@ export default function AnalysisPage() {
 
         {/* Right: Analysis Results */}
         <div className="space-y-4">
+          {/* Error display */}
+          {video?.status === 'failed' && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="text-sm font-semibold text-red-700 mb-1">⚠️ 分析失败</div>
+              <div className="text-xs text-red-600">{video.error || '未知错误，请检查模型配置和API Key'}</div>
+            </div>
+          )}
+
+          {/* Start analysis button */}
+          {!report && video?.status !== 'failed' && (
+            <div className="bg-white rounded-lg shadow p-6 text-center">
+              <div className="text-gray-500 text-sm mb-4">视频已上传，点击开始分析</div>
+              <button
+                onClick={startAnalysis}
+                disabled={analysisStarting}
+                className={`px-8 py-3 rounded-xl text-sm font-semibold transition-all ${
+                  analysisStarting
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
+                }`}
+              >
+                {analysisStarting ? '分析中...' : '🎬 开始分析'}
+              </button>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg shadow p-4">
             <h3 className="font-medium text-gray-900 mb-2">智能策略分析</h3>
             <div className="text-sm text-gray-700 whitespace-pre-wrap">
