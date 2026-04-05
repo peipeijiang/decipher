@@ -557,6 +557,11 @@ export default function AnalysisPage() {
                 <div className="text-xs text-gray-700 whitespace-pre-wrap font-mono bg-gray-50 p-2 rounded max-h-40 overflow-y-auto">
                   {selectedSeg.prompt}
                 </div>
+                <div className="mt-2 p-2 bg-green-50 rounded border border-green-100">
+                  <div className="text-xs text-green-600">
+                    <span className="font-medium">复刻用法：</span>复制此片段 Prompt，粘贴到即梦/ Sora 中生成对应片段视频
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -625,6 +630,16 @@ export default function AnalysisPage() {
             </div>
             <div className="text-sm text-gray-700 whitespace-pre-wrap font-mono bg-gray-50 p-2 rounded">
               {report?.prompt || '生成中...'}
+            </div>
+            {/* 爆款复刻教程 */}
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+              <div className="text-xs font-semibold text-blue-700 mb-2">🎬 爆款复刻教程</div>
+              <div className="text-xs text-blue-600 space-y-1">
+                <div>① 点击上方「复制」按钮，复制完整 Prompt</div>
+                <div>② 打开 <span className="font-medium">即梦AI</span>（jimeng.jianying.com）或 <span className="font-medium">Sora</span>（sora.com）</div>
+                <div>③ 在视频生成框中粘贴 Prompt，选择比例 9:16（竖屏 TikTok 格式）</div>
+                <div>④ 选择画质和时长，点击生成即可获得风格类似的视频</div>
+              </div>
             </div>
           </div>
 
