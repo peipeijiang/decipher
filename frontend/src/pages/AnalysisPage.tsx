@@ -244,6 +244,8 @@ export default function AnalysisPage() {
 
   // Polling for segment analysis
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Polling for main video/progress/report
+  const mainPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const fetchSegments = useCallback(async () => {
     if (!videoId) return
@@ -305,9 +307,16 @@ export default function AnalysisPage() {
     if (!videoId) return
     try {
       const res = await axios.get(`/api/videos/${videoId}`)
-      setVideo(res.data.video)
+      const v: Video = res.data.video
+      setVideo(v)
       setProgress(res.data.progress || { upload: 0, parse: 0, strategy: 0, prompt: 0 })
       if (res.data.report) setReport(res.data.report)
+      if (v.status === 'completed' || v.status === 'failed') {
+        if (mainPollRef.current) {
+          clearInterval(mainPollRef.current)
+          mainPollRef.current = null
+        }
+      }
     } catch (e) {
       // ignore
     }
@@ -316,8 +325,13 @@ export default function AnalysisPage() {
   useEffect(() => {
     fetchData()
     fetchSegments()
-    const interval = setInterval(fetchData, 3000)
-    return () => clearInterval(interval)
+    mainPollRef.current = setInterval(fetchData, 3000)
+    return () => {
+      if (mainPollRef.current) {
+        clearInterval(mainPollRef.current)
+        mainPollRef.current = null
+      }
+    }
   }, [videoId, fetchData, fetchSegments])
 
   // Init selection when duration is known

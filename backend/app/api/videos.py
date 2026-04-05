@@ -10,8 +10,9 @@ from app.database import get_db
 from app.models.video import Video
 from app.models.report import Report
 from app.schemas.video import VideoOut
+from app.schemas.report import ReportOut
 from app.config import settings
-from app.tasks.analysis import run_analysis
+from app.tasks.analysis import run_analysis, get_analysis_progress
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
@@ -59,12 +60,21 @@ async def upload_video(file: UploadFile = File(...), db: Session = Depends(get_d
     return video
 
 
-@router.get("/{video_id}", response_model=VideoOut)
+@router.get("/{video_id}")
 def get_video(video_id: str, db: Session = Depends(get_db)):
     video = db.get(Video, video_id)
     if not video:
         raise HTTPException(404, "Video not found")
-    return video
+    report = db.query(Report).filter(Report.video_id == video_id).first()
+    progress = get_analysis_progress(video_id)
+    # If already completed, ensure progress shows 100
+    if video.status == "completed":
+        progress = {"upload": 100, "parse": 100, "strategy": 100, "prompt": 100}
+    return {
+        "video": VideoOut.model_validate(video),
+        "progress": progress,
+        "report": ReportOut.model_validate(report) if report and report.strategy else None,
+    }
 
 
 MEDIA_TYPES = {
