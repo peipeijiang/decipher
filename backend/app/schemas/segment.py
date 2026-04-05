@@ -15,6 +15,10 @@ class SegmentOut(BaseModel):
     end_time: float
     label: str
     analysis: str | None
+    analysis_status: str | None
+    prompt: str | None
+    strategy: str | None
+    shots: str | None
     created_at: datetime
 
     model_config = {"from_attributes": True}

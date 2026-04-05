@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+import threading
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -43,6 +44,20 @@ def get_segment(segment_id: str, db: Session = Depends(get_db)):
     if not seg:
         raise HTTPException(404, "Segment not found")
     return seg
+
+
+@router.post("/api/segments/{segment_id}/analyze")
+def analyze_segment_endpoint(segment_id: str, db: Session = Depends(get_db)):
+    seg = db.get(Segment, segment_id)
+    if not seg:
+        raise HTTPException(404, "Segment not found")
+    if seg.analysis_status == "analyzing":
+        return {"ok": True, "status": "analyzing"}
+
+    from app.tasks.analysis import analyze_segment
+    t = threading.Thread(target=analyze_segment, args=(segment_id,), daemon=True)
+    t.start()
+    return {"ok": True, "status": "analyzing"}
 
 
 @router.delete("/api/segments/{segment_id}")
