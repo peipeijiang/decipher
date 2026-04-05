@@ -14,4 +14,8 @@ class Segment(Base):
     end_time: Mapped[float] = mapped_column(Float, nullable=False)
     label: Mapped[str] = mapped_column(String, default="")
     analysis: Mapped[str | None] = mapped_column(Text, nullable=True)
+    analysis_status: Mapped[str | None] = mapped_column(String, nullable=True)  # analyzing | completed | failed
+    prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
+    strategy: Mapped[str | None] = mapped_column(Text, nullable=True)
+    shots: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
