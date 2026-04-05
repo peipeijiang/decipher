@@ -1,18 +1,216 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { useParams } from 'react-router-dom'
 import axios from 'axios'
-import type { Video, Report, Progress } from '../types'
+import type { Video, Report, Progress, Segment } from '../types'
 
 const STEPS = ['视频上传', '智能解析', '策略拆解', '提示词生成']
 
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+// ── VideoTimeline ────────────────────────────────────────────────────────────
+
+interface TimelineProps {
+  duration: number
+  currentTime: number
+  startTime: number
+  endTime: number
+  segments: Segment[]
+  onStartChange: (t: number) => void
+  onEndChange: (t: number) => void
+  onSeek: (t: number) => void
+}
+
+function VideoTimeline({
+  duration,
+  currentTime,
+  startTime,
+  endTime,
+  segments,
+  onStartChange,
+  onEndChange,
+  onSeek,
+}: TimelineProps) {
+  const barRef = useRef<HTMLDivElement>(null)
+  const dragging = useRef<'start' | 'end' | null>(null)
+
+  const ratio = (t: number) => (duration > 0 ? (t / duration) * 100 : 0)
+
+  const timeFromEvent = useCallback(
+    (clientX: number) => {
+      if (!barRef.current || duration === 0) return 0
+      const rect = barRef.current.getBoundingClientRect()
+      const r = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+      return r * duration
+    },
+    [duration],
+  )
+
+  const onMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!dragging.current) return
+      const t = timeFromEvent(e.clientX)
+      if (dragging.current === 'start') {
+        onStartChange(Math.min(t, endTime - 0.5))
+      } else {
+        onEndChange(Math.max(t, startTime + 0.5))
+      }
+    },
+    [timeFromEvent, startTime, endTime, onStartChange, onEndChange],
+  )
+
+  const onMouseUp = useCallback(() => {
+    dragging.current = null
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove)
+      window.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [onMouseMove, onMouseUp])
+
+  const handleBarClick = (e: React.MouseEvent) => {
+    if (dragging.current) return
+    onSeek(timeFromEvent(e.clientX))
+  }
+
+  if (duration === 0) {
+    return (
+      <div className="h-8 bg-gray-100 rounded flex items-center justify-center text-xs text-gray-400">
+        加载视频中...
+      </div>
+    )
+  }
+
+  return (
+    <div className="select-none">
+      {/* Bar */}
+      <div
+        ref={barRef}
+        className="relative h-8 bg-gray-200 rounded cursor-pointer"
+        onClick={handleBarClick}
+      >
+        {/* Existing segments (background markers) */}
+        {segments.map((seg) => (
+          <div
+            key={seg.id}
+            className="absolute top-0 h-full bg-green-200 opacity-50 pointer-events-none"
+            style={{ left: `${ratio(seg.startTime)}%`, width: `${ratio(seg.endTime - seg.startTime)}%` }}
+          />
+        ))}
+
+        {/* Selection range highlight */}
+        <div
+          className="absolute top-0 h-full bg-blue-300 opacity-60 pointer-events-none"
+          style={{ left: `${ratio(startTime)}%`, width: `${ratio(endTime - startTime)}%` }}
+        />
+
+        {/* Current time playhead */}
+        <div
+          className="absolute top-0 w-0.5 h-full bg-red-500 pointer-events-none"
+          style={{ left: `${ratio(currentTime)}%` }}
+        />
+
+        {/* Start handle */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow cursor-ew-resize z-10"
+          style={{ left: `${ratio(startTime)}%`, transform: 'translate(-50%, -50%)' }}
+          onMouseDown={(e) => { e.stopPropagation(); dragging.current = 'start' }}
+        />
+
+        {/* End handle */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow cursor-ew-resize z-10"
+          style={{ left: `${ratio(endTime)}%`, transform: 'translate(-50%, -50%)' }}
+          onMouseDown={(e) => { e.stopPropagation(); dragging.current = 'end' }}
+        />
+      </div>
+
+      {/* Time labels */}
+      <div className="flex justify-between text-xs text-gray-500 mt-1">
+        <span>0:00</span>
+        <span>{formatTime(duration)}</span>
+      </div>
+    </div>
+  )
+}
+
+// ── SegmentList ──────────────────────────────────────────────────────────────
+
+interface SegmentListProps {
+  segments: Segment[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onDelete: (id: string) => void
+  onSeek: (t: number) => void
+}
+
+function SegmentList({ segments, selectedId, onSelect, onDelete, onSeek }: SegmentListProps) {
+  if (segments.length === 0) {
+    return (
+      <div className="text-xs text-gray-400 text-center py-3">
+        暂无片段，在时间轴上选择区间后点击「创建片段」
+      </div>
+    )
+  }
+
+  return (
+    <ul className="space-y-1">
+      {segments.map((seg) => (
+        <li
+          key={seg.id}
+          className={`flex items-center gap-2 p-2 rounded cursor-pointer text-sm transition-colors ${
+            selectedId === seg.id ? 'bg-blue-50 border border-blue-300' : 'bg-gray-50 hover:bg-gray-100'
+          }`}
+          onClick={() => { onSelect(seg.id); onSeek(seg.startTime) }}
+        >
+          <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+          <span className="flex-1 font-medium truncate">{seg.label}</span>
+          <span className="text-gray-400 tabular-nums">
+            {formatTime(seg.startTime)} – {formatTime(seg.endTime)}
+          </span>
+          <button
+            className="text-gray-400 hover:text-red-500 ml-1"
+            onClick={(e) => { e.stopPropagation(); onDelete(seg.id) }}
+            title="删除片段"
+          >
+            ✕
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// ── AnalysisPage ─────────────────────────────────────────────────────────────
+
 export default function AnalysisPage() {
   const { videoId } = useParams()
-  const navigate = useNavigate()
   const [video, setVideo] = useState<Video | null>(null)
   const [report, setReport] = useState<Report | null>(null)
   const [progress, setProgress] = useState<Progress>({ upload: 0, parse: 0, strategy: 0, prompt: 0 })
   const [notes, setNotes] = useState('')
   const [savingNotes, setSavingNotes] = useState(false)
+
+  // Video playback state
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+
+  // Timeline selection state
+  const [selStart, setSelStart] = useState(0)
+  const [selEnd, setSelEnd] = useState(0)
+
+  // Segments state
+  const [segments, setSegments] = useState<Segment[]>([])
+  const [selectedSegId, setSelectedSegId] = useState<string | null>(null)
+  const [segLabel, setSegLabel] = useState('')
 
   const fetchData = async () => {
     if (!videoId) return
@@ -20,9 +218,7 @@ export default function AnalysisPage() {
       const res = await axios.get(`/api/videos/${videoId}`)
       setVideo(res.data.video)
       setProgress(res.data.progress || progress)
-      if (res.data.report) {
-        setReport(res.data.report)
-      }
+      if (res.data.report) setReport(res.data.report)
     } catch (e) {
       console.error(e)
     }
@@ -33,6 +229,22 @@ export default function AnalysisPage() {
     const interval = setInterval(fetchData, 3000)
     return () => clearInterval(interval)
   }, [videoId])
+
+  // Init selection when duration is known
+  const handleLoadedMetadata = () => {
+    const d = videoRef.current?.duration ?? 0
+    setDuration(d)
+    setSelStart(0)
+    setSelEnd(Math.min(d, 10))
+  }
+
+  const handleTimeUpdate = () => {
+    setCurrentTime(videoRef.current?.currentTime ?? 0)
+  }
+
+  const seek = useCallback((t: number) => {
+    if (videoRef.current) videoRef.current.currentTime = t
+  }, [])
 
   const saveNotes = async () => {
     if (!videoId) return
@@ -56,6 +268,24 @@ export default function AnalysisPage() {
     if (values[idx] > 0) return 'active'
     if (idx === 0 && video) return 'active'
     return 'pending'
+  }
+
+  const createSegment = () => {
+    const label = segLabel.trim() || `片段 ${segments.length + 1}`
+    const seg: Segment = {
+      id: crypto.randomUUID(),
+      label,
+      startTime: selStart,
+      endTime: selEnd,
+    }
+    setSegments((prev) => [...prev, seg])
+    setSelectedSegId(seg.id)
+    setSegLabel('')
+  }
+
+  const deleteSegment = (id: string) => {
+    setSegments((prev) => prev.filter((s) => s.id !== id))
+    if (selectedSegId === id) setSelectedSegId(null)
   }
 
   if (!video) return <div className="p-8 text-center">加载中...</div>
@@ -89,17 +319,104 @@ export default function AnalysisPage() {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8 grid grid-cols-2 gap-8">
-        {/* Left: Video Player */}
-        <div>
+        {/* Left: Video Player + Timeline + Segments */}
+        <div className="space-y-4">
+          {/* Video */}
           <video
+            ref={videoRef}
             src={`/api/videos/${videoId}/stream`}
             controls
             className="w-full rounded-lg shadow"
+            onLoadedMetadata={handleLoadedMetadata}
+            onTimeUpdate={handleTimeUpdate}
           />
-          <div className="mt-4 bg-white rounded-lg shadow p-4">
+
+          {/* Timeline */}
+          <div className="bg-white rounded-lg shadow p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-medium text-gray-900 text-sm">时间轴选择</h3>
+              <span className="text-xs text-gray-500 tabular-nums">
+                当前 {formatTime(currentTime)} / {formatTime(duration)}
+              </span>
+            </div>
+
+            <VideoTimeline
+              duration={duration}
+              currentTime={currentTime}
+              startTime={selStart}
+              endTime={selEnd}
+              segments={segments}
+              onStartChange={setSelStart}
+              onEndChange={setSelEnd}
+              onSeek={seek}
+            />
+
+            {/* Selection info + quick-set buttons */}
+            <div className="flex items-center gap-2 text-sm">
+              <button
+                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs"
+                onClick={() => setSelStart(currentTime)}
+                title="将当前播放位置设为起点"
+              >
+                ▶ 设为起点
+              </button>
+              <span className="text-blue-600 font-mono tabular-nums flex-1 text-center">
+                {formatTime(selStart)} → {formatTime(selEnd)}
+                <span className="text-gray-400 ml-1">({formatTime(selEnd - selStart)})</span>
+              </span>
+              <button
+                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs"
+                onClick={() => setSelEnd(currentTime)}
+                title="将当前播放位置设为终点"
+              >
+                ▶ 设为终点
+              </button>
+            </div>
+
+            {/* Create segment */}
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={segLabel}
+                onChange={(e) => setSegLabel(e.target.value)}
+                placeholder={`片段 ${segments.length + 1}`}
+                className="flex-1 border rounded px-2 py-1 text-sm"
+                onKeyDown={(e) => { if (e.key === 'Enter') createSegment() }}
+              />
+              <button
+                className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-medium disabled:opacity-40"
+                onClick={createSegment}
+                disabled={selEnd <= selStart || duration === 0}
+              >
+                创建片段
+              </button>
+            </div>
+          </div>
+
+          {/* Segment list */}
+          <div className="bg-white rounded-lg shadow p-4 space-y-2">
+            <h3 className="font-medium text-gray-900 text-sm">
+              已创建片段
+              {segments.length > 0 && (
+                <span className="ml-2 bg-blue-100 text-blue-700 text-xs px-1.5 py-0.5 rounded-full">
+                  {segments.length}
+                </span>
+              )}
+            </h3>
+            <SegmentList
+              segments={segments}
+              selectedId={selectedSegId}
+              onSelect={setSelectedSegId}
+              onDelete={deleteSegment}
+              onSeek={seek}
+            />
+          </div>
+
+          {/* Video info */}
+          <div className="bg-white rounded-lg shadow p-4">
             <h3 className="font-medium text-gray-900 mb-2">视频信息</h3>
             <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
-              <div>时长：{video.duration ? `${Math.floor(video.duration / 60)}:${String(Math.floor(video.duration % 60)).padStart(2, '0')}` : '-'}</div>
+              <div>时长：{video.duration ? formatTime(video.duration) : '-'}</div>
               <div>平台：{video.platform || 'TikTok'}</div>
               <div>点赞：{video.likes || '-'}</div>
             </div>
@@ -107,7 +424,7 @@ export default function AnalysisPage() {
               <label className="block text-sm text-gray-600 mb-1">备注</label>
               <textarea
                 value={notes}
-                onChange={e => setNotes(e.target.value)}
+                onChange={(e) => setNotes(e.target.value)}
                 onBlur={saveNotes}
                 disabled={savingNotes}
                 className="w-full border rounded p-2 text-sm"
@@ -130,7 +447,7 @@ export default function AnalysisPage() {
           <div className="bg-white rounded-lg shadow p-4">
             <h3 className="font-medium text-gray-900 mb-2">分镜场景分析</h3>
             <div className="text-sm text-gray-700">
-              {report?.shots ? JSON.parse(report.shots).map((s: any, i: number) => (
+              {report?.shots ? JSON.parse(report.shots).map((s: { description: string }, i: number) => (
                 <div key={i} className="mb-2 border-b pb-2">
                   <span className="font-medium">场景{i + 1}：</span>{s.description}
                 </div>
