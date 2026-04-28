@@ -14,6 +14,8 @@ from app.api.segments import router as segments_router
 from app.api.creative import router as creative_router
 from app.models.config import ModelConfig  # noqa: F401 - registers with Base.metadata
 from app.models.creative_prompt import CreativePrompt  # noqa: F401
+from app.models.product import Product  # noqa: F401 - registers with Base.metadata
+from app.models.product_prompt import ProductPrompt  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 
@@ -57,6 +59,8 @@ def _migrate():
         ("model_configs", "max_tokens", "INTEGER DEFAULT 4096"),
         ("model_configs", "created_at", "DATETIME"),
         ("creative_prompts", "video_id", "TEXT"),
+        ("model_configs", "image_model", "TEXT DEFAULT 'laozhang-image-2-vip'"),
+        ("model_configs", "video_gen_model", "TEXT DEFAULT 'seedance-2.0'"),
     ]
     with engine.connect() as conn:
         for table, col, col_type in new_cols:
