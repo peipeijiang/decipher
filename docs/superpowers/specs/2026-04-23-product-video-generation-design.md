@@ -17,6 +17,8 @@
 
 核心价值：从产品页面到营销视频的一站式自动化生成。
 
+**语言约束**: 面向跨境电商场景，所有生成的 prompt、视频对话、配音、文字叠加均为英文。产品说明文档保持中英双语（中文方便用户理解，英文供 AI 生成使用）。
+
 ---
 
 ## 2. 设计决策总结
@@ -286,6 +288,12 @@ PATCH  /api/config/models            # 更新模型配置
 1. **TikTok GRWM** (Get Ready With Me)
 2. **开箱测评** (Unboxing Review)
 3. **对比评测** (Comparison Test)
+
+**语言要求**: 所有模板和生成的 prompt 均为英文，包括：
+- 视频中的对话/口播（Dialogue）
+- 文字叠加（Text Overlay）
+- 配音脚本（Voiceover）
+- 视频标题和描述建议
 
 **模板结构**:
 ```python
