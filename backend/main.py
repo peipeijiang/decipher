@@ -12,6 +12,7 @@ from app.api.videos import router as videos_router
 from app.api.reports import router as reports_router, config_router
 from app.api.segments import router as segments_router
 from app.api.creative import router as creative_router
+from app.api.products import router as products_router
 from app.models.config import ModelConfig  # noqa: F401 - registers with Base.metadata
 from app.models.creative_prompt import CreativePrompt  # noqa: F401
 from app.models.product import Product  # noqa: F401 - registers with Base.metadata
@@ -164,6 +165,7 @@ app.include_router(reports_router)
 app.include_router(config_router)
 app.include_router(segments_router)
 app.include_router(creative_router)
+app.include_router(products_router)
 
 
 @app.get("/health")
