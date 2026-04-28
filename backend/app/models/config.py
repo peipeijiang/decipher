@@ -14,6 +14,8 @@ class ModelConfig(Base):
     # Active provider selection
     vision_model: Mapped[str] = mapped_column(String, default="openai")
     analysis_model: Mapped[str] = mapped_column(String, default="openai")
+    image_model: Mapped[str] = mapped_column(String, default="laozhang-image-2-vip")
+    video_gen_model: Mapped[str] = mapped_column(String, default="seedance-2.0")
 
     # All provider configs as a single JSON blob:
     # {"openai": {"api_key": "", "endpoint": "", "vision_model": "", "text_model": ""}, ...}

@@ -14,9 +14,14 @@ class Settings(BaseSettings):
     default_vision_model: str = "openai"
     default_analysis_model: str = "openai"
 
+    # Product video generation
+    laozhang_api_key: str = ""
+    volcengine_api_key: str = ""
+
     # File storage
     upload_dir: str = "uploads"
     processed_dir: str = "processed"
+    products_dir: str = "products"
     max_file_size_mb: int = 500
 
     class Config:
