@@ -228,6 +228,54 @@ export default function ConfigPage() {
           </div>
         </div>
 
+        {/* Image & Video Generation Models */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">生成模型配置</h2>
+          <p className="text-sm text-gray-500 mb-6">配置图片生成和视频生成模型</p>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">🎨 图片生成模型</label>
+              <p className="text-xs text-gray-400 mb-2">用于生成营销图片</p>
+              <select
+                value="laozhang-image-2-vip"
+                disabled
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-gray-50"
+              >
+                <option value="laozhang-image-2-vip">🖼️ 老张图片生成 2.0 VIP</option>
+              </select>
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-gray-600 mb-1">老张 API Key</label>
+                <input
+                  type="password"
+                  placeholder="输入老张 API Key..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+                  onChange={mark}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">🎬 视频生成模型</label>
+              <p className="text-xs text-gray-400 mb-2">用于生成营销视频</p>
+              <select
+                value="seedance-2.0"
+                disabled
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-gray-50"
+              >
+                <option value="seedance-2.0">🎥 Seedance 2.0</option>
+              </select>
+              <div className="mt-3">
+                <label className="block text-xs font-medium text-gray-600 mb-1">火山引擎 API Key</label>
+                <input
+                  type="password"
+                  placeholder="输入火山引擎 API Key..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+                  onChange={mark}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Provider Cards */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">API Key 配置</h2>
