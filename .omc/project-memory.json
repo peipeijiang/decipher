@@ -92,38 +92,38 @@
   "hotPaths": [
     {
       "path": "frontend/src/pages/AnalysisPage.tsx",
-      "accessCount": 133,
-      "lastAccessed": 1776850309344,
+      "accessCount": 134,
+      "lastAccessed": 1777412271104,
       "type": "file"
     },
     {
       "path": "backend/app/tasks/analysis.py",
-      "accessCount": 30,
-      "lastAccessed": 1776414228074,
+      "accessCount": 32,
+      "lastAccessed": 1777411867220,
       "type": "file"
     },
     {
       "path": "backend/app/api/videos.py",
-      "accessCount": 29,
-      "lastAccessed": 1776162185150,
+      "accessCount": 30,
+      "lastAccessed": 1777412067175,
       "type": "file"
     },
     {
       "path": "frontend/src/pages/HomePage.tsx",
-      "accessCount": 27,
-      "lastAccessed": 1776414609508,
+      "accessCount": 28,
+      "lastAccessed": 1777412269714,
+      "type": "file"
+    },
+    {
+      "path": "backend/main.py",
+      "accessCount": 28,
+      "lastAccessed": 1777412868684,
       "type": "file"
     },
     {
       "path": "frontend/src/pages/HistoryPage.tsx",
       "accessCount": 24,
       "lastAccessed": 1776849507207,
-      "type": "file"
-    },
-    {
-      "path": "backend/main.py",
-      "accessCount": 21,
-      "lastAccessed": 1776839411805,
       "type": "file"
     },
     {
@@ -134,26 +134,32 @@
     },
     {
       "path": "frontend/src/types/index.ts",
-      "accessCount": 16,
-      "lastAccessed": 1776076519454,
+      "accessCount": 17,
+      "lastAccessed": 1777412178983,
       "type": "file"
     },
     {
       "path": "frontend/src/pages/ConfigPage.tsx",
-      "accessCount": 14,
-      "lastAccessed": 1775582503406,
-      "type": "file"
-    },
-    {
-      "path": "backend/app/ai_models/base.py",
-      "accessCount": 13,
-      "lastAccessed": 1776414152543,
+      "accessCount": 17,
+      "lastAccessed": 1777412534881,
       "type": "file"
     },
     {
       "path": "frontend/src/App.tsx",
-      "accessCount": 13,
-      "lastAccessed": 1776414603553,
+      "accessCount": 16,
+      "lastAccessed": 1777412372936,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/ai_models/base.py",
+      "accessCount": 15,
+      "lastAccessed": 1777411754153,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/config.py",
+      "accessCount": 15,
+      "lastAccessed": 1777412868577,
       "type": "file"
     },
     {
@@ -163,22 +169,34 @@
       "type": "file"
     },
     {
+      "path": "backend/app/ai_models/__init__.py",
+      "accessCount": 12,
+      "lastAccessed": 1777398706690,
+      "type": "file"
+    },
+    {
       "path": "backend/app/api/reports.py",
       "accessCount": 11,
       "lastAccessed": 1775379626605,
       "type": "file"
     },
     {
-      "path": "backend/app/ai_models/__init__.py",
+      "path": "",
       "accessCount": 11,
-      "lastAccessed": 1776937149584,
+      "lastAccessed": 1777397004480,
+      "type": "directory"
+    },
+    {
+      "path": "frontend/src/api/client.ts",
+      "accessCount": 11,
+      "lastAccessed": 1777412857543,
       "type": "file"
     },
     {
-      "path": "",
-      "accessCount": 10,
-      "lastAccessed": 1775615863368,
-      "type": "directory"
+      "path": "backend/app/models/config.py",
+      "accessCount": 11,
+      "lastAccessed": 1777412868641,
+      "type": "file"
     },
     {
       "path": "backend/app/services/video_processor.py",
@@ -187,9 +205,15 @@
       "type": "file"
     },
     {
-      "path": "backend/app/config.py",
-      "accessCount": 8,
-      "lastAccessed": 1775379702305,
+      "path": "backend/app/models/video.py",
+      "accessCount": 10,
+      "lastAccessed": 1777399228129,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/services/ai_analyzer.py",
+      "accessCount": 9,
+      "lastAccessed": 1777395810330,
       "type": "file"
     },
     {
@@ -199,21 +223,15 @@
       "type": "file"
     },
     {
-      "path": "backend/app/services/ai_analyzer.py",
-      "accessCount": 8,
-      "lastAccessed": 1776414146089,
-      "type": "file"
-    },
-    {
       "path": "backend/app/ai_models/zhipu_model.py",
       "accessCount": 8,
       "lastAccessed": 1776414554710,
       "type": "file"
     },
     {
-      "path": "backend/app/models/video.py",
+      "path": "backend/requirements.txt",
       "accessCount": 8,
-      "lastAccessed": 1776916254058,
+      "lastAccessed": 1777411628762,
       "type": "file"
     },
     {
@@ -229,15 +247,9 @@
       "type": "file"
     },
     {
-      "path": "backend/app/models/config.py",
+      "path": "backend/app/database.py",
       "accessCount": 7,
-      "lastAccessed": 1775620648693,
-      "type": "file"
-    },
-    {
-      "path": "frontend/src/api/client.ts",
-      "accessCount": 7,
-      "lastAccessed": 1776830979997,
+      "lastAccessed": 1777398706744,
       "type": "file"
     },
     {
@@ -253,28 +265,22 @@
       "type": "file"
     },
     {
-      "path": "backend/requirements.txt",
+      "path": "backend/app/schemas/video.py",
       "accessCount": 6,
-      "lastAccessed": 1775379593373,
+      "lastAccessed": 1777411475173,
       "type": "file"
     },
     {
-      "path": "backend/app/database.py",
+      "path": "backend",
       "accessCount": 6,
-      "lastAccessed": 1776839384843,
-      "type": "file"
+      "lastAccessed": 1777412547237,
+      "type": "directory"
     },
     {
       "path": "backend/app/schemas/segment.py",
       "accessCount": 5,
       "lastAccessed": 1775379627722,
       "type": "file"
-    },
-    {
-      "path": "backend",
-      "accessCount": 5,
-      "lastAccessed": 1776850054631,
-      "type": "directory"
     },
     {
       "path": "backend/app/models/report.py",
@@ -295,15 +301,9 @@
       "type": "file"
     },
     {
-      "path": "backend/app/schemas/video.py",
-      "accessCount": 4,
-      "lastAccessed": 1775396128935,
-      "type": "file"
-    },
-    {
       "path": "backend/app/config/presets.py",
-      "accessCount": 3,
-      "lastAccessed": 1775378215643,
+      "accessCount": 4,
+      "lastAccessed": 1777397010098,
       "type": "file"
     },
     {
@@ -323,6 +323,12 @@
       "accessCount": 2,
       "lastAccessed": 1775375058717,
       "type": "file"
+    },
+    {
+      "path": "backend/app/ai_models",
+      "accessCount": 2,
+      "lastAccessed": 1777395800898,
+      "type": "directory"
     },
     {
       "path": "backend/app/__init__.py",
@@ -383,12 +389,6 @@
       "accessCount": 1,
       "lastAccessed": 1775374524313,
       "type": "file"
-    },
-    {
-      "path": "backend/app/ai_models",
-      "accessCount": 1,
-      "lastAccessed": 1775375290295,
-      "type": "directory"
     }
   ],
   "userDirectives": []

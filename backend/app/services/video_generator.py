@@ -6,7 +6,7 @@ from typing import Optional
 class VideoGeneratorService:
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.base_url = "https://visual.volcengineapi.com"
+        self.base_url = "https://ark.cn-beijing.volces.com/api/v3"
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
@@ -16,21 +16,26 @@ class VideoGeneratorService:
         self,
         image_url: str,
         prompt: str,
-        model: str = "seedance-2.0"
+        model: str = "seedance-2.0",
+        reference_images: Optional[list[str]] = None,
     ) -> dict:
         """Generate video from image + prompt"""
         try:
             # Submit generation request
+            payload = {
+                "model": model,
+                "image_url": image_url,
+                "prompt": prompt,
+                "duration": 5,  # 5 seconds
+                "aspect_ratio": "9:16",
+            }
+            if reference_images:
+                payload["reference_images"] = reference_images
+
             response = requests.post(
-                f"{self.base_url}/api/v1/video/generation",
+                f"{self.base_url}/video/generate",
                 headers=self.headers,
-                json={
-                    "model": model,
-                    "image_url": image_url,
-                    "prompt": prompt,
-                    "duration": 5,  # 5 seconds
-                    "aspect_ratio": "16:9"
-                },
+                json=payload,
                 timeout=30
             )
             response.raise_for_status()
@@ -51,16 +56,15 @@ class VideoGeneratorService:
         for attempt in range(max_attempts):
             try:
                 response = requests.get(
-                    f"{self.base_url}/api/v1/video/query",
+                    f"{self.base_url}/video/status/{task_id}",
                     headers=self.headers,
-                    params={"task_id": task_id},
                     timeout=10
                 )
                 response.raise_for_status()
                 data = response.json()
 
                 status = data.get("status")
-                if status == "success":
+                if status == "succeeded":
                     return {
                         "status": "completed",
                         "video_url": data.get("video_url"),

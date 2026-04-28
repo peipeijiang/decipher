@@ -179,6 +179,12 @@
       "type": "file"
     },
     {
+      "path": "src/pages/ProductPage.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1777412985830,
+      "type": "file"
+    },
+    {
       "path": "src/components/ui/MissingDataAlert.tsx",
       "accessCount": 1,
       "lastAccessed": 1776070995841,
