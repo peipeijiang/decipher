@@ -97,12 +97,12 @@ def frames_for_duration(duration: float, is_segment: bool = False) -> int:
     if is_segment:
         return 2 if duration < 15 else 3
     if duration < 15:
-        return 3
-    if duration < 60:
         return 6
+    if duration < 60:
+        return 12
     if duration < 180:
-        return 9
-    return 12
+        return 18
+    return 24
 
 
 def extract_frames(

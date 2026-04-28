@@ -1,0 +1,7 @@
+{
+  "tool_name": "Read",
+  "tool_input_preview": "{\"file_path\":\"/Users/shane/projects/tiktok-analyzer/frontend/src/pages/frontend/src/pages/AnalysisPage.tsx\",\"offset\":400,\"limit\":150}",
+  "error": "File does not exist. Note: your current working directory is /Users/shane/projects/tiktok-analyzer/frontend/src/pages.",
+  "timestamp": "2026-04-07T16:32:38.072Z",
+  "retry_count": 1
+}

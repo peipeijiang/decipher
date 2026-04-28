@@ -1,0 +1,45 @@
+{
+  "project": "TikTok Analyzer - Creative Rewrite Feature",
+  "stories": [
+    {
+      "id": "US-001",
+      "title": "Product description input + image upload UI",
+      "description": "Add a new tab or page with a product description textarea and image upload in the top-left corner",
+      "acceptanceCriteria": [
+        "A textarea input exists for product description",
+        "An image upload button exists in the top-left of the input area",
+        "Uploaded image previews inline next to the textarea",
+        "A '生成创意' submit button triggers the generation flow",
+        "TypeScript compiles with no errors"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-002",
+      "title": "Backend API endpoint for creative rewrite generation",
+      "description": "Create a POST /api/creative-rewrite endpoint that accepts product description + optional image, calls the LLM to generate creative angles then prompts",
+      "acceptanceCriteria": [
+        "POST /api/creative-rewrite endpoint exists and accepts multipart/form-data with 'description' and optional 'image' fields",
+        "LLM is called with a system prompt that generates 3-5 creative angles in the specified format (Hook, Concept, Why it fits)",
+        "LLM is called a second time per angle to generate the final video prompt in the specified format ([Style], [Prose], [Cinematography], [Lighting], [Actions], [Audio])",
+        "Response JSON contains array of {angle: {title, hook, concept, why}, prompt: string}",
+        "Endpoint handles errors gracefully and returns 500 with message on failure"
+      ],
+      "passes": false
+    },
+    {
+      "id": "US-003",
+      "title": "Creative results display UI",
+      "description": "Display generated creative angles and prompts in a clear, scannable layout",
+      "acceptanceCriteria": [
+        "Each creative angle renders as a numbered card with title, Hook, Concept, Why it fits sections",
+        "Each card has an expandable/collapsible section showing the final video prompt",
+        "The prompt section has a copy-to-clipboard button",
+        "Cards are visually distinct with color coding per angle",
+        "Loading state shown while generation is in progress",
+        "TypeScript compiles with no errors"
+      ],
+      "passes": false
+    }
+  ]
+}

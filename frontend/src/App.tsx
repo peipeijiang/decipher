@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage'
 import AnalysisPage from './pages/AnalysisPage'
 import HistoryPage from './pages/HistoryPage'
 import ConfigPage from './pages/ConfigPage'
+import CreativePage from './pages/CreativePage'
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/analysis/:videoId" element={<AnalysisPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/config" element={<ConfigPage />} />
+        <Route path="/creative" element={<CreativePage />} />
       </Routes>
     </BrowserRouter>
   )

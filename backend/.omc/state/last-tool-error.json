@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"python3 -c \\\"\\nimport sys\\nsys.path.insert(0, '.')\\nfrom app.database import SessionLocal\\nfrom app.models.config import ModelConfig\\n\\ndb = SessionLocal()\\ncfg = db.query(ModelConfig).fir...",
+  "error": "Exit code 1\nTraceback (most recent call last):\n  File \"<string>\", line 12, in <module>\nAttributeError: 'ModelConfig' object has no attribute 'analysis_api_key'\nanalysis_model: minimax\nvision_model: zhipu",
+  "timestamp": "2026-04-23T09:38:36.013Z",
+  "retry_count": 1
+}

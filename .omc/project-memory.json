@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "lastScanned": 1775362970043,
+  "lastScanned": 1777394267026,
   "projectRoot": "/Users/shane/projects/tiktok-analyzer",
   "techStack": {
     "languages": [],
@@ -28,30 +28,138 @@
     "gitBranches": null
   },
   "customNotes": [],
-  "directoryMap": {},
+  "directoryMap": {
+    "backend": {
+      "path": "backend",
+      "purpose": null,
+      "fileCount": 7,
+      "lastAccessed": 1777394267015,
+      "keyFiles": [
+        "LIGHT_THEME_FINAL.md",
+        "main.py",
+        "requirements.txt",
+        "tiktok_analyzer.db"
+      ]
+    },
+    "design-system": {
+      "path": "design-system",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1777394267016,
+      "keyFiles": []
+    },
+    "frontend": {
+      "path": "frontend",
+      "purpose": null,
+      "fileCount": 11,
+      "lastAccessed": 1777394267017,
+      "keyFiles": [
+        "index.html",
+        "package-lock.json",
+        "package.json",
+        "playwright.config.ts",
+        "postcss.config.js"
+      ]
+    },
+    "backend/app": {
+      "path": "backend/app",
+      "purpose": "Application code",
+      "fileCount": 3,
+      "lastAccessed": 1777394267017,
+      "keyFiles": [
+        "__init__.py",
+        "config.py",
+        "database.py"
+      ]
+    },
+    "frontend/dist": {
+      "path": "frontend/dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 1,
+      "lastAccessed": 1777394267018,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
+    "frontend/node_modules": {
+      "path": "frontend/node_modules",
+      "purpose": "Dependencies",
+      "fileCount": 2,
+      "lastAccessed": 1777394267022,
+      "keyFiles": []
+    }
+  },
   "hotPaths": [
     {
       "path": "frontend/src/pages/AnalysisPage.tsx",
-      "accessCount": 33,
-      "lastAccessed": 1775379964851,
+      "accessCount": 133,
+      "lastAccessed": 1776850309344,
       "type": "file"
     },
     {
       "path": "backend/app/tasks/analysis.py",
-      "accessCount": 24,
-      "lastAccessed": 1775379965204,
-      "type": "file"
-    },
-    {
-      "path": "backend/main.py",
-      "accessCount": 15,
-      "lastAccessed": 1775379603173,
+      "accessCount": 30,
+      "lastAccessed": 1776414228074,
       "type": "file"
     },
     {
       "path": "backend/app/api/videos.py",
+      "accessCount": 29,
+      "lastAccessed": 1776162185150,
+      "type": "file"
+    },
+    {
+      "path": "frontend/src/pages/HomePage.tsx",
+      "accessCount": 27,
+      "lastAccessed": 1776414609508,
+      "type": "file"
+    },
+    {
+      "path": "frontend/src/pages/HistoryPage.tsx",
+      "accessCount": 24,
+      "lastAccessed": 1776849507207,
+      "type": "file"
+    },
+    {
+      "path": "backend/main.py",
+      "accessCount": 21,
+      "lastAccessed": 1776839411805,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/ai_models/minimax_model.py",
+      "accessCount": 18,
+      "lastAccessed": 1776937217727,
+      "type": "file"
+    },
+    {
+      "path": "frontend/src/types/index.ts",
+      "accessCount": 16,
+      "lastAccessed": 1776076519454,
+      "type": "file"
+    },
+    {
+      "path": "frontend/src/pages/ConfigPage.tsx",
+      "accessCount": 14,
+      "lastAccessed": 1775582503406,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/ai_models/base.py",
+      "accessCount": 13,
+      "lastAccessed": 1776414152543,
+      "type": "file"
+    },
+    {
+      "path": "frontend/src/App.tsx",
+      "accessCount": 13,
+      "lastAccessed": 1776414603553,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/services/whisper.py",
       "accessCount": 12,
-      "lastAccessed": 1775379615387,
+      "lastAccessed": 1776414376020,
       "type": "file"
     },
     {
@@ -61,33 +169,51 @@
       "type": "file"
     },
     {
-      "path": "frontend/src/types/index.ts",
-      "accessCount": 10,
-      "lastAccessed": 1775379828766,
+      "path": "backend/app/ai_models/__init__.py",
+      "accessCount": 11,
+      "lastAccessed": 1776937149584,
       "type": "file"
     },
     {
       "path": "",
-      "accessCount": 9,
-      "lastAccessed": 1775376950295,
+      "accessCount": 10,
+      "lastAccessed": 1775615863368,
       "type": "directory"
     },
     {
       "path": "backend/app/services/video_processor.py",
-      "accessCount": 8,
-      "lastAccessed": 1775379593320,
-      "type": "file"
-    },
-    {
-      "path": "backend/app/ai_models/__init__.py",
-      "accessCount": 8,
-      "lastAccessed": 1775379627733,
+      "accessCount": 10,
+      "lastAccessed": 1776414152492,
       "type": "file"
     },
     {
       "path": "backend/app/config.py",
       "accessCount": 8,
       "lastAccessed": 1775379702305,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/schemas/report.py",
+      "accessCount": 8,
+      "lastAccessed": 1776076284505,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/services/ai_analyzer.py",
+      "accessCount": 8,
+      "lastAccessed": 1776414146089,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/ai_models/zhipu_model.py",
+      "accessCount": 8,
+      "lastAccessed": 1776414554710,
+      "type": "file"
+    },
+    {
+      "path": "backend/app/models/video.py",
+      "accessCount": 8,
+      "lastAccessed": 1776916254058,
       "type": "file"
     },
     {
@@ -103,6 +229,18 @@
       "type": "file"
     },
     {
+      "path": "backend/app/models/config.py",
+      "accessCount": 7,
+      "lastAccessed": 1775620648693,
+      "type": "file"
+    },
+    {
+      "path": "frontend/src/api/client.ts",
+      "accessCount": 7,
+      "lastAccessed": 1776830979997,
+      "type": "file"
+    },
+    {
       "path": "backend/app/ai_models/claude_model.py",
       "accessCount": 6,
       "lastAccessed": 1775376388922,
@@ -115,51 +253,15 @@
       "type": "file"
     },
     {
-      "path": "backend/app/ai_models/minimax_model.py",
-      "accessCount": 6,
-      "lastAccessed": 1775376423639,
-      "type": "file"
-    },
-    {
-      "path": "backend/app/ai_models/zhipu_model.py",
-      "accessCount": 6,
-      "lastAccessed": 1775376423741,
-      "type": "file"
-    },
-    {
-      "path": "backend/app/schemas/report.py",
-      "accessCount": 6,
-      "lastAccessed": 1775376665518,
-      "type": "file"
-    },
-    {
       "path": "backend/requirements.txt",
       "accessCount": 6,
       "lastAccessed": 1775379593373,
       "type": "file"
     },
     {
-      "path": "backend/app/services/whisper.py",
+      "path": "backend/app/database.py",
       "accessCount": 6,
-      "lastAccessed": 1775379614923,
-      "type": "file"
-    },
-    {
-      "path": "backend/app/services/ai_analyzer.py",
-      "accessCount": 6,
-      "lastAccessed": 1775379615187,
-      "type": "file"
-    },
-    {
-      "path": "backend/app/models/config.py",
-      "accessCount": 6,
-      "lastAccessed": 1775379702358,
-      "type": "file"
-    },
-    {
-      "path": "frontend/src/pages/ConfigPage.tsx",
-      "accessCount": 5,
-      "lastAccessed": 1775378223544,
+      "lastAccessed": 1776839384843,
       "type": "file"
     },
     {
@@ -169,21 +271,15 @@
       "type": "file"
     },
     {
-      "path": "frontend/src/pages/HomePage.tsx",
+      "path": "backend",
       "accessCount": 5,
-      "lastAccessed": 1775379898530,
-      "type": "file"
+      "lastAccessed": 1776850054631,
+      "type": "directory"
     },
     {
       "path": "backend/app/models/report.py",
       "accessCount": 4,
       "lastAccessed": 1775373953439,
-      "type": "file"
-    },
-    {
-      "path": "backend/app/database.py",
-      "accessCount": 4,
-      "lastAccessed": 1775375146718,
       "type": "file"
     },
     {
@@ -193,39 +289,15 @@
       "type": "file"
     },
     {
-      "path": "frontend/src/pages/HistoryPage.tsx",
-      "accessCount": 4,
-      "lastAccessed": 1775379603119,
-      "type": "file"
-    },
-    {
       "path": "backend/app/models/segment.py",
       "accessCount": 4,
       "lastAccessed": 1775379626938,
       "type": "file"
     },
     {
-      "path": "backend/app/models/video.py",
+      "path": "backend/app/schemas/video.py",
       "accessCount": 4,
-      "lastAccessed": 1775379724295,
-      "type": "file"
-    },
-    {
-      "path": "frontend/src/api/client.ts",
-      "accessCount": 3,
-      "lastAccessed": 1775370995096,
-      "type": "file"
-    },
-    {
-      "path": "backend",
-      "accessCount": 3,
-      "lastAccessed": 1775371658151,
-      "type": "directory"
-    },
-    {
-      "path": "frontend/src/App.tsx",
-      "accessCount": 3,
-      "lastAccessed": 1775371834222,
+      "lastAccessed": 1775396128935,
       "type": "file"
     },
     {
@@ -241,21 +313,9 @@
       "type": "file"
     },
     {
-      "path": "backend/app/schemas/video.py",
-      "accessCount": 2,
-      "lastAccessed": 1775373953805,
-      "type": "file"
-    },
-    {
       "path": "frontend/package.json",
       "accessCount": 2,
       "lastAccessed": 1775374435596,
-      "type": "file"
-    },
-    {
-      "path": "backend/app/ai_models/base.py",
-      "accessCount": 2,
-      "lastAccessed": 1775375040291,
       "type": "file"
     },
     {

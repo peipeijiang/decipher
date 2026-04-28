@@ -1,0 +1,79 @@
+{
+  "updatedAt": "2026-04-23T09:40:31.034Z",
+  "missions": [
+    {
+      "id": "session:03f57419-b7fd-4591-a369-1fa00ea54894:none",
+      "source": "session",
+      "name": "none",
+      "objective": "Session mission",
+      "createdAt": "2026-04-23T03:48:46.299Z",
+      "updatedAt": "2026-04-23T09:40:31.034Z",
+      "status": "done",
+      "workerCount": 2,
+      "taskCounts": {
+        "total": 2,
+        "pending": 0,
+        "blocked": 0,
+        "inProgress": 0,
+        "completed": 2,
+        "failed": 0
+      },
+      "agents": [
+        {
+          "name": "debugger:a59bc4c",
+          "role": "debugger",
+          "ownership": "a59bc4c7bb55051df",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-23T03:54:04.467Z"
+        },
+        {
+          "name": "debugger:a4cb86c",
+          "role": "debugger",
+          "ownership": "a4cb86c30f3232c6b",
+          "status": "done",
+          "currentStep": null,
+          "latestUpdate": "completed",
+          "completedSummary": null,
+          "updatedAt": "2026-04-23T09:40:31.034Z"
+        }
+      ],
+      "timeline": [
+        {
+          "id": "session-start:a59bc4c7bb55051df:2026-04-23T03:48:46.299Z",
+          "at": "2026-04-23T03:48:46.299Z",
+          "kind": "update",
+          "agent": "debugger:a59bc4c",
+          "detail": "started debugger:a59bc4c",
+          "sourceKey": "session-start:a59bc4c7bb55051df"
+        },
+        {
+          "id": "session-stop:a59bc4c7bb55051df:2026-04-23T03:54:04.467Z",
+          "at": "2026-04-23T03:54:04.467Z",
+          "kind": "completion",
+          "agent": "debugger:a59bc4c",
+          "detail": "completed",
+          "sourceKey": "session-stop:a59bc4c7bb55051df"
+        },
+        {
+          "id": "session-start:a4cb86c30f3232c6b:2026-04-23T09:38:56.675Z",
+          "at": "2026-04-23T09:38:56.675Z",
+          "kind": "update",
+          "agent": "debugger:a4cb86c",
+          "detail": "started debugger:a4cb86c",
+          "sourceKey": "session-start:a4cb86c30f3232c6b"
+        },
+        {
+          "id": "session-stop:a4cb86c30f3232c6b:2026-04-23T09:40:31.034Z",
+          "at": "2026-04-23T09:40:31.034Z",
+          "kind": "completion",
+          "agent": "debugger:a4cb86c",
+          "detail": "completed",
+          "sourceKey": "session-stop:a4cb86c30f3232c6b"
+        }
+      ]
+    }
+  ]
+}

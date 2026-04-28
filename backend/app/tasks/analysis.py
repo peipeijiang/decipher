@@ -18,13 +18,15 @@ _progress: dict[str, dict] = {}
 
 
 def get_analysis_progress(video_id: str) -> dict:
-    return _progress.get(video_id, {"upload": 0, "parse": 0, "strategy": 0, "prompt": 0})
+    return _progress.get(video_id, {"upload": 0, "parse": 0, "strategy": 0, "prompt": 0, "error": None})
 
 
-def _set_progress(video_id: str, **kwargs: int) -> None:
+def _set_progress(video_id: str, error: str | None = None, **kwargs: int) -> None:
     if video_id not in _progress:
-        _progress[video_id] = {"upload": 0, "parse": 0, "strategy": 0, "prompt": 0}
+        _progress[video_id] = {"upload": 0, "parse": 0, "strategy": 0, "prompt": 0, "error": None}
     _progress[video_id].update(kwargs)
+    if error is not None:
+        _progress[video_id]["error"] = error
 
 
 def run_analysis(video_id: str):
@@ -68,9 +70,12 @@ def run_analysis(video_id: str):
 
         # Step 4: Whisper transcription (lazy import — heavy)
         script = ""
+        whisper_segments = []
         if audio_path:
-            from app.services.whisper import transcribe
-            script = transcribe(audio_path)
+            from app.services.whisper import whisper_transcribe
+            result = whisper_transcribe(audio_path)
+            script = result.get("text", "")
+            whisper_segments = result.get("segments", [])
         _set_progress(video_id, parse=100, strategy=0)
 
         # Step 5: AI analysis
@@ -84,6 +89,7 @@ def run_analysis(video_id: str):
         ai_result = run_ai_analysis(
             frames=[str(f) for f in frames],
             script=script,
+            whisper_segments=whisper_segments,
             vision_model=vision_model,
             analysis_model=analysis_model,
         )
@@ -91,7 +97,13 @@ def run_analysis(video_id: str):
 
         report = db.query(Report).filter(Report.video_id == video_id).first()
         if report:
+            import json
             report.script = script
+            report.script_segments = json.dumps(
+                [{"start": s.get("start", 0), "end": s.get("end", 0), "text": s.get("text", "").strip()}
+                 for s in whisper_segments],
+                ensure_ascii=False,
+            ) if whisper_segments else None
             report.strategy = ai_result["strategy"]
             report.shots = ai_result["shots"]
             report.prompt = ai_result["prompt"]
@@ -105,9 +117,11 @@ def run_analysis(video_id: str):
             video = db.get(Video, video_id)
             if video:
                 video.status = "failed"
+                video.error = str(e)
                 db.commit()
         except Exception:
             pass
+        _set_progress(video_id, error=str(e))
     finally:
         db.close()
 

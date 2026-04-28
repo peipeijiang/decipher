@@ -16,6 +16,15 @@ except ImportError:
         "Also requires ffmpeg on PATH: brew install ffmpeg (macOS)"
     )
 
+try:
+    from opencc import OpenCC
+    _cc = OpenCC('t2s')  # Traditional to Simplified
+    OPENCC_AVAILABLE = True
+except ImportError:
+    _cc = None
+    OPENCC_AVAILABLE = False
+    logger.warning("opencc-python-reimplemented not installed. Traditional Chinese will not be converted.")
+
 # Cache loaded models to avoid reloading on each call (~500MB for 'small')
 _model_cache: dict[str, Any] = {}
 
@@ -33,7 +42,18 @@ def _load_model(model_size: str) -> Any:
     return _model_cache[model_size]
 
 
-def whisper_transcribe(audio_path: str, model_size: str = "small") -> dict:
+def _to_simplified(text: str) -> str:
+    """Convert traditional Chinese to simplified."""
+    if not OPENCC_AVAILABLE or not text:
+        return text
+    try:
+        return _cc.convert(text)
+    except Exception as e:
+        logger.warning("OpenCC conversion failed: %s", e)
+        return text
+
+
+def whisper_transcribe(audio_path: str, model_size: str = "large-v3-turbo", language: str | None = None) -> dict:
     """Transcribe audio using a local Whisper model.
 
     Args:
@@ -43,8 +63,8 @@ def whisper_transcribe(audio_path: str, model_size: str = "small") -> dict:
 
     Returns:
         dict with keys:
-            text      (str)  — full transcript
-            segments  (list) — per-segment dicts with start/end/text
+            text      (str)  — full transcript (simplified Chinese)
+            segments  (list) — per-segment dicts with start/end/text (simplified)
             language  (str)  — detected language code
         On failure returns {"text": "", "segments": [], "language": "", "error": "..."}
     """
@@ -63,10 +83,18 @@ def whisper_transcribe(audio_path: str, model_size: str = "small") -> dict:
     try:
         model = _load_model(model_size)
         logger.info("Transcribing '%s' with Whisper '%s'…", audio_path, model_size)
-        result = model.transcribe(audio_path, language="zh")
+        result = model.transcribe(audio_path, language=language)
+
+        # Convert traditional to simplified
+        full_text = _to_simplified(result.get("text", "").strip())
+        segments = result.get("segments", [])
+        for seg in segments:
+            if "text" in seg:
+                seg["text"] = _to_simplified(seg["text"])
+
         return {
-            "text": result.get("text", "").strip(),
-            "segments": result.get("segments", []),
+            "text": full_text,
+            "segments": segments,
             "language": result.get("language", ""),
         }
     except RuntimeError as e:

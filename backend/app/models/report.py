@@ -14,6 +14,7 @@ class Report(Base):
     shots: Mapped[str | None] = mapped_column(Text, nullable=True)
     prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     script: Mapped[str | None] = mapped_column(Text, nullable=True)
+    script_segments: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array of {start, end, text}
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

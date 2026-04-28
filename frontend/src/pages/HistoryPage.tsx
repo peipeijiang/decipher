@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { Film, Clock, Timer, Trash2, Inbox, RefreshCw } from 'lucide-react'
+import { StatusBadge } from '../components/ui/StatusBadge'
+import { ListSkeleton } from '../components/ui/LoadingSkeleton'
+import { MainLayout } from '../components/layout/MainLayout'
 
 interface HistoryItem {
   video_id: string
@@ -11,17 +15,11 @@ interface HistoryItem {
   platform?: string
 }
 
-const STATUS_BADGE: Record<HistoryItem['status'], { label: string; cls: string }> = {
-  pending:    { label: '等待中', cls: 'bg-gray-100 text-gray-600' },
-  processing: { label: '分析中', cls: 'bg-blue-100 text-blue-700' },
-  completed:  { label: '已完成', cls: 'bg-green-100 text-green-700' },
-  failed:     { label: '失败',   cls: 'bg-red-100 text-red-700' },
-}
-
 export default function HistoryPage() {
   const navigate = useNavigate()
   const [items, setItems] = useState<HistoryItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [reanalyzing, setReanalyzing] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     axios.get('/api/reports')
@@ -36,84 +34,99 @@ export default function HistoryPage() {
     setItems(prev => prev.filter(item => item.video_id !== videoId))
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-900">历史记录</h1>
-          <div className="flex gap-4">
-            <button
-              onClick={() => navigate('/config')}
-              className="text-gray-500 hover:text-gray-800 text-sm"
-            >
-              模型配置
-            </button>
-            <button
-              onClick={() => navigate('/')}
-              className="text-gray-600 hover:text-gray-900 text-sm font-medium"
-            >
-              返回首页
-            </button>
-          </div>
-        </div>
-      </header>
+  const handleReanalyze = async (videoId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setReanalyzing(prev => new Set(prev).add(videoId))
+    try {
+      await axios.post(`/api/videos/${videoId}/analyze`)
+      setItems(prev => prev.map(item =>
+        item.video_id === videoId ? { ...item, status: 'processing' } : item
+      ))
+      navigate(`/analysis/${videoId}`)
+    } catch {
+      setReanalyzing(prev => { const s = new Set(prev); s.delete(videoId); return s })
+    }
+  }
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+  return (
+    <MainLayout>
+      <div className="max-w-4xl mx-auto px-6 pt-10 pb-16">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-bold text-gray-900">历史记录</h1>
+          {!loading && items.length > 0 && (
+            <span className="text-sm text-gray-400">{items.length} 条记录</span>
+          )}
+        </div>
+
         {loading ? (
-          <div className="text-center text-gray-400 py-16">加载中...</div>
+          <ListSkeleton count={5} />
         ) : items.length === 0 ? (
-          <div className="text-center text-gray-500 py-16">
-            <div className="text-4xl mb-4">📭</div>
-            <div>暂无分析记录</div>
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+              <Inbox className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-base font-semibold text-gray-700 mb-1">暂无分析记录</h3>
+            <p className="text-sm text-gray-400 mb-6">还没有分析过任何视频，上传第一个视频开始体验吧！</p>
             <button
               onClick={() => navigate('/')}
-              className="mt-6 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+              className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors cursor-pointer"
             >
               上传第一个视频
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div className="text-sm text-gray-500 mb-4">共 {items.length} 条记录</div>
-            {items.map(item => {
-              const badge = STATUS_BADGE[item.status] ?? STATUS_BADGE.pending
-              return (
-                <div
-                  key={item.video_id}
-                  onClick={() => navigate(`/analysis/${item.video_id}`)}
-                  className="bg-white rounded-lg shadow-sm border border-gray-100 p-4 flex justify-between items-center cursor-pointer hover:shadow-md hover:border-gray-200 transition-all"
-                >
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="text-2xl flex-shrink-0">🎬</div>
-                    <div className="min-w-0">
-                      <div className="font-medium text-gray-900 truncate">{item.filename}</div>
-                      <div className="text-sm text-gray-500 mt-0.5">
+          <div className="space-y-2">
+            {items.map(item => (
+              <div
+                key={item.video_id}
+                onClick={() => navigate(`/analysis/${item.video_id}`)}
+                className="group bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex justify-between items-center hover:border-blue-300 hover:shadow-sm transition-all duration-150 cursor-pointer"
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                    <Film className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium text-gray-800 truncate">{item.filename}</div>
+                    <div className="flex items-center gap-3 text-xs text-gray-400 mt-0.5">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
                         {new Date(item.created_at).toLocaleString('zh-CN')}
-                        {item.duration && (
-                          <span className="ml-3">
-                            {Math.floor(item.duration / 60)}:{String(Math.round(item.duration % 60)).padStart(2, '0')}
-                          </span>
-                        )}
-                      </div>
+                      </span>
+                      {item.duration && (
+                        <span className="flex items-center gap-1">
+                          <Timer className="w-3 h-3" />
+                          {Math.floor(item.duration / 60)}:{String(Math.round(item.duration % 60)).padStart(2, '0')}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.cls}`}>
-                      {badge.label}
-                    </span>
-                    <button
-                      onClick={e => handleDelete(item.video_id, e)}
-                      className="text-red-500 hover:text-red-700 text-sm px-2 py-1 rounded hover:bg-red-50 transition-colors"
-                    >
-                      删除
-                    </button>
-                  </div>
                 </div>
-              )
-            })}
+                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                  <StatusBadge status={item.status} />
+                  {(item.status === 'failed' || item.status === 'pending') && (
+                    <button
+                      onClick={e => handleReanalyze(item.video_id, e)}
+                      disabled={reanalyzing.has(item.video_id)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 cursor-pointer"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${reanalyzing.has(item.video_id) ? 'animate-spin' : ''}`} />
+                      重新分析
+                    </button>
+                  )}
+                  <button
+                    onClick={e => handleDelete(item.video_id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-150 cursor-pointer"
+                    aria-label="删除"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </MainLayout>
   )
 }

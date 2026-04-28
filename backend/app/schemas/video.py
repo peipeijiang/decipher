@@ -25,6 +25,7 @@ class VideoOut(VideoBase):
     filesize: int
     duration: float | None
     status: str
+    error: str | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

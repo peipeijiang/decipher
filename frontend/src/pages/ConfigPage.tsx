@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { MainLayout } from '../components/layout/MainLayout'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -42,8 +42,6 @@ interface ProviderFields {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ConfigPage() {
-  const navigate = useNavigate()
-
   const [config, setConfig] = useState<CurrentConfig | null>(null)
   const [presets, setPresets] = useState<ProviderPreset[]>([])
   const [visionModel, setVisionModel] = useState('openai')
@@ -158,19 +156,11 @@ export default function ConfigPage() {
   const isConfigured = (pid: string) => config?.providers[pid]?.configured ?? false
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-bold text-gray-900">⚙️ 模型配置</h1>
-          <div className="flex gap-4 text-sm">
-            <button onClick={() => navigate('/history')} className="text-gray-500 hover:text-gray-800">历史记录</button>
-            <button onClick={() => navigate('/')} className="text-gray-600 hover:text-gray-900 font-medium">返回首页</button>
-          </div>
-        </div>
-      </header>
+    <MainLayout>
+      <div className="max-w-4xl mx-auto px-4 pt-8 pb-16">
+        <h1 className="text-3xl font-bold font-heading mb-8">模型配置</h1>
 
-      <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+        <div className="space-y-6">
 
         {/* Global Parameters */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -397,7 +387,8 @@ export default function ConfigPage() {
             {saving ? '保存中...' : saved ? '✓ 已保存' : '保存配置'}
           </button>
         </div>
-      </main>
+      </div>
     </div>
+    </MainLayout>
   )
 }
