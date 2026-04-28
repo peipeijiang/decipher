@@ -313,7 +313,7 @@ function PromptCard({ prompt }: { prompt: ProductPrompt }) {
     <div className="bg-white border border-gray-200 rounded-xl p-4">
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-gray-800">变体 {prompt.variant_index + 1}</span>
+          <span className="text-xs font-semibold text-gray-800">变体 {prompt.variant_index}</span>
           <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{prompt.template_name}</span>
         </div>
         <button
