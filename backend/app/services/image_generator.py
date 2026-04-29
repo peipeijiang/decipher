@@ -33,16 +33,33 @@ class ImageGeneratorService:
 
             # Check if synchronous response
             if "data" in data and len(data["data"]) > 0:
-                return {
-                    "status": "completed",
-                    "image_url": data["data"][0]["url"],
-                    "task_id": None
-                }
+                item = data["data"][0]
+                # Handle both url and b64_json responses
+                if "url" in item:
+                    return {
+                        "status": "completed",
+                        "image_url": item["url"],
+                        "task_id": None
+                    }
+                elif "b64_json" in item:
+                    # Save base64 image to temp file and return path
+                    import base64
+                    import tempfile
+                    import os
+                    image_data = base64.b64decode(item["b64_json"])
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f:
+                        f.write(image_data)
+                        temp_path = f.name
+                    return {
+                        "status": "completed",
+                        "image_url": f"file://{temp_path}",
+                        "task_id": None
+                    }
 
             # Async response - poll for result
             task_id = data.get("id")
             if not task_id:
-                raise Exception("No task_id or image_url in response")
+                raise Exception("No task_id, url, or b64_json in response")
 
             return self._poll_task(task_id)
 
@@ -63,11 +80,27 @@ class ImageGeneratorService:
 
                 status = data.get("status")
                 if status == "succeeded":
-                    return {
-                        "status": "completed",
-                        "image_url": data["data"][0]["url"],
-                        "task_id": task_id
-                    }
+                    item = data["data"][0]
+                    # Handle both url and b64_json responses
+                    if "url" in item:
+                        return {
+                            "status": "completed",
+                            "image_url": item["url"],
+                            "task_id": task_id
+                        }
+                    elif "b64_json" in item:
+                        # Save base64 image to temp file
+                        import base64
+                        import tempfile
+                        image_data = base64.b64decode(item["b64_json"])
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as f:
+                            f.write(image_data)
+                            temp_path = f.name
+                        return {
+                            "status": "completed",
+                            "image_url": f"file://{temp_path}",
+                            "task_id": task_id
+                        }
                 elif status == "failed":
                     raise Exception(f"Generation failed: {data.get('error', 'Unknown error')}")
 
@@ -84,6 +117,13 @@ class ImageGeneratorService:
     def download_image(self, image_url: str, save_path: str) -> str:
         """Download generated image to local path"""
         try:
+            # Handle local file:// URLs (b64_json responses saved to temp file)
+            if image_url.startswith("file://"):
+                import shutil
+                src = image_url[len("file://"):]
+                shutil.copy2(src, save_path)
+                return save_path
+
             response = requests.get(image_url, timeout=30)
             response.raise_for_status()
 
