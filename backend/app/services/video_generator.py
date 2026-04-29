@@ -19,21 +19,28 @@ class VideoGeneratorService:
         model: str = "seedance-2.0",
         reference_images: Optional[list[str]] = None,
     ) -> dict:
-        """Generate video from image + prompt"""
+        """Generate video from image + prompt (Seedance 2.0 via Volcengine)"""
         try:
-            # Submit generation request
-            payload = {
-                "model": model,
-                "image_url": image_url,
-                "prompt": prompt,
-                "duration": 5,  # 5 seconds
-                "aspect_ratio": "9:16",
-            }
+            # Build content array
+            content = [{"type": "text", "text": prompt}]
+            if image_url:
+                content.append({"type": "image_url", "image_url": image_url})
             if reference_images:
-                payload["reference_images"] = reference_images
+                for ref_img in reference_images:
+                    content.append({"type": "image_url", "image_url": ref_img})
+
+            # Submit generation request with correct endpoint and format
+            payload = {
+                "model": "dreamina-seedance-2-0-260128",
+                "content": content,
+                "ratio": "9:16",
+                "resolution": "720p",
+                "duration": 5,
+                "generate_audio": False
+            }
 
             response = requests.post(
-                f"{self.base_url}/video/generate",
+                f"{self.base_url}/contents/generations/tasks",
                 headers=self.headers,
                 json=payload,
                 timeout=30
@@ -56,7 +63,7 @@ class VideoGeneratorService:
         for attempt in range(max_attempts):
             try:
                 response = requests.get(
-                    f"{self.base_url}/video/status/{task_id}",
+                    f"{self.base_url}/contents/generations/tasks/{task_id}",
                     headers=self.headers,
                     timeout=10
                 )
@@ -65,9 +72,10 @@ class VideoGeneratorService:
 
                 status = data.get("status")
                 if status == "succeeded":
+                    video_url = data.get("content", {}).get("video_url")
                     return {
                         "status": "completed",
-                        "video_url": data.get("video_url"),
+                        "video_url": video_url,
                         "task_id": task_id
                     }
                 elif status == "failed":
