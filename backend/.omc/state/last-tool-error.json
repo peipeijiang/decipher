@@ -1,7 +1,7 @@
 {
-  "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"cd /Users/shane/projects/tiktok-analyzer && git add backend/app/api/products.py && git commit -m \\\"fix: use getattr for products_dir to prevent AttributeError on delete\\\"\",\"description\":\"C...",
-  "error": "Exit code 1\nOn branch main\nChanges not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n  (use \"git restore <file>...\" to discard changes in working directory)\n\tmodified:   .omc/project-memory.json\n\tmodified:   backend/.omc/state/idle-notif-cooldown.json\n\tmodified:   backend/.omc/state/last-tool-error.json\n\tmodified:   backend/.omc/state/mission-state.json\n\tmodified:   backend/.omc/state/subagent-tracking.json\n\tmodified:   backend/tiktok_analyzer.db\n\tmodified:   fr...",
-  "timestamp": "2026-04-29T07:13:22.869Z",
+  "tool_name": "WebFetch",
+  "tool_input_preview": "{\"url\":\"https://www.newsminer.com/online_features/press_releases/fal-launches-happyhorse-1-0-the-1-ranked-ai-video-model-as-official-api-partner/article_547c398f-a8d4-5829-9fbe-b4ef9c61e59d.html\",\"pro...",
+  "error": "Client network socket disconnected before secure TLS connection was established",
+  "timestamp": "2026-04-29T12:41:45.267Z",
   "retry_count": 1
 }

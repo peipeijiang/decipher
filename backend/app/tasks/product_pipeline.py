@@ -291,9 +291,12 @@ def _generate_video_veo(prompt: str, image_url: str, providers: dict) -> dict:
     if image_url:
         content_parts.append({"type": "image_url", "image_url": {"url": image_url}})
 
-    logger.info("Submitting Veo 3.1 video generation via LaoZhang")
+    # Use veo-3.1-fl for image-to-video, veo-3.1 for text-to-video
+    model = "veo-3.1-fl" if image_url else "veo-3.1"
+
+    logger.info("Submitting Veo 3.1 video generation via LaoZhang (model: %s)", model)
     response = client.chat.completions.create(
-        model="veo-3.1",
+        model=model,
         messages=[{"role": "user", "content": content_parts}],
         stream=True,
     )
@@ -305,11 +308,13 @@ def _generate_video_veo(prompt: str, image_url: str, providers: dict) -> dict:
             continue
         delta = chunk.choices[0].delta
         if delta and delta.content:
-            # The final streamed content typically contains the video URL
-            video_url = delta.content.strip()
+            content_text = delta.content.strip()
+            # Video URL is in the final chunk
+            if "http" in content_text:
+                video_url = content_text
 
     if video_url and video_url.startswith("http"):
-        return {"status": "completed", "video_url": video_url}
+        return {"status": "completed", "video_url": video_url, "task_id": None}
 
     raise RuntimeError(f"Veo 3.1 did not return a valid video URL. Last content: {video_url}")
 

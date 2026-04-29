@@ -277,7 +277,7 @@ export default function ConfigPage() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
               >
                 <option value="seedance-2.0">🎥 Seedance 2.0 (需要火山引擎API)</option>
-                <option value="happyhorse-1.0">🐴 HappyHorse 1.0</option>
+                <option value="happyhorse-1.0">🐴 Wan 2.6 (阿里云)</option>
               </select>
             </div>
           </div>
@@ -383,7 +383,7 @@ export default function ConfigPage() {
                         <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">用于 HappyHorse 视频生成</p>
+                    <p className="text-xs text-gray-400 mt-0.5">用于 Wan 2.6 视频生成</p>
                   </div>
                 </div>
                 <a
