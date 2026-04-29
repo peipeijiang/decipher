@@ -41,3 +41,6 @@ export const getProductImageUrl = (productId: string, filename: string) =>
 
 export const getGeneratedImageUrl = (promptId: string) =>
   `${API_BASE}/api/products/prompts/${promptId}/image`
+
+export const updatePrompt = (promptId: string, promptText: string) =>
+  api.patch(`/api/products/prompts/${promptId}`, { prompt_text: promptText }).then(r => r.data)

@@ -149,3 +149,15 @@ def get_generated_video(prompt_id: str, db: Session = Depends(get_db)):
     if not pp or not pp.video_url:
         raise HTTPException(404, "Generated video not found")
     return {"video_url": pp.video_url, "status": pp.video_status}
+
+
+@router.patch("/prompts/{prompt_id}", response_model=ProductPromptOut)
+def update_prompt(prompt_id: str, body: dict, db: Session = Depends(get_db)):
+    pp = db.get(ProductPrompt, prompt_id)
+    if not pp:
+        raise HTTPException(404, "Prompt not found")
+    if "prompt_text" in body:
+        pp.prompt_text = body["prompt_text"]
+    db.commit()
+    db.refresh(pp)
+    return pp
