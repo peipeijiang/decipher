@@ -90,11 +90,13 @@ def generate_prompt_variants(
 ) -> list[dict]:
     """Generate 10 prompt variants using the analysis model."""
     prompt = build_generation_prompt(product_doc, template_key)
+    logger.info("Generating prompt variants, prompt length: %d", len(prompt))
     raw = analysis_model.analyze_text(prompt, task="direct")
+    logger.info("Prompt generation raw response length: %d, preview: %s", len(raw) if raw else 0, repr(raw[:300]) if raw else "empty")
     parsed = analysis_model._parse_json_safe(raw)
 
-    if isinstance(parsed, list):
+    if isinstance(parsed, list) and len(parsed) > 0:
         return parsed
 
-    logger.warning("Prompt generation did not return a list, raw: %s", raw[:200] if raw else "empty")
-    return []
+    logger.error("Prompt generation failed to return a valid list. Parsed type: %s, raw preview: %s", type(parsed).__name__, raw[:500] if raw else "empty")
+    raise RuntimeError(f"Prompt generation returned {type(parsed).__name__} instead of list. AI response may be malformed.")
