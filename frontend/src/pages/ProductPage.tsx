@@ -247,6 +247,47 @@ export default function ProductPage() {
           </div>
         )}
 
+        {/* Image Analysis Results */}
+        {doc && doc.images && doc.images.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-800 mb-3">图片识别结果</h2>
+            <div className="space-y-4">
+              {doc.images.map(img => (
+                <div key={img.index} className="bg-white rounded-lg border border-gray-200 p-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                      <img
+                        src={getProductImageUrl(id!, img.filename)}
+                        alt={`图片 ${img.index}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900">图片 {img.index}</span>
+                        <span className="text-gray-400">·</span>
+                        <span className="text-gray-500">{img.filename}</span>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-blue-600 mb-1">🔍 基础识别</div>
+                        <div className="text-gray-700 leading-relaxed">{img.basic_recognition}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-green-600 mb-1">📦 产品理解</div>
+                        <div className="text-gray-700 leading-relaxed">{img.product_understanding}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-purple-600 mb-1">🎬 创意建议</div>
+                        <div className="text-gray-700 leading-relaxed">{img.creative_usage}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* PLACEHOLDER_PROMPTS */}
 
         {/* Prompt List Section */}
