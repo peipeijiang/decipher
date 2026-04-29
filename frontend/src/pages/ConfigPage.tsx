@@ -264,8 +264,8 @@ export default function ConfigPage() {
                 onChange={e => { setImageModel(e.target.value); mark() }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
               >
-                <option value="laozhang-image-2-vip">🖼️ 老张图片生成 2.0 VIP</option>
-                <option value="veo-3.1">🎨 Veo 3.1</option>
+                <option value="laozhang-image-2-vip">🖼️ 老张图片生成 2.0 VIP (推荐)</option>
+                <option value="veo-3.1">🎨 Veo 3.1 (需要特定API访问权限)</option>
               </select>
             </div>
             <div>
@@ -276,7 +276,7 @@ export default function ConfigPage() {
                 onChange={e => { setVideoModel(e.target.value); mark() }}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
               >
-                <option value="seedance-2.0">🎥 Seedance 2.0</option>
+                <option value="seedance-2.0">🎥 Seedance 2.0 (需要火山引擎API)</option>
                 <option value="happyhorse-1.0">🐴 HappyHorse 1.0</option>
               </select>
             </div>
