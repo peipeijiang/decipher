@@ -34,12 +34,16 @@ def analyze_product_images(
     vision_model: AIModel,
 ) -> list[dict]:
     """Run 3-layer AI recognition on each product image."""
+    import time
+
     results = []
     for path in image_paths:
         try:
             if vision_model.SUPPORTS_VISION:
                 # Use vision model to analyze the image
                 frame_results = vision_model.analyze_frames([path])
+                # Rate limit: wait between API calls to avoid 429
+                time.sleep(2)
                 # Now do a text analysis with the 3-layer prompt
                 context = json.dumps(frame_results[0] if frame_results else {}, ensure_ascii=False)
                 raw = vision_model.analyze_text(
@@ -58,6 +62,8 @@ def analyze_product_images(
                 "product_understanding": parsed.get("product_understanding", ""),
                 "creative_usage": parsed.get("creative_usage", ""),
             })
+            # Rate limit: wait before next image
+            time.sleep(2)
         except Exception as e:
             logger.warning("Image analysis failed for %s: %s", path, e)
             results.append({
