@@ -177,7 +177,7 @@ def generate_image_for_prompt(prompt_id: str):
 
 
 def generate_video_for_prompt(prompt_id: str):
-    """Generate a video for a single prompt using SeedDance 2.0."""
+    """Generate a video for a single prompt using selected video generation model."""
     db: Session = SessionLocal()
     try:
         pp = db.get(ProductPrompt, prompt_id)
@@ -190,27 +190,12 @@ def generate_video_for_prompt(prompt_id: str):
         pp.video_status = "generating"
         db.commit()
 
-        from app.services.video_generator import VideoGeneratorService
-
         # Read from DB config_json first, fallback to .env settings
         cfg = db.query(ModelConfig).first()
         providers = cfg.get_providers() if cfg else {}
 
         # Get selected video model from config
         video_model = cfg.video_gen_model if cfg else "seedance-2.0"
-
-        # Choose API key and endpoint based on model
-        if video_model == "happyhorse-1.0":
-            api_key = providers.get("_aliyun_api_key") or getattr(settings, 'aliyun_api_key', '')
-            base_url = "https://dashscope.aliyuncs.com/api/v1"
-        else:  # seedance-2.0
-            api_key = providers.get("_volcengine_api_key") or getattr(settings, 'volcengine_api_key', '')
-            base_url = "https://ark.cn-beijing.volces.com/api/v3"
-
-        if not api_key:
-            raise RuntimeError(f"API key not configured for {video_model}")
-
-        service = VideoGeneratorService(api_key=api_key, base_url=base_url)
 
         # Use generated image as input (if available), otherwise use first product image
         if pp.image_url:
@@ -224,11 +209,13 @@ def generate_video_for_prompt(prompt_id: str):
             # For local files, we'd need to upload them first - for now, skip
             raise RuntimeError("Video generation requires a generated image first")
 
-        result = service.generate_video(
-            image_url=image_url,
-            prompt=pp.prompt_text,
-            model=video_model,
-        )
+        # Route to appropriate video generation service based on model
+        if video_model == "veo-3.1":
+            result = _generate_video_veo(pp.prompt_text, image_url, providers)
+        elif video_model == "happyhorse-1.0":
+            result = _generate_video_aliyun(pp.prompt_text, image_url, providers)
+        else:  # seedance-2.0 (default)
+            result = _generate_video_volcengine(pp.prompt_text, image_url, providers)
 
         if result["status"] == "completed":
             pp.video_url = result.get("video_url", "")
@@ -240,8 +227,14 @@ def generate_video_for_prompt(prompt_id: str):
                 output_dir = Path(products_base) / product.id / "videos"
                 output_dir.mkdir(parents=True, exist_ok=True)
                 output_path = output_dir / f"prompt_{pp.variant_index}_video.mp4"
-                saved = service.download_video(pp.video_url, str(output_path))
-                pp.video_path = saved
+
+                # Download video
+                import requests
+                response = requests.get(pp.video_url, timeout=60)
+                response.raise_for_status()
+                with open(output_path, "wb") as f:
+                    f.write(response.content)
+                pp.video_path = str(output_path)
         else:
             pp.video_status = "failed"
 
@@ -258,3 +251,134 @@ def generate_video_for_prompt(prompt_id: str):
             pass
     finally:
         db.close()
+
+
+# ---------------------------------------------------------------------------
+# Video generation backends
+# ---------------------------------------------------------------------------
+
+def _generate_video_volcengine(prompt: str, image_url: str, providers: dict) -> dict:
+    """Seedance 2.0 via Volcengine (default)."""
+    from app.services.video_generator import VideoGeneratorService
+
+    api_key = providers.get("_volcengine_api_key") or getattr(settings, 'volcengine_api_key', '')
+    if not api_key:
+        raise RuntimeError("volcengine_api_key not configured for Seedance 2.0")
+
+    service = VideoGeneratorService(
+        api_key=api_key,
+        base_url="https://ark.cn-beijing.volces.com/api/v3",
+    )
+    return service.generate_video(image_url=image_url, prompt=prompt, model="seedance-2.0")
+
+
+def _generate_video_veo(prompt: str, image_url: str, providers: dict) -> dict:
+    """Veo 3.1 via LaoZhang proxy (OpenAI Chat Completions streaming)."""
+    from openai import OpenAI
+
+    api_key = providers.get("_laozhang_api_key") or getattr(settings, 'laozhang_api_key', '')
+    if not api_key:
+        raise RuntimeError("laozhang_api_key not configured for Veo 3.1")
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.laozhang.ai/v1",
+        timeout=300.0,
+    )
+
+    # Build message content
+    content_parts: list[dict] = [{"type": "text", "text": prompt}]
+    if image_url:
+        content_parts.append({"type": "image_url", "image_url": {"url": image_url}})
+
+    logger.info("Submitting Veo 3.1 video generation via LaoZhang")
+    response = client.chat.completions.create(
+        model="veo-3.1",
+        messages=[{"role": "user", "content": content_parts}],
+        stream=True,
+    )
+
+    # Stream through chunks; the final chunk contains the video URL
+    video_url = None
+    for chunk in response:
+        if not chunk.choices:
+            continue
+        delta = chunk.choices[0].delta
+        if delta and delta.content:
+            # The final streamed content typically contains the video URL
+            video_url = delta.content.strip()
+
+    if video_url and video_url.startswith("http"):
+        return {"status": "completed", "video_url": video_url}
+
+    raise RuntimeError(f"Veo 3.1 did not return a valid video URL. Last content: {video_url}")
+
+
+def _generate_video_aliyun(prompt: str, image_url: str, providers: dict) -> dict:
+    """Wan 2.6 (HappyHorse) via Alibaba Cloud DashScope async task API."""
+    import requests
+    import time
+
+    api_key = providers.get("_aliyun_api_key") or getattr(settings, 'aliyun_api_key', '')
+    if not api_key:
+        raise RuntimeError("aliyun_api_key not configured for Wan 2.6 (HappyHorse)")
+
+    base_url = "https://dashscope.aliyuncs.com/api/v1"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+        "X-DashScope-Async": "enable",
+    }
+
+    # Submit async video generation task
+    payload = {
+        "model": "wan2.6-t2v",
+        "input": {"prompt": prompt},
+        "parameters": {
+            "resolution": "1080p",
+            "duration": 5,
+        },
+    }
+
+    logger.info("Submitting Wan 2.6 video generation task via DashScope")
+    resp = requests.post(
+        f"{base_url}/services/aigc/video-generation/video-synthesis",
+        headers=headers,
+        json=payload,
+        timeout=30,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+
+    task_id = data.get("output", {}).get("task_id")
+    if not task_id:
+        raise RuntimeError(f"DashScope did not return task_id: {data}")
+
+    logger.info("Wan 2.6 task submitted: %s", task_id)
+
+    # Poll for completion (drop the async header for polling)
+    poll_headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    for attempt in range(120):
+        time.sleep(3)
+        poll_resp = requests.get(
+            f"{base_url}/tasks/{task_id}",
+            headers=poll_headers,
+            timeout=10,
+        )
+        poll_resp.raise_for_status()
+        poll_data = poll_resp.json()
+
+        status = poll_data.get("output", {}).get("task_status", "").upper()
+        if status == "SUCCEEDED":
+            video_url = poll_data.get("output", {}).get("video_url")
+            return {"status": "completed", "video_url": video_url, "task_id": task_id}
+        elif status == "FAILED":
+            msg = poll_data.get("output", {}).get("message", "Unknown error")
+            raise RuntimeError(f"Wan 2.6 generation failed: {msg}")
+        # PENDING / RUNNING → keep polling
+
+    raise RuntimeError("Wan 2.6 video generation timeout after 360s")
