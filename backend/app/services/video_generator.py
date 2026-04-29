@@ -31,7 +31,7 @@ class VideoGeneratorService:
 
             # Submit generation request with correct endpoint and format
             payload = {
-                "model": "dreamina-seedance-2-0-260128",
+                "model": "doubao-seedance-2-0-260128",
                 "content": content,
                 "ratio": "9:16",
                 "resolution": "720p",
