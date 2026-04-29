@@ -212,8 +212,8 @@ def generate_video_for_prompt(prompt_id: str):
         # Route to appropriate video generation service based on model
         if video_model == "veo-3.1":
             result = _generate_video_veo(pp.prompt_text, image_url, providers)
-        elif video_model == "happyhorse-1.0":
-            result = _generate_video_aliyun(pp.prompt_text, image_url, providers)
+        elif video_model in ["happyhorse-1.0", "wan-2.6"]:
+            result = _generate_video_aliyun(pp.prompt_text, image_url, providers, model_name=video_model)
         else:  # seedance-2.0 (default)
             result = _generate_video_volcengine(pp.prompt_text, image_url, providers)
 
@@ -319,14 +319,14 @@ def _generate_video_veo(prompt: str, image_url: str, providers: dict) -> dict:
     raise RuntimeError(f"Veo 3.1 did not return a valid video URL. Last content: {video_url}")
 
 
-def _generate_video_aliyun(prompt: str, image_url: str, providers: dict) -> dict:
-    """Wan 2.6 (HappyHorse) via Alibaba Cloud DashScope async task API."""
+def _generate_video_aliyun(prompt: str, image_url: str, providers: dict, model_name: str = "wan-2.6") -> dict:
+    """Wan 2.6 / HappyHorse 1.0 via Alibaba Cloud DashScope async task API."""
     import requests
     import time
 
     api_key = providers.get("_aliyun_api_key") or getattr(settings, 'aliyun_api_key', '')
     if not api_key:
-        raise RuntimeError("aliyun_api_key not configured for Wan 2.6 (HappyHorse)")
+        raise RuntimeError("aliyun_api_key not configured")
 
     base_url = "https://dashscope.aliyuncs.com/api/v1"
     headers = {
@@ -335,9 +335,12 @@ def _generate_video_aliyun(prompt: str, image_url: str, providers: dict) -> dict
         "X-DashScope-Async": "enable",
     }
 
+    # Map model selection to DashScope model name
+    dashscope_model = "happyhorse-1.0-t2v" if model_name == "happyhorse-1.0" else "wan2.6-t2v"
+
     # Submit async video generation task
     payload = {
-        "model": "wan2.6-t2v",
+        "model": dashscope_model,
         "input": {"prompt": prompt},
         "parameters": {
             "resolution": "1080p",
@@ -345,7 +348,7 @@ def _generate_video_aliyun(prompt: str, image_url: str, providers: dict) -> dict
         },
     }
 
-    logger.info("Submitting Wan 2.6 video generation task via DashScope")
+    logger.info("Submitting %s video generation task via DashScope (model: %s)", model_name, dashscope_model)
     resp = requests.post(
         f"{base_url}/services/aigc/video-generation/video-synthesis",
         headers=headers,
