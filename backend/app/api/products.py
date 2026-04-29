@@ -61,7 +61,8 @@ def delete_product(product_id: str, db: Session = Depends(get_db)):
     db.commit()
     # Clean up files
     from app.config import settings
-    product_dir = Path(settings.products_dir) / product_id
+    products_base = getattr(settings, 'products_dir', 'products')
+    product_dir = Path(products_base) / product_id
     if product_dir.exists():
         import shutil
         shutil.rmtree(product_dir, ignore_errors=True)
