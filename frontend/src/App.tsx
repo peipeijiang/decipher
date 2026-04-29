@@ -5,6 +5,7 @@ import HistoryPage from './pages/HistoryPage'
 import ConfigPage from './pages/ConfigPage'
 import CreativePage from './pages/CreativePage'
 import ProductPage from './pages/ProductPage'
+import ProductListPage from './pages/ProductListPage'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/config" element={<ConfigPage />} />
         <Route path="/creative" element={<CreativePage />} />
+        <Route path="/products" element={<ProductListPage />} />
         <Route path="/product" element={<ProductPage />} />
         <Route path="/product/:id" element={<ProductPage />} />
       </Routes>
