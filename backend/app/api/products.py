@@ -21,6 +21,14 @@ router = APIRouter(prefix="/api/products", tags=["products"])
 
 @router.post("/create", response_model=ProductOut)
 def create_product(body: ProductCreate, db: Session = Depends(get_db)):
+    # Check if URL already exists (not failed)
+    existing = db.query(Product).filter(
+        Product.url == body.url,
+        Product.status != "failed",
+    ).first()
+    if existing:
+        return existing
+
     product = Product(url=body.url)
     db.add(product)
     db.commit()
