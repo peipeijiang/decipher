@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MainLayout } from '../components/layout/MainLayout'
-import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle } from 'lucide-react'
+import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X } from 'lucide-react'
 import {
   createProduct,
   getProduct,
@@ -12,6 +12,7 @@ import {
   triggerVideoGeneration,
   getProductImageUrl,
   getGeneratedImageUrl,
+  updatePrompt,
 } from '../api/client'
 import type { Product, ProductPrompt, ProductProgress, ProductDoc } from '../types/product'
 
@@ -299,7 +300,15 @@ export default function ProductPage() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {prompts.map(prompt => (
-                <PromptCard key={prompt.id} prompt={prompt} />
+                <PromptCard
+                  key={prompt.id}
+                  prompt={prompt}
+                  onUpdate={async () => {
+                    if (id) {
+                      try { setPrompts(await getProductPrompts(id)) } catch { /* ignore */ }
+                    }
+                  }}
+                />
               ))}
             </div>
           </div>
@@ -309,14 +318,42 @@ export default function ProductPage() {
   )
 }
 
-function PromptCard({ prompt }: { prompt: ProductPrompt }) {
+function PromptCard({ prompt, onUpdate }: { prompt: ProductPrompt; onUpdate: () => void }) {
   const [copied, setCopied] = useState(false)
   const [generating, setGenerating] = useState<'image' | 'video' | null>(null)
+  const [expanded, setExpanded] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editText, setEditText] = useState(prompt.prompt_text)
+  const [saving, setSaving] = useState(false)
 
   const handleCopy = () => {
     navigator.clipboard.writeText(prompt.prompt_text)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const handleEdit = () => {
+    setEditText(prompt.prompt_text)
+    setEditing(true)
+    setExpanded(true)
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await updatePrompt(prompt.id, editText)
+      setEditing(false)
+      onUpdate()
+    } catch (e: any) {
+      alert('保存失败：' + (e.response?.data?.detail || e.message))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCancel = () => {
+    setEditText(prompt.prompt_text)
+    setEditing(false)
   }
 
   const handleGenerateImage = async () => {
@@ -350,6 +387,9 @@ function PromptCard({ prompt }: { prompt: ProductPrompt }) {
     return null
   }
 
+  const shouldTruncate = prompt.prompt_text.length > 100
+  const displayText = expanded || !shouldTruncate ? prompt.prompt_text : prompt.prompt_text.slice(0, 100) + '...'
+
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
       <div className="flex items-start justify-between mb-2">
@@ -357,18 +397,78 @@ function PromptCard({ prompt }: { prompt: ProductPrompt }) {
           <span className="text-xs font-semibold text-gray-800">变体 {prompt.variant_index}</span>
           <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{prompt.template_name}</span>
         </div>
-        <button
-          onClick={handleCopy}
-          className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
-        >
-          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-          {copied ? '已复制' : '复制'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleEdit}
+            disabled={editing}
+            className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 transition-colors disabled:opacity-40"
+          >
+            <Edit className="w-3 h-3" />
+            编辑
+          </button>
+          <button
+            onClick={handleCopy}
+            className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
+          >
+            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+            {copied ? '已复制' : '复制'}
+          </button>
+        </div>
       </div>
 
-      <p className="text-xs text-gray-700 leading-relaxed mb-3 line-clamp-3">
-        {prompt.prompt_text.slice(0, 100)}...
-      </p>
+      {editing ? (
+        <div className="mb-3">
+          <textarea
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+            className="w-full text-xs text-gray-700 leading-relaxed border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            rows={4}
+            style={{ minHeight: '100px' }}
+          />
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+              保存
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={saving}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              <X className="w-3 h-3" />
+              取消
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="text-xs text-gray-700 leading-relaxed mb-2 whitespace-pre-wrap">
+            {displayText}
+          </p>
+          {shouldTruncate && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 mb-3 transition-colors"
+            >
+              {expanded ? (
+                <>
+                  <ChevronUp className="w-3 h-3" />
+                  收起
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="w-3 h-3" />
+                  展开
+                </>
+              )}
+            </button>
+          )}
+        </>
+      )}
 
       <div className="flex gap-2">
         <button
