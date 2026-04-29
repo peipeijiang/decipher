@@ -15,6 +15,8 @@ interface CurrentConfig {
   id: string
   vision_model: string
   analysis_model: string
+  image_model: string
+  video_model: string
   providers: Record<string, ProviderStatus>
   temperature: number
   max_tokens: number
@@ -48,6 +50,8 @@ export default function ConfigPage() {
   const [presets, setPresets] = useState<ProviderPreset[]>([])
   const [visionModel, setVisionModel] = useState('openai')
   const [analysisModel, setAnalysisModel] = useState('openai')
+  const [imageModel, setImageModel] = useState('laozhang-image-2-vip')
+  const [videoModel, setVideoModel] = useState('seedance-2.0')
   const [temperature, setTemperature] = useState(0.7)
   const [maxTokens, setMaxTokens] = useState(4096)
   const [providerFields, setProviderFields] = useState<Record<string, ProviderFields>>({})
@@ -71,6 +75,8 @@ export default function ConfigPage() {
       setPresets(ps)
       setVisionModel(c.vision_model)
       setAnalysisModel(c.analysis_model)
+      setImageModel(c.image_model)
+      setVideoModel(c.video_model)
       setTemperature(c.temperature)
       setMaxTokens(c.max_tokens)
 
@@ -133,6 +139,8 @@ export default function ConfigPage() {
       const res = await axios.patch<CurrentConfig>('/api/config/models', {
         vision_model: visionModel,
         analysis_model: analysisModel,
+        image_model: imageModel,
+        video_model: videoModel,
         temperature,
         max_tokens: maxTokens,
         providers,
@@ -141,6 +149,8 @@ export default function ConfigPage() {
         ...(volcengineApiKey ? { volcengine_api_key: volcengineApiKey } : {}),
       })
       setConfig(res.data)
+      setImageModel(res.data.image_model)
+      setVideoModel(res.data.video_model)
       setDirty(false)
       setSaved(true)
       // Clear api_key inputs after successful save
@@ -240,70 +250,119 @@ export default function ConfigPage() {
         {/* Image & Video Generation Models */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-1">生成模型配置</h2>
-          <p className="text-sm text-gray-500 mb-6">配置图片生成和视频生成模型</p>
+          <p className="text-sm text-gray-500 mb-6">选择图片生成和视频生成模型，在下方配置对应 API Key</p>
           <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">🎨 图片生成模型</label>
               <p className="text-xs text-gray-400 mb-2">用于生成营销图片</p>
               <select
-                value="laozhang-image-2-vip"
-                disabled
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-gray-50"
+                value={imageModel}
+                onChange={e => { setImageModel(e.target.value); mark() }}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
               >
                 <option value="laozhang-image-2-vip">🖼️ 老张图片生成 2.0 VIP</option>
               </select>
-              <div className="mt-3">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  老张 API Key{' '}
-                  {config?.laozhang_api_key_configured && (
-                    <span className="text-green-600 font-normal">(已保存，留空则不修改)</span>
-                  )}
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="password"
-                    placeholder={config?.laozhang_api_key_configured ? '输入新 Key 以覆盖...' : '输入老张 API Key...'}
-                    value={laozhangApiKey}
-                    onChange={e => { setLaozhangApiKey(e.target.value); mark() }}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
-                  />
-                  {config?.laozhang_api_key_configured && (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">✓ 已配置</span>
-                  )}
-                </div>
-              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">🎬 视频生成模型</label>
               <p className="text-xs text-gray-400 mb-2">用于生成营销视频</p>
               <select
-                value="seedance-2.0"
-                disabled
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm bg-gray-50"
+                value={videoModel}
+                onChange={e => { setVideoModel(e.target.value); mark() }}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
               >
                 <option value="seedance-2.0">🎥 Seedance 2.0</option>
               </select>
-              <div className="mt-3">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  火山引擎 API Key{' '}
-                  {config?.volcengine_api_key_configured && (
-                    <span className="text-green-600 font-normal">(已保存，留空则不修改)</span>
-                  )}
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="password"
-                    placeholder={config?.volcengine_api_key_configured ? '输入新 Key 以覆盖...' : '输入火山引擎 API Key...'}
-                    value={volcengineApiKey}
-                    onChange={e => { setVolcengineApiKey(e.target.value); mark() }}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
-                  />
-                  {config?.volcengine_api_key_configured && (
-                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">✓ 已配置</span>
-                  )}
+            </div>
+          </div>
+        </div>
+
+        {/* Generation Model Provider Cards */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">生成模型 API Key</h2>
+          <p className="text-sm text-gray-500 mb-4">配置图片和视频生成服务的 API Key</p>
+          <div className="space-y-3">
+
+            {/* 老张 provider card */}
+            <div className={`border rounded-xl overflow-hidden transition-all ${laozhangApiKey ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🖼️</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">老张图片生成</span>
+                      {config?.laozhang_api_key_configured ? (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ 已配置</span>
+                      ) : (
+                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">用于产品营销图片生成</p>
+                  </div>
                 </div>
+                <a
+                  href="https://laozhang.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-700 text-xs"
+                >
+                  获取 Key →
+                </a>
+              </div>
+              <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  API Key{config?.laozhang_api_key_configured && <span className="text-green-600 font-normal ml-1">(已保存，留空则不修改)</span>}
+                </label>
+                <input
+                  type="password"
+                  placeholder={config?.laozhang_api_key_configured ? '输入新 Key 以覆盖...' : '输入老张 API Key...'}
+                  value={laozhangApiKey}
+                  onChange={e => { setLaozhangApiKey(e.target.value); mark() }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+                />
               </div>
             </div>
+
+            {/* 火山引擎 provider card */}
+            <div className={`border rounded-xl overflow-hidden transition-all ${volcengineApiKey ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🎬</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">火山引擎视频生成</span>
+                      {config?.volcengine_api_key_configured ? (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ 已配置</span>
+                      ) : (
+                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">用于产品营销视频生成</p>
+                  </div>
+                </div>
+                <a
+                  href="https://console.volcengine.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-700 text-xs"
+                >
+                  获取 Key →
+                </a>
+              </div>
+              <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  API Key{config?.volcengine_api_key_configured && <span className="text-green-600 font-normal ml-1">(已保存，留空则不修改)</span>}
+                </label>
+                <input
+                  type="password"
+                  placeholder={config?.volcengine_api_key_configured ? '输入新 Key 以覆盖...' : '输入火山引擎 API Key...'}
+                  value={volcengineApiKey}
+                  onChange={e => { setVolcengineApiKey(e.target.value); mark() }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+                />
+              </div>
+            </div>
+
           </div>
         </div>
 

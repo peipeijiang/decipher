@@ -34,6 +34,8 @@ class ModelConfigOut(BaseModel):
     id: str
     vision_model: str
     analysis_model: str
+    image_model: str
+    video_model: str
     providers: dict[str, ProviderConfigOut] = {}
     temperature: float = 0.7
     max_tokens: int = 4096
@@ -53,6 +55,8 @@ class ProviderUpdate(BaseModel):
 class ModelConfigUpdate(BaseModel):
     vision_model: str | None = None
     analysis_model: str | None = None
+    image_model: str | None = None
+    video_model: str | None = None
     providers: dict[str, ProviderUpdate] | None = None
     temperature: float | None = None
     max_tokens: int | None = None

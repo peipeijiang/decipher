@@ -89,6 +89,8 @@ def _cfg_to_out(cfg: ModelConfig) -> ModelConfigOut:
         id=cfg.id,
         vision_model=cfg.vision_model,
         analysis_model=cfg.analysis_model,
+        image_model=cfg.image_model,
+        video_model=cfg.video_gen_model,
         providers=providers_out,
         temperature=cfg.temperature or 0.7,
         max_tokens=cfg.max_tokens or 4096,
@@ -133,6 +135,10 @@ def update_config(body: ModelConfigUpdate, db: Session = Depends(get_db)):
         if body.analysis_model not in SUPPORTED_MODELS:
             raise HTTPException(400, f"Unsupported model: {body.analysis_model}")
         cfg.analysis_model = body.analysis_model
+    if body.image_model is not None:
+        cfg.image_model = body.image_model
+    if body.video_model is not None:
+        cfg.video_gen_model = body.video_model
     if body.temperature is not None:
         cfg.temperature = body.temperature
     if body.max_tokens is not None:
