@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     # Product video generation
     laozhang_api_key: str = ""
     volcengine_api_key: str = ""
+    aliyun_api_key: str = ""
 
     # File storage
     upload_dir: str = "uploads"

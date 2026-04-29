@@ -195,6 +195,18 @@
       "accessCount": 1,
       "lastAccessed": 1776071148927,
       "type": "directory"
+    },
+    {
+      "path": "src/api/client.ts",
+      "accessCount": 1,
+      "lastAccessed": 1777413065729,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/ConfigPage.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1777413065786,
+      "type": "file"
     }
   ],
   "userDirectives": []

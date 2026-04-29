@@ -4,9 +4,9 @@ from typing import Optional
 
 
 class VideoGeneratorService:
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, base_url: str = "https://ark.cn-beijing.volces.com/api/v3"):
         self.api_key = api_key
-        self.base_url = "https://ark.cn-beijing.volces.com/api/v3"
+        self.base_url = base_url
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"

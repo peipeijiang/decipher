@@ -22,6 +22,7 @@ interface CurrentConfig {
   max_tokens: number
   laozhang_api_key_configured: boolean
   volcengine_api_key_configured: boolean
+  aliyun_api_key_configured: boolean
   updated_at: string
 }
 
@@ -63,6 +64,7 @@ export default function ConfigPage() {
   const [error, setError] = useState('')
   const [laozhangApiKey, setLaozhangApiKey] = useState('')
   const [volcengineApiKey, setVolcengineApiKey] = useState('')
+  const [aliyunApiKey, setAliyunApiKey] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -147,6 +149,7 @@ export default function ConfigPage() {
         // Only send generation-model keys when user typed something
         ...(laozhangApiKey ? { laozhang_api_key: laozhangApiKey } : {}),
         ...(volcengineApiKey ? { volcengine_api_key: volcengineApiKey } : {}),
+        ...(aliyunApiKey ? { aliyun_api_key: aliyunApiKey } : {}),
       })
       setConfig(res.data)
       setImageModel(res.data.image_model)
@@ -163,6 +166,7 @@ export default function ConfigPage() {
       })
       setLaozhangApiKey('')
       setVolcengineApiKey('')
+      setAliyunApiKey('')
       setTimeout(() => setSaved(false), 2000)
     } catch (e: any) {
       setError(e.response?.data?.detail || '保存失败')
@@ -261,6 +265,7 @@ export default function ConfigPage() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
               >
                 <option value="laozhang-image-2-vip">🖼️ 老张图片生成 2.0 VIP</option>
+                <option value="veo-3.1">🎨 Veo 3.1</option>
               </select>
             </div>
             <div>
@@ -272,6 +277,7 @@ export default function ConfigPage() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
               >
                 <option value="seedance-2.0">🎥 Seedance 2.0</option>
+                <option value="happyhorse-1.0">🐴 HappyHorse 1.0</option>
               </select>
             </div>
           </div>
@@ -358,6 +364,46 @@ export default function ConfigPage() {
                   placeholder={config?.volcengine_api_key_configured ? '输入新 Key 以覆盖...' : '输入火山引擎 API Key...'}
                   value={volcengineApiKey}
                   onChange={e => { setVolcengineApiKey(e.target.value); mark() }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+                />
+              </div>
+            </div>
+
+            {/* 阿里云 provider card */}
+            <div className={`border rounded-xl overflow-hidden transition-all ${aliyunApiKey ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">🐴</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">阿里云视频生成</span>
+                      {config?.aliyun_api_key_configured ? (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ 已配置</span>
+                      ) : (
+                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">用于 HappyHorse 视频生成</p>
+                  </div>
+                </div>
+                <a
+                  href="https://dashscope.aliyun.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-700 text-xs"
+                >
+                  获取 Key →
+                </a>
+              </div>
+              <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  API Key{config?.aliyun_api_key_configured && <span className="text-green-600 font-normal ml-1">(已保存，留空则不修改)</span>}
+                </label>
+                <input
+                  type="password"
+                  placeholder={config?.aliyun_api_key_configured ? '输入新 Key 以覆盖...' : '输入阿里云 API Key...'}
+                  value={aliyunApiKey}
+                  onChange={e => { setAliyunApiKey(e.target.value); mark() }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
                 />
               </div>

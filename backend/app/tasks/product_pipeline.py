@@ -143,10 +143,13 @@ def generate_image_for_prompt(prompt_id: str):
         if not api_key:
             raise RuntimeError("laozhang_api_key not configured")
 
+        # Get selected image model from config
+        image_model = cfg.image_model if cfg else "laozhang-image-2-vip"
+
         service = ImageGeneratorService(api_key=api_key)
 
-        # Generate image
-        result = service.generate_image(prompt=pp.prompt_text)
+        # Generate image with selected model
+        result = service.generate_image(prompt=pp.prompt_text, model=image_model)
 
         # Download and save
         products_base = getattr(settings, 'products_dir', 'products')
@@ -192,11 +195,22 @@ def generate_video_for_prompt(prompt_id: str):
         # Read from DB config_json first, fallback to .env settings
         cfg = db.query(ModelConfig).first()
         providers = cfg.get_providers() if cfg else {}
-        api_key = providers.get("_volcengine_api_key") or getattr(settings, 'volcengine_api_key', '')
-        if not api_key:
-            raise RuntimeError("volcengine_api_key not configured")
 
-        service = VideoGeneratorService(api_key=api_key)
+        # Get selected video model from config
+        video_model = cfg.video_gen_model if cfg else "seedance-2.0"
+
+        # Choose API key and endpoint based on model
+        if video_model == "happyhorse-1.0":
+            api_key = providers.get("_aliyun_api_key") or getattr(settings, 'aliyun_api_key', '')
+            base_url = "https://dashscope.aliyuncs.com/api/v1"
+        else:  # seedance-2.0
+            api_key = providers.get("_volcengine_api_key") or getattr(settings, 'volcengine_api_key', '')
+            base_url = "https://ark.cn-beijing.volces.com/api/v3"
+
+        if not api_key:
+            raise RuntimeError(f"API key not configured for {video_model}")
+
+        service = VideoGeneratorService(api_key=api_key, base_url=base_url)
 
         # Use generated image as input (if available), otherwise use first product image
         if pp.image_url:
@@ -213,6 +227,7 @@ def generate_video_for_prompt(prompt_id: str):
         result = service.generate_video(
             image_url=image_url,
             prompt=pp.prompt_text,
+            model=video_model,
         )
 
         if result["status"] == "completed":

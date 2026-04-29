@@ -1,7 +1,7 @@
 {
   "tool_name": "Bash",
-  "tool_input_preview": "{\"command\":\"python3 -c \\\"\\nimport sys\\nsys.path.insert(0, '.')\\nfrom app.database import SessionLocal\\nfrom app.models.config import ModelConfig\\n\\ndb = SessionLocal()\\ncfg = db.query(ModelConfig).fir...",
-  "error": "Exit code 1\nTraceback (most recent call last):\n  File \"<string>\", line 12, in <module>\nAttributeError: 'ModelConfig' object has no attribute 'analysis_api_key'\nanalysis_model: minimax\nvision_model: zhipu",
-  "timestamp": "2026-04-23T09:38:36.013Z",
+  "tool_input_preview": "{\"command\":\"cd /Users/shane/projects/tiktok-analyzer && git add backend/app/api/products.py && git commit -m \\\"fix: use getattr for products_dir to prevent AttributeError on delete\\\"\",\"description\":\"C...",
+  "error": "Exit code 1\nOn branch main\nChanges not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n  (use \"git restore <file>...\" to discard changes in working directory)\n\tmodified:   .omc/project-memory.json\n\tmodified:   backend/.omc/state/idle-notif-cooldown.json\n\tmodified:   backend/.omc/state/last-tool-error.json\n\tmodified:   backend/.omc/state/mission-state.json\n\tmodified:   backend/.omc/state/subagent-tracking.json\n\tmodified:   backend/tiktok_analyzer.db\n\tmodified:   fr...",
+  "timestamp": "2026-04-29T07:13:22.869Z",
   "retry_count": 1
 }
