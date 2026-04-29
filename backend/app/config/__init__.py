@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     default_vision_model: str = "openai"
     default_analysis_model: str = "openai"
 
+    # Product video generation (env var fallback; DB config_json takes priority)
+    laozhang_api_key: str = ""
+    volcengine_api_key: str = ""
+
     # File storage
     upload_dir: str = "uploads"
     processed_dir: str = "processed"

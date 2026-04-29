@@ -18,6 +18,8 @@ interface CurrentConfig {
   providers: Record<string, ProviderStatus>
   temperature: number
   max_tokens: number
+  laozhang_api_key_configured: boolean
+  volcengine_api_key_configured: boolean
   updated_at: string
 }
 
@@ -55,6 +57,8 @@ export default function ConfigPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [laozhangApiKey, setLaozhangApiKey] = useState('')
+  const [volcengineApiKey, setVolcengineApiKey] = useState('')
 
   useEffect(() => {
     Promise.all([
@@ -132,6 +136,9 @@ export default function ConfigPage() {
         temperature,
         max_tokens: maxTokens,
         providers,
+        // Only send generation-model keys when user typed something
+        ...(laozhangApiKey ? { laozhang_api_key: laozhangApiKey } : {}),
+        ...(volcengineApiKey ? { volcengine_api_key: volcengineApiKey } : {}),
       })
       setConfig(res.data)
       setDirty(false)
@@ -144,6 +151,8 @@ export default function ConfigPage() {
         }
         return next
       })
+      setLaozhangApiKey('')
+      setVolcengineApiKey('')
       setTimeout(() => setSaved(false), 2000)
     } catch (e: any) {
       setError(e.response?.data?.detail || '保存失败')
@@ -244,13 +253,24 @@ export default function ConfigPage() {
                 <option value="laozhang-image-2-vip">🖼️ 老张图片生成 2.0 VIP</option>
               </select>
               <div className="mt-3">
-                <label className="block text-xs font-medium text-gray-600 mb-1">老张 API Key</label>
-                <input
-                  type="password"
-                  placeholder="输入老张 API Key..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
-                  onChange={mark}
-                />
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  老张 API Key{' '}
+                  {config?.laozhang_api_key_configured && (
+                    <span className="text-green-600 font-normal">(已保存，留空则不修改)</span>
+                  )}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    placeholder={config?.laozhang_api_key_configured ? '输入新 Key 以覆盖...' : '输入老张 API Key...'}
+                    value={laozhangApiKey}
+                    onChange={e => { setLaozhangApiKey(e.target.value); mark() }}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+                  />
+                  {config?.laozhang_api_key_configured && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">✓ 已配置</span>
+                  )}
+                </div>
               </div>
             </div>
             <div>
@@ -264,13 +284,24 @@ export default function ConfigPage() {
                 <option value="seedance-2.0">🎥 Seedance 2.0</option>
               </select>
               <div className="mt-3">
-                <label className="block text-xs font-medium text-gray-600 mb-1">火山引擎 API Key</label>
-                <input
-                  type="password"
-                  placeholder="输入火山引擎 API Key..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
-                  onChange={mark}
-                />
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  火山引擎 API Key{' '}
+                  {config?.volcengine_api_key_configured && (
+                    <span className="text-green-600 font-normal">(已保存，留空则不修改)</span>
+                  )}
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="password"
+                    placeholder={config?.volcengine_api_key_configured ? '输入新 Key 以覆盖...' : '输入火山引擎 API Key...'}
+                    value={volcengineApiKey}
+                    onChange={e => { setVolcengineApiKey(e.target.value); mark() }}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+                  />
+                  {config?.volcengine_api_key_configured && (
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium whitespace-nowrap">✓ 已配置</span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
