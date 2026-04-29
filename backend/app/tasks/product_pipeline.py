@@ -136,7 +136,10 @@ def generate_image_for_prompt(prompt_id: str):
 
         from app.services.image_generator import ImageGeneratorService
 
-        api_key = getattr(settings, 'laozhang_api_key', '')
+        # Read from DB config_json first, fallback to .env settings
+        cfg = db.query(ModelConfig).first()
+        providers = cfg.get_providers() if cfg else {}
+        api_key = providers.get("_laozhang_api_key") or getattr(settings, 'laozhang_api_key', '')
         if not api_key:
             raise RuntimeError("laozhang_api_key not configured")
 
@@ -186,7 +189,10 @@ def generate_video_for_prompt(prompt_id: str):
 
         from app.services.video_generator import VideoGeneratorService
 
-        api_key = getattr(settings, 'volcengine_api_key', '')
+        # Read from DB config_json first, fallback to .env settings
+        cfg = db.query(ModelConfig).first()
+        providers = cfg.get_providers() if cfg else {}
+        api_key = providers.get("_volcengine_api_key") or getattr(settings, 'volcengine_api_key', '')
         if not api_key:
             raise RuntimeError("volcengine_api_key not configured")
 

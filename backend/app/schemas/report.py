@@ -37,6 +37,8 @@ class ModelConfigOut(BaseModel):
     providers: dict[str, ProviderConfigOut] = {}
     temperature: float = 0.7
     max_tokens: int = 4096
+    laozhang_api_key_configured: bool = False
+    volcengine_api_key_configured: bool = False
     updated_at: datetime
 
 
@@ -54,6 +56,8 @@ class ModelConfigUpdate(BaseModel):
     providers: dict[str, ProviderUpdate] | None = None
     temperature: float | None = None
     max_tokens: int | None = None
+    laozhang_api_key: str | None = None
+    volcengine_api_key: str | None = None
 
 
 SUPPORTED_MODELS = ["doubao", "openai", "claude", "minimax", "zhipu", "deepseek"]
