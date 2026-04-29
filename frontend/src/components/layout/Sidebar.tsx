@@ -1,4 +1,4 @@
-import { Home, Settings, Film, Sparkles, Package } from 'lucide-react'
+import { Home, Settings, Film, Sparkles, Package, History } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 export function Sidebar() {
@@ -9,6 +9,7 @@ export function Sidebar() {
     { icon: Home, label: '首页', path: '/' },
     { icon: Sparkles, label: '创意', path: '/creative' },
     { icon: Package, label: '产品', path: '/product' },
+    { icon: History, label: '产品历史', path: '/products' },
     { icon: Settings, label: '设置', path: '/config' },
   ]
 
