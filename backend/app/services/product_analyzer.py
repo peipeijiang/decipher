@@ -53,6 +53,7 @@ def analyze_product_images(
             results.append({
                 "index": len(results) + 1,
                 "filename": Path(path).name,
+                "path": path,
                 "basic_recognition": parsed.get("basic_recognition", ""),
                 "product_understanding": parsed.get("product_understanding", ""),
                 "creative_usage": parsed.get("creative_usage", ""),
@@ -62,10 +63,59 @@ def analyze_product_images(
             results.append({
                 "index": len(results) + 1,
                 "filename": Path(path).name,
+                "path": path,
                 "basic_recognition": f"Analysis failed: {e}",
                 "product_understanding": "",
                 "creative_usage": "",
             })
+
+    # Filter out irrelevant images based on AI analysis
+    filtered = _filter_relevant_images(results, vision_model)
+    logger.info("Filtered %d/%d images as product-relevant", len(filtered), len(results))
+    return filtered
+
+
+def _filter_relevant_images(results: list[dict], vision_model: AIModel) -> list[dict]:
+    """Filter out images that are not product-related (logos, decorations, ads, etc.)."""
+    if len(results) <= 3:
+        # Keep all if we have 3 or fewer images
+        return results
+
+    # Ask AI to identify which images are product-related
+    filter_prompt = (
+        "Review these product image analysis results and identify which images show the actual product "
+        "(not website logos, decorative elements, advertisements, or unrelated content).\n\n"
+        "Image analysis results:\n"
+    )
+    for r in results:
+        filter_prompt += (
+            f"Image {r['index']} ({r['filename']}): "
+            f"Basic: {r['basic_recognition'][:100]} | "
+            f"Product: {r['product_understanding'][:100]}\n"
+        )
+
+    filter_prompt += (
+        "\n\nReturn a JSON array of image indices (numbers) that show the actual product. "
+        "Example: [1, 3, 5, 7]\n"
+        "Return ONLY the JSON array, no other text."
+    )
+
+    try:
+        raw = vision_model.analyze_text(filter_prompt, task="direct")
+        relevant_indices = vision_model._parse_json_safe(raw) if isinstance(raw, str) else raw
+
+        if isinstance(relevant_indices, list) and relevant_indices:
+            # Keep only images with indices in the relevant list
+            filtered = [r for r in results if r['index'] in relevant_indices]
+            if filtered:
+                # Re-index after filtering
+                for i, r in enumerate(filtered, 1):
+                    r['index'] = i
+                return filtered
+    except Exception as e:
+        logger.warning("Image filtering failed: %s, keeping all images", e)
+
+    # Fallback: keep all images if filtering fails
     return results
 
 
