@@ -7,6 +7,8 @@ export interface Product {
   error_message: string | null
   created_at: string
   updated_at: string
+  archive_status: 'active' | 'archived'
+  archived_at: string | null
 }
 
 export interface ProductPrompt {
@@ -19,6 +21,11 @@ export interface ProductPrompt {
   image_status: 'pending' | 'generating' | 'completed' | 'failed'
   video_url: string | null
   video_status: 'pending' | 'generating' | 'completed' | 'failed'
+  grid_layout: 'single' | '2x3' | '3x2'
+  width: number | null
+  height: number | null
+  aspect_ratio: string
+  batch_id: string | null
   created_at: string
 }
 

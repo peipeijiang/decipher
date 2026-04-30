@@ -44,3 +44,12 @@ export const getGeneratedImageUrl = (promptId: string) =>
 
 export const updatePrompt = (promptId: string, promptText: string) =>
   api.patch(`/api/products/prompts/${promptId}`, { prompt_text: promptText }).then(r => r.data)
+
+export const archiveProduct = (id: string) =>
+  api.patch<Product>(`/api/products/${id}/archive`).then(r => r.data)
+
+export const activateProduct = (id: string) =>
+  api.patch<Product>(`/api/products/${id}/activate`).then(r => r.data)
+
+export const triggerBatchVideoGeneration = (productId: string) =>
+  api.post(`/api/products/${productId}/generate-videos`).then(r => r.data)
