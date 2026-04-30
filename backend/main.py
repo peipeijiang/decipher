@@ -64,6 +64,8 @@ def _migrate():
         ("creative_prompts", "video_id", "TEXT"),
         ("model_configs", "image_model", "TEXT DEFAULT 'laozhang-image-2-vip'"),
         ("model_configs", "video_gen_model", "TEXT DEFAULT 'seedance-2.0'"),
+        ("products", "archive_status", "TEXT DEFAULT 'active'"),
+        ("products", "archived_at", "DATETIME"),
     ]
     with engine.connect() as conn:
         for table, col, col_type in new_cols:

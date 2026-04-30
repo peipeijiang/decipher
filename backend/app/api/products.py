@@ -38,11 +38,41 @@ def create_product(body: ProductCreate, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=list[ProductOut])
-def list_products(status: str | None = None, db: Session = Depends(get_db)):
-    q = db.query(Product).order_by(Product.created_at.desc())
+def list_products(status: str | None = None, archive_status: str = "active", db: Session = Depends(get_db)):
+    q = db.query(Product)
+    if archive_status == "archived":
+        q = q.filter(Product.archive_status == "archived")
+    else:
+        q = q.filter(Product.archive_status == "active")
     if status:
         q = q.filter(Product.status == status)
+    q = q.order_by(Product.created_at.desc())
     return q.all()
+
+
+@router.patch("/{product_id}/archive", response_model=ProductOut)
+def archive_product(product_id: str, db: Session = Depends(get_db)):
+    from datetime import datetime
+    product = db.get(Product, product_id)
+    if not product:
+        raise HTTPException(404, "Product not found")
+    product.archive_status = "archived"
+    product.archived_at = datetime.utcnow()
+    db.commit()
+    db.refresh(product)
+    return product
+
+
+@router.patch("/{product_id}/activate", response_model=ProductOut)
+def activate_product(product_id: str, db: Session = Depends(get_db)):
+    product = db.get(Product, product_id)
+    if not product:
+        raise HTTPException(404, "Product not found")
+    product.archive_status = "active"
+    product.archived_at = None
+    db.commit()
+    db.refresh(product)
+    return product
 
 
 @router.get("/{product_id}", response_model=ProductOut)

@@ -13,6 +13,8 @@ class ProductOut(BaseModel):
     description: str
     status: str
     error_message: str | None = None
+    archive_status: str
+    archived_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
