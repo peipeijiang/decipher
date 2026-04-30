@@ -7,6 +7,24 @@ from app.ai_models.base import AIModel
 
 logger = logging.getLogger(__name__)
 
+
+def _call_with_retry(fn, max_retries: int = 3, base_wait: int = 10):
+    """Call fn with exponential backoff retry on 429 errors."""
+    import time
+    for attempt in range(max_retries + 1):
+        try:
+            result = fn()
+            # Small delay between successful calls to avoid hitting rate limits
+            time.sleep(3)
+            return result
+        except Exception as e:
+            if "429" in str(e) and attempt < max_retries:
+                wait = base_wait * (2 ** attempt)  # 10s, 20s, 40s
+                logger.warning("Rate limited (429), waiting %ds before retry %d/%d", wait, attempt + 1, max_retries)
+                time.sleep(wait)
+            else:
+                raise
+
 PRODUCT_IMAGE_PROMPT = (
     "Analyze this product image and return a JSON object with exactly these 3 fields:\n"
     '{"basic_recognition":"Describe what you see: the object, colors, materials, background scene",'
@@ -40,15 +58,16 @@ def analyze_product_images(
     for path in image_paths:
         try:
             if vision_model.SUPPORTS_VISION:
-                # Use vision model to analyze the image
-                frame_results = vision_model.analyze_frames([path])
-                # Rate limit: wait between API calls to avoid 429
-                time.sleep(2)
-                # Now do a text analysis with the 3-layer prompt
+                # Use vision model with retry on 429
+                frame_results = _call_with_retry(
+                    lambda: vision_model.analyze_frames([path])
+                )
                 context = json.dumps(frame_results[0] if frame_results else {}, ensure_ascii=False)
-                raw = vision_model.analyze_text(
-                    f"Based on this image analysis: {context}\n\n{PRODUCT_IMAGE_PROMPT}",
-                    task="direct",
+                raw = _call_with_retry(
+                    lambda ctx=context: vision_model.analyze_text(
+                        f"Based on this image analysis: {ctx}\n\n{PRODUCT_IMAGE_PROMPT}",
+                        task="direct",
+                    )
                 )
             else:
                 raw = "{}"
@@ -62,8 +81,8 @@ def analyze_product_images(
                 "product_understanding": parsed.get("product_understanding", ""),
                 "creative_usage": parsed.get("creative_usage", ""),
             })
-            # Rate limit: wait before next image
-            time.sleep(2)
+            # Rate limit: wait 5s before next image
+            time.sleep(5)
         except Exception as e:
             logger.warning("Image analysis failed for %s: %s", path, e)
             results.append({
