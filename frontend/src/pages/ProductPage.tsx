@@ -13,6 +13,10 @@ import {
   getProductImageUrl,
   getGeneratedImageUrl,
   updatePrompt,
+  triggerBatchVideoGeneration,
+  archiveProduct,
+  rerunProduct,
+  resumeProduct,
 } from '../api/client'
 import type { Product, ProductPrompt, ProductProgress, ProductDoc } from '../types/product'
 
@@ -34,12 +38,20 @@ export default function ProductPage() {
   const [doc, setDoc] = useState<ProductDoc | null>(null)
   const [prompts, setPrompts] = useState<ProductPrompt[]>([])
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [gridLayout, setGridLayout] = useState<'single' | '2x3' | '3x2'>('single')
+  const [aspectRatio, setAspectRatio] = useState('16:9')
+  const [batchGenerating, setBatchGenerating] = useState(false)
 
-  const fetchProduct = useCallback(async () => {
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [loadingProduct, setLoadingProduct] = useState(false)
+
+  const fetchProduct = useCallback(async (isInitial = false) => {
     if (!id) return
+    if (isInitial) setLoadingProduct(true)
     try {
       const p = await getProduct(id)
       setProduct(p)
+      setLoadError(null)
       const prog = await getProductProgress(id)
       setProgress(prog)
 
@@ -60,15 +72,21 @@ export default function ProductPage() {
       } else if (prog.doc >= 100) {
         try { setDoc(await getProductDocJson(id)) } catch { /* ignore */ }
       }
-    } catch {
-      // ignore fetch errors during polling
+    } catch (e: any) {
+      if (isInitial) {
+        const msg = e?.response?.data?.detail || e?.message || '加载产品失败'
+        setLoadError(msg)
+      }
+      // ignore subsequent polling errors silently
+    } finally {
+      if (isInitial) setLoadingProduct(false)
     }
   }, [id])
 
   useEffect(() => {
     if (!id) return
-    fetchProduct()
-    pollRef.current = setInterval(fetchProduct, 2000)
+    fetchProduct(true)
+    pollRef.current = setInterval(() => fetchProduct(false), 2000)
     return () => {
       if (pollRef.current) {
         clearInterval(pollRef.current)
@@ -82,7 +100,13 @@ export default function ProductPage() {
     setCreating(true)
     try {
       const p = await createProduct(url.trim())
-      navigate(`/product/${p.id}`)
+      if ((p as any).existed) {
+        if (confirm('该商品已存在，是否跳转到已有记录？')) {
+          navigate(`/product/${p.id}`)
+        }
+      } else {
+        navigate(`/product/${p.id}`)
+      }
     } catch (e: any) {
       alert('创建失败：' + (e.response?.data?.detail || e.message))
     } finally {
@@ -132,36 +156,89 @@ export default function ProductPage() {
   return (
     <MainLayout>
       <div className="max-w-6xl mx-auto px-6 pt-8 pb-16">
-        {/* URL Input */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-1">产品视频生成</h1>
-          <p className="text-sm text-gray-500 mb-4">输入商品链接，自动抓取 → 分析 → 生成提示词 → 生成图片/视频</p>
-          <div className="flex gap-3">
-            <input
-              type="text"
-              value={url}
-              onChange={e => setUrl(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
-              placeholder="粘贴商品链接（如 Amazon、1688、淘宝…）"
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
-              disabled={creating}
-            />
+        {/* Back button when viewing a product */}
+        {id && (
+          <button
+            onClick={() => navigate('/product/history')}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 mb-4 transition-colors"
+          >
+            <span>←</span> 返回产品列表
+          </button>
+        )}
+
+        {/* Loading State */}
+        {id && loadingProduct && (
+          <div className="flex flex-col items-center justify-center py-24">
+            <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-4" />
+            <p className="text-sm text-gray-600">加载产品信息...</p>
+          </div>
+        )}
+
+        {/* Error State */}
+        {id && loadError && !loadingProduct && (
+          <div className="flex flex-col items-center justify-center py-24">
+            <AlertCircle className="w-10 h-10 text-red-500 mb-4" />
+            <p className="text-sm text-gray-600 mb-4">{loadError}</p>
             <button
-              onClick={handleCreate}
-              disabled={creating || !url.trim()}
-              className="px-6 py-3 bg-blue-500 text-white text-sm font-semibold rounded-xl hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+              onClick={() => navigate('/product/history')}
+              className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg hover:bg-blue-600 transition-colors"
             >
-              {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              {creating ? '创建中…' : '开始分析'}
+              返回列表
             </button>
           </div>
-        </div>
+        )}
 
-        {/* PLACEHOLDER_KANBAN */}
-
-        {/* Kanban Pipeline */}
-        {id && product && (
+        {/* URL Input - Only show when creating new product (no id) */}
+        {!id && (
           <div className="mb-8">
+            <div className="flex items-center justify-between mb-1">
+              <h1 className="text-2xl font-bold text-gray-900">产品视频生成</h1>
+            </div>
+            <p className="text-sm text-gray-500 mb-4">输入商品链接，自动抓取 → 分析 → 生成提示词 → 生成图片/视频</p>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
+                placeholder="粘贴商品链接（如 Amazon、1688、淘宝…）"
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                disabled={creating}
+              />
+              <button
+                onClick={handleCreate}
+                disabled={creating || !url.trim()}
+                className="px-6 py-3 bg-blue-500 text-white text-sm font-semibold rounded-xl hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+              >
+                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {creating ? '创建中…' : '开始分析'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Product Detail View - Only show when id exists and loaded successfully */}
+        {id && !loadingProduct && !loadError && product && (
+          <>
+            {/* Header with Archive Button */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-1">
+                <h1 className="text-2xl font-bold text-gray-900">{product.title || '产品详情'}</h1>
+                <button
+                  onClick={async () => {
+                    await archiveProduct(product.id)
+                    navigate('/product/history')
+                  }}
+                  className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  归档项目
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 truncate">{product.url}</p>
+            </div>
+
+            {/* Kanban Pipeline */}
+            <div className="mb-8">
             {product.status === 'failed' && progress?.error && (
               <div className="mb-4 flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -193,12 +270,35 @@ export default function ProductPage() {
               })}
             </div>
           </div>
-        )}
 
-        {/* PLACEHOLDER_PRODUCT_INFO */}
+          {/* Rerun/Resume Buttons */}
+          {product && (product.status === 'completed' || product.status === 'failed') && (
+            <div className="flex gap-3 mb-6">
+              <button
+                onClick={async () => {
+                  await rerunProduct(product.id)
+                  window.location.reload()
+                }}
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+              >
+                重新运行
+              </button>
+              {product.status === 'failed' && (
+                <button
+                  onClick={async () => {
+                    await resumeProduct(product.id)
+                    window.location.reload()
+                  }}
+                  className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+                >
+                  继续运行
+                </button>
+              )}
+            </div>
+          )}
 
-        {/* Product Info Section */}
-        {doc && progress && progress.scrape >= 100 && (
+          {/* Product Info Section */}
+          {doc && progress && progress.scrape >= 100 && (
           <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left: Product Images */}
             <div>
@@ -298,6 +398,45 @@ export default function ProductPage() {
               <h2 className="text-sm font-semibold text-gray-800">生成的提示词</h2>
               <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{prompts.length} 个</span>
             </div>
+
+            {/* Control Panel */}
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <select
+                value={gridLayout}
+                onChange={e => setGridLayout(e.target.value as any)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="single">单图模式</option>
+                <option value="2x3">6宫格 2×3</option>
+                <option value="3x2">6宫格 3×2</option>
+              </select>
+              <select
+                value={aspectRatio}
+                onChange={e => setAspectRatio(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="16:9">16:9</option>
+                <option value="9:16">9:16</option>
+                <option value="1:1">1:1</option>
+              </select>
+              <button
+                onClick={async () => {
+                  if (!product) return
+                  setBatchGenerating(true)
+                  try {
+                    await triggerBatchVideoGeneration(product.id)
+                    alert('批量视频生成已启动')
+                  } finally {
+                    setBatchGenerating(false)
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-medium hover:bg-purple-700 disabled:opacity-40"
+                disabled={batchGenerating}
+              >
+                {batchGenerating ? '批量生成中...' : '批量生成视频'}
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {prompts.map(prompt => (
                 <PromptCard
@@ -312,6 +451,8 @@ export default function ProductPage() {
               ))}
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </MainLayout>
