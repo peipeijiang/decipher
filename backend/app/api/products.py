@@ -200,3 +200,13 @@ def update_prompt(prompt_id: str, body: dict, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(pp)
     return pp
+
+
+@router.post("/{product_id}/generate-videos")
+def trigger_batch_video_generation(product_id: str, db: Session = Depends(get_db)):
+    prompts = db.query(ProductPrompt).filter(ProductPrompt.product_id == product_id).all()
+    if not prompts:
+        raise HTTPException(404, "No prompts found for product")
+    for pp in prompts:
+        threading.Thread(target=generate_video_for_prompt, args=(pp.id,), daemon=True).start()
+    return {"ok": True, "count": len(prompts)}
