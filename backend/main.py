@@ -17,6 +17,8 @@ from app.models.config import ModelConfig  # noqa: F401 - registers with Base.me
 from app.models.creative_prompt import CreativePrompt  # noqa: F401
 from app.models.product import Product  # noqa: F401 - registers with Base.metadata
 from app.models.product_prompt import ProductPrompt  # noqa: F401
+from app.models.batch_job import BatchJob  # noqa: F401
+from app.models.auto_pipeline_config import AutoPipelineConfig  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 
