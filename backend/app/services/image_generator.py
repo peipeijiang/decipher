@@ -12,18 +12,33 @@ class ImageGeneratorService:
             "Content-Type": "application/json"
         }
 
-    def generate_image(self, prompt: str, model: str = "laozhang-image-2-vip") -> dict:
+    def generate_image(
+        self,
+        prompt: str,
+        model: str = "laozhang-image-2-vip",
+        size: str = "1024x1024",
+        grid_layout: str = "single",
+    ) -> dict:
         """Generate image from text prompt"""
         try:
+            # Adjust size for grid layouts
+            if grid_layout in ["2x3", "3x2"]:
+                size = "1536x1024"
+
+            # Modify prompt for grid layouts
+            final_prompt = prompt
+            if grid_layout in ["2x3", "3x2"]:
+                final_prompt = f"Create a {grid_layout} storyboard grid. {prompt}"
+
             # Submit generation request
             response = requests.post(
                 f"{self.base_url}/images/generations",
                 headers=self.headers,
                 json={
                     "model": model,
-                    "prompt": prompt,
+                    "prompt": final_prompt,
                     "n": 1,
-                    "size": "1024x1024",
+                    "size": size,
                     "quality": "hd"
                 },
                 timeout=30
