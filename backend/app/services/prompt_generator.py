@@ -47,6 +47,8 @@ TEMPLATES = {
 
 VARIANT_PROMPT = (
     "You are an expert TikTok marketing video scriptwriter for cross-border e-commerce.\n\n"
+    "Target aspect ratio: {aspect_ratio}\n"
+    "Image layout: {layout_instruction}\n\n"
     "Product info:\n{product_json}\n\n"
     "Template style: {template_name}\n"
     "Template structure:\n{template_structure}\n\n"
@@ -65,12 +67,21 @@ VARIANT_PROMPT = (
 )
 
 
-def build_generation_prompt(product_doc: dict, template_key: str) -> str:
+def build_generation_prompt(
+    product_doc: dict,
+    template_key: str,
+    aspect_ratio: str = "16:9",
+    grid_layout: str = "single",
+) -> str:
     """Build the prompt that asks the AI to generate 10 variants."""
     template = TEMPLATES.get(template_key, TEMPLATES["grwm"])
     consistency = (
         f"Preserve the exact design, color, and appearance of {product_doc.get('title', 'the product')}: "
         f"{product_doc.get('appearance', 'as shown in reference images')}"
+    )
+    layout_instruction = (
+        "Generate a single keyframe image" if grid_layout == "single"
+        else f"Generate a {grid_layout} 6-grid storyboard with consistent product appearance"
     )
     return VARIANT_PROMPT.format(
         product_json=json.dumps(product_doc, ensure_ascii=False, indent=2),
@@ -80,6 +91,8 @@ def build_generation_prompt(product_doc: dict, template_key: str) -> str:
             content="{unique content here}",
             consistency=consistency,
         ),
+        aspect_ratio=aspect_ratio,
+        layout_instruction=layout_instruction,
     )
 
 

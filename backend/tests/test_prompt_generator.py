@@ -38,3 +38,15 @@ def test_build_generation_prompt_english_requirement():
     product_doc = {"title": "Test"}
     prompt = build_generation_prompt(product_doc, "grwm")
     assert "entirely in English" in prompt
+
+
+def test_build_generation_prompt_contains_aspect_ratio():
+    product_doc = {"title": "Wireless Earbuds", "appearance": "White matte finish"}
+    prompt = build_generation_prompt(product_doc, "grwm", aspect_ratio="9:16")
+    assert "9:16" in prompt
+
+
+def test_build_generation_prompt_contains_grid_layout():
+    product_doc = {"title": "Wireless Earbuds", "appearance": "White matte finish"}
+    prompt = build_generation_prompt(product_doc, "grwm", aspect_ratio="16:9", grid_layout="2x3")
+    assert "2x3" in prompt or "6-grid" in prompt.lower()
