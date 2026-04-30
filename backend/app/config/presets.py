@@ -55,9 +55,18 @@ PROVIDER_PRESETS: dict[str, dict] = {
         "icon": "🔮",
         "api_key_url": "https://platform.deepseek.com/api_keys",
     },
+    "aliyun": {
+        "name": "阿里云 Qwen",
+        "endpoint": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
+        "vision_model": "qwen-vl-max-latest",
+        "text_model": "qwen-max",
+        "supports_vision": True,
+        "icon": "☁️",
+        "api_key_url": "https://bailian.console.aliyun.com/",
+    },
 }
 
-PROVIDER_ORDER = ["openai", "claude", "doubao", "minimax", "zhipu", "deepseek"]
+PROVIDER_ORDER = ["openai", "claude", "doubao", "minimax", "zhipu", "deepseek", "aliyun"]
 
 
 def get_provider_presets() -> list[dict]:

@@ -4,7 +4,7 @@ import types
 
 from app.ai_models.base import AIModel
 
-AVAILABLE_MODELS = ["openai", "claude", "doubao", "minimax", "zhipu", "deepseek"]
+AVAILABLE_MODELS = ["openai", "claude", "doubao", "minimax", "zhipu", "deepseek", "aliyun"]
 
 _REGISTRY = {
     "openai":   ("openai_model",   "OpenAIModel"),
@@ -13,6 +13,7 @@ _REGISTRY = {
     "minimax":  ("minimax_model",  "MinimaxModel"),
     "zhipu":    ("zhipu_model",    "ZhipuModel"),
     "deepseek": ("deepseek_model", "DeepSeekModel"),
+    "aliyun":   ("aliyun_model",   "AliyunModel"),
 }
 
 # Maps generic JSON keys → flat attribute names each model class expects
@@ -51,6 +52,12 @@ _ATTR_MAP: dict[str, dict[str, str]] = {
         "api_key":      "deepseek_api_key",
         "endpoint":     "deepseek_endpoint",
         "text_model":   "deepseek_text_model",
+    },
+    "aliyun": {
+        "api_key":      "aliyun_api_key",
+        "endpoint":     "aliyun_endpoint",
+        "vision_model": "aliyun_vision_model",
+        "text_model":   "aliyun_text_model",
     },
 }
 
