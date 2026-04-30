@@ -12,21 +12,25 @@ import {
   Inbox,
 } from 'lucide-react'
 import { MainLayout } from '../components/layout/MainLayout'
-import { getProducts, deleteProduct, getProductImageUrl } from '../api/client'
+import { getProducts, deleteProduct, getProductImageUrl, archiveProduct, activateProduct } from '../api/client'
 import type { Product } from '../types/product'
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-type FilterTab = 'all' | 'completed' | 'analyzing' | 'failed'
+type FilterTab = 'all' | 'completed' | 'analyzing' | 'failed' | 'archived'
 
 const FILTER_TABS: { key: FilterTab; label: string }[] = [
   { key: 'all', label: '全部' },
   { key: 'completed', label: '已完成' },
   { key: 'analyzing', label: '分析中' },
   { key: 'failed', label: '失败' },
+  { key: 'archived', label: '已归档' },
 ]
 
 function matchesFilter(product: Product, tab: FilterTab): boolean {
+  if (tab === 'archived') return product.archive_status === 'archived'
+  // For all non-archived tabs, only show active products
+  if (product.archive_status === 'archived') return false
   if (tab === 'all') return true
   if (tab === 'completed') return product.status === 'completed'
   if (tab === 'analyzing') return product.status === 'analyzing' || product.status === 'scraping' || product.status === 'pending'
@@ -153,13 +157,17 @@ interface ProductCardProps {
   promptCount: number
   onDelete: (id: string) => void
   onRetry: (id: string) => void
+  onArchive: (id: string) => void
+  onActivate: (id: string) => void
 }
 
-function ProductCard({ product, imageFilenames, promptCount, onDelete, onRetry }: ProductCardProps) {
+function ProductCard({ product, imageFilenames, promptCount, onDelete, onRetry, onArchive, onActivate }: ProductCardProps) {
   const navigate = useNavigate()
 
   const borderClass =
-    product.status === 'failed'
+    product.archive_status === 'archived'
+      ? 'border-gray-200 opacity-75'
+      : product.status === 'failed'
       ? 'border-red-200'
       : product.status === 'analyzing' || product.status === 'scraping'
       ? 'border-blue-200'
@@ -174,6 +182,16 @@ function ProductCard({ product, imageFilenames, promptCount, onDelete, onRetry }
   const handleRetry = (e: React.MouseEvent) => {
     e.stopPropagation()
     onRetry(product.id)
+  }
+
+  const handleArchive = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onArchive(product.id)
+  }
+
+  const handleActivate = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    onActivate(product.id)
   }
 
   const displayTitle = product.title || 'Untitled Product'
@@ -236,6 +254,21 @@ function ProductCard({ product, imageFilenames, promptCount, onDelete, onRetry }
                 className="px-2 py-1 text-[10px] border border-gray-300 rounded text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
               >
                 重试
+              </button>
+            )}
+            {product.archive_status === 'active' ? (
+              <button
+                onClick={handleArchive}
+                className="px-2 py-1 text-[10px] border border-gray-300 rounded text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                归档
+              </button>
+            ) : (
+              <button
+                onClick={handleActivate}
+                className="px-2 py-1 text-[10px] border border-blue-300 rounded text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+              >
+                恢复
               </button>
             )}
             <button
@@ -303,6 +336,24 @@ export default function ProductListPage() {
   const handleRetry = useCallback((id: string) => {
     navigate(`/product/${id}`)
   }, [navigate])
+
+  const handleArchive = useCallback(async (id: string) => {
+    try {
+      const updated = await archiveProduct(id)
+      setProducts(prev => prev.map(p => p.id === id ? updated : p))
+    } catch {
+      alert('归档失败，请重试')
+    }
+  }, [])
+
+  const handleActivate = useCallback(async (id: string) => {
+    try {
+      const updated = await activateProduct(id)
+      setProducts(prev => prev.map(p => p.id === id ? updated : p))
+    } catch {
+      alert('恢复失败，请重试')
+    }
+  }, [])
 
   const filtered = products.filter(
     p => matchesFilter(p, activeTab) && matchesSearch(p, debouncedQuery)
@@ -413,6 +464,8 @@ export default function ProductListPage() {
                 promptCount={0}
                 onDelete={handleDelete}
                 onRetry={handleRetry}
+                onArchive={handleArchive}
+                onActivate={handleActivate}
               />
             ))}
           </div>
