@@ -79,12 +79,21 @@ def _cfg_to_out(cfg: ModelConfig) -> ModelConfigOut:
     for pid in PROVIDER_ORDER:
         p = providers.get(pid, {})
         preset = PROVIDER_PRESETS[pid]
-        providers_out[pid] = ProviderConfigOut(
-            configured=bool(p.get("api_key")),
-            endpoint=p.get("endpoint") or preset["endpoint"],
-            vision_model=p.get("vision_model") or preset.get("vision_model", ""),
-            text_model=p.get("text_model") or preset.get("text_model", ""),
-        )
+        # Special handling for aliyun: use _aliyun_api_key for configured status
+        if pid == "aliyun":
+            providers_out[pid] = ProviderConfigOut(
+                configured=bool(providers.get("_aliyun_api_key")),
+                endpoint=p.get("endpoint") or preset["endpoint"],
+                vision_model=p.get("vision_model") or preset.get("vision_model", ""),
+                text_model=p.get("text_model") or preset.get("text_model", ""),
+            )
+        else:
+            providers_out[pid] = ProviderConfigOut(
+                configured=bool(p.get("api_key")),
+                endpoint=p.get("endpoint") or preset["endpoint"],
+                vision_model=p.get("vision_model") or preset.get("vision_model", ""),
+                text_model=p.get("text_model") or preset.get("text_model", ""),
+            )
     return ModelConfigOut(
         id=cfg.id,
         vision_model=cfg.vision_model,

@@ -69,6 +69,9 @@ def _make_provider_cfg(cfg, provider: str) -> types.SimpleNamespace:
     ns = types.SimpleNamespace()
     for json_key, attr_name in _ATTR_MAP.get(provider, {}).items():
         setattr(ns, attr_name, p.get(json_key) or None)
+    # aliyun: fall back to _aliyun_api_key (shared with video generation)
+    if provider == "aliyun" and not getattr(ns, "aliyun_api_key", None):
+        setattr(ns, "aliyun_api_key", providers.get("_aliyun_api_key") or None)
     return ns
 
 
