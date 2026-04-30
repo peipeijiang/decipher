@@ -4,7 +4,7 @@ import type { Product, ProductPrompt, ProductProgress, ProductDoc } from '../typ
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:8000'
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '',
+  baseURL: API_BASE,
 })
 
 export default api
