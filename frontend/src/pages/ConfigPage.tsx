@@ -65,6 +65,10 @@ export default function ConfigPage() {
   const [laozhangApiKey, setLaozhangApiKey] = useState('')
   const [volcengineApiKey, setVolcengineApiKey] = useState('')
   const [aliyunApiKey, setAliyunApiKey] = useState('')
+  const [autoEnabled, setAutoEnabled] = useState(false)
+  const [autoImages, setAutoImages] = useState(false)
+  const [autoVideos, setAutoVideos] = useState(false)
+  const [archiveDays, setArchiveDays] = useState(30)
 
   useEffect(() => {
     Promise.all([
@@ -545,6 +549,30 @@ export default function ConfigPage() {
                 </div>
               )
             })}
+          </div>
+        </div>
+
+        {/* Auto-Pipeline Configuration */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-1">自动流程配置</h2>
+          <p className="text-sm text-gray-500 mb-4">配置自动生成和自动归档策略</p>
+          <div className="space-y-3 text-sm">
+            <label className="flex items-center justify-between">
+              <span>启用自动流程</span>
+              <input type="checkbox" checked={autoEnabled} onChange={e => setAutoEnabled(e.target.checked)} />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>自动生成图片</span>
+              <input type="checkbox" checked={autoImages} onChange={e => setAutoImages(e.target.checked)} />
+            </label>
+            <label className="flex items-center justify-between">
+              <span>自动生成视频</span>
+              <input type="checkbox" checked={autoVideos} onChange={e => setAutoVideos(e.target.checked)} />
+            </label>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">自动归档天数</label>
+              <input type="number" value={archiveDays} onChange={e => setArchiveDays(parseInt(e.target.value) || 30)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+            </div>
           </div>
         </div>
 
