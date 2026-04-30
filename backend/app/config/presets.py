@@ -57,9 +57,9 @@ PROVIDER_PRESETS: dict[str, dict] = {
     },
     "aliyun": {
         "name": "阿里云 Qwen",
-        "endpoint": "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation",
-        "vision_model": "qwen-vl-max-latest",
-        "text_model": "qwen-max",
+        "endpoint": "https://dashscope.aliyuncs.com/api/v1",
+        "vision_model": "qwen3-vl-plus",
+        "text_model": "qwen3.6-plus",
         "supports_vision": True,
         "icon": "☁️",
         "api_key_url": "https://bailian.console.aliyun.com/",

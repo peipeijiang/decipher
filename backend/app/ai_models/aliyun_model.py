@@ -10,10 +10,13 @@ from app.ai_models.base import AIModel, FRAME_PROMPT
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_VISION_MODEL = "qwen-vl-max-latest"
-DEFAULT_TEXT_MODEL = "qwen-max"
-DEFAULT_ENDPOINT = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
+DEFAULT_VISION_MODEL = "qwen3-vl-plus"
+DEFAULT_TEXT_MODEL = "qwen3.6-plus"
+DEFAULT_MULTIMODAL_ENDPOINT = "https://dashscope.aliyuncs.com/api/v1/services/aigc/multimodal-generation/generation"
 DEFAULT_TEXT_ENDPOINT = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+
+# Vision models that require multimodal endpoint
+VISION_MODELS = {"qwen-vl-max-latest", "qwen3-vl-plus", "qwen3-vl-flash"}
 
 
 class AliyunModel(AIModel):
@@ -24,16 +27,17 @@ class AliyunModel(AIModel):
         if not api_key:
             raise ValueError("阿里云 API key not configured. Please set it in Config page.")
         self._api_key = api_key
-        self._vision_endpoint = (
-            getattr(cfg, "aliyun_endpoint", None) or DEFAULT_ENDPOINT
-        ) if cfg else DEFAULT_ENDPOINT
-        self._text_endpoint = DEFAULT_TEXT_ENDPOINT
+
         self._vision_model = (
             getattr(cfg, "aliyun_vision_model", None) or DEFAULT_VISION_MODEL
         ) if cfg else DEFAULT_VISION_MODEL
         self._text_model = (
             getattr(cfg, "aliyun_text_model", None) or DEFAULT_TEXT_MODEL
         ) if cfg else DEFAULT_TEXT_MODEL
+
+        # Determine endpoint based on model type
+        self._multimodal_endpoint = DEFAULT_MULTIMODAL_ENDPOINT
+        self._text_endpoint = DEFAULT_TEXT_ENDPOINT
 
         self._ssl_ctx = ssl.create_default_context()
         self._ssl_ctx.check_hostname = False
@@ -62,11 +66,14 @@ class AliyunModel(AIModel):
 
     def analyze_frames(self, images: list[str]) -> list[dict]:
         results = []
+        # Use multimodal endpoint for vision models
+        endpoint = self._multimodal_endpoint if self._vision_model in VISION_MODELS else self._text_endpoint
+
         for path in images:
             b64 = self._encode_image(path)
             try:
                 resp = self._post(
-                    self._vision_endpoint,
+                    endpoint,
                     {
                         "model": self._vision_model,
                         "input": {
