@@ -73,6 +73,10 @@ def run_product_pipeline(product_id: str):
         analysis_model = get_model(cfg.analysis_model, cfg)
 
         image_paths = [img["path"] for img in scrape_result["images"]]
+        # Limit to 5 images max to avoid API rate limits (429)
+        if len(image_paths) > 5:
+            logger.info("Limiting image analysis from %d to 5 images", len(image_paths))
+            image_paths = image_paths[:5]
         image_results = analyze_product_images(image_paths, vision_model)
         _set_progress(product_id, doc=60)
 
