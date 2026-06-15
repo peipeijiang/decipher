@@ -8,8 +8,8 @@ export interface NavSection {
   id: string
   label: string
   icon: string
-  path: string          // primary path — direct link when no children needed in sidebar
-  children?: NavChild[] // only shown when >1 sub-item
+  path: string
+  children?: NavChild[]
 }
 
 export interface NavItem {
@@ -30,7 +30,10 @@ export const NAV_CONFIG: NavConfig = {
       label: '爆款复刻',
       icon: 'Sparkles',
       path: '/replica/new',
-      children: [], // single child → render as direct link, no expand
+      children: [
+        { path: '/replica/new', label: '新建分析', icon: 'PlusSquare' },
+        { path: '/agent-workflow', label: '智能体工作流', icon: 'GitBranch' },
+      ],
     },
     {
       id: 'creative',
