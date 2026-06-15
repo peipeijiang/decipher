@@ -402,7 +402,11 @@ def regenerate_prompt(prompt_id: str, body: dict, db: Session = Depends(get_db))
             from app.api.agent_prompts import get_agent_prompt
             hooks = db.query(HookTemplate).filter(HookTemplate.is_active == True).all()
             if hooks:
-                hook_names = "\n".join(f"- {h.key} ({h.name}): {h.description}. Example: \"{json.loads(h.examples)[0] if h.examples else "N/A"}\"" for h in hooks)
+                hook_names = "\n".join(
+                    f"- {h.key} ({h.name}): {h.description}. "
+                    f"Example: \"{json.loads(h.examples)[0] if h.examples else 'N/A'}\""
+                    for h in hooks
+                )
                 _hook_picker_system, _ = get_agent_prompt(db, "hook_picker")
                 if _hook_picker_system:
                     pick_prompt = _hook_picker_system.format(
@@ -748,7 +752,7 @@ def generate_prompts_for_product(product_id: str, body: dict, db: Session = Depe
         from app.database import SessionLocal
         from app.ai_models import get_model
         from app.models.config import ModelConfig as MC
-        from app.services.prompt_generator import generate_prompt_variants
+        from app.services.prompt_generator import generate_prompt_variants, get_template
         import logging
         _logger = logging.getLogger(__name__)
 
@@ -757,25 +761,97 @@ def generate_prompts_for_product(product_id: str, body: dict, db: Session = Depe
             cfg = db_task.query(MC).first() or MC()
             analysis_model = get_model(cfg.analysis_model, cfg)
 
-            # Generate 10 variants, each with its own template (round-robin)
+            def _fallback_variant(index: int, template_key: str, error: Exception) -> dict:
+                template = get_template(template_key)
+                title = product_info.get("title", "the product")
+                appearance = product_info.get("appearance", "as shown in the reference images")
+                usage = product_info.get("usage", "daily use")
+                selling_points = product_info.get("selling_points", "clear product benefits")
+                consistency = f"Preserve the exact design, color, and appearance of {title}: {appearance}"
+                hook = f"Why are people switching to {title}?"
+                content = (
+                    "0-3s: Open with the product in a real-life scene and a quick problem statement. "
+                    "3-8s: Demonstrate the main use case with close-up product handling. "
+                    "8-12s: Highlight the strongest benefit with a simple before/after or proof moment. "
+                    "12-15s: End with a concise recommendation and clear call to action."
+                )
+                try:
+                    prompt_text = template["structure"].format(
+                        hook=hook,
+                        content=content,
+                        consistency=consistency,
+                    )
+                except Exception as template_error:
+                    _logger.warning(
+                        "Template '%s' fallback structure failed, using plain fallback: %s",
+                        template_key,
+                        template_error,
+                    )
+                    prompt_text = (
+                        "[Equipment] Shot with iPhone rear camera, natural product lighting\n"
+                        f"[Video Style] TikTok product demo using the {template_key} angle\n"
+                        "[Video Music] Clean upbeat social commerce background\n"
+                        "[Video Effects] Fast cuts, close-ups, captions, proof moment\n"
+                        f"[First 3 Seconds Hook] {hook}\n"
+                        f"[Video Content] {content}\n"
+                        f"[Product Consistency] {consistency}"
+                    )
+                prompt_text += (
+                    f"\n[Product Context] Use case: {usage}. Key selling points: {selling_points}."
+                )
+                _logger.warning(
+                    "Using fallback prompt for variant %d with template '%s' after generation error: %s",
+                    index,
+                    template_key,
+                    error,
+                )
+                return {
+                    "variant_index": index,
+                    "template_key": template_key,
+                    "full_prompt": prompt_text,
+                }
+
+            # Generate 10 variants, each with its own template (round-robin).
+            # Do not leave gaps when a model call returns empty or malformed JSON.
             total = 10
             all_variants = []
             for i in range(total):
                 assigned_template = template_keys[i % len(template_keys)]
-                try:
-                    variants = generate_prompt_variants(
-                        product_info, assigned_template, analysis_model, total_variants=1
+                variant = None
+                last_error: Exception | None = None
+                for attempt in range(2):
+                    try:
+                        variants = generate_prompt_variants(
+                            product_info, assigned_template, analysis_model, total_variants=1
+                        )
+                        if variants and variants[0].get("full_prompt"):
+                            variant = variants[0]
+                            break
+                        last_error = RuntimeError("model returned no usable prompt")
+                    except Exception as e:
+                        last_error = e
+                        _logger.warning(
+                            "Failed to generate variant %d with template '%s' (attempt %d/2): %s",
+                            i + 1,
+                            assigned_template,
+                            attempt + 1,
+                            e,
+                        )
+
+                if variant is None:
+                    variant = _fallback_variant(
+                        i + 1,
+                        assigned_template,
+                        last_error or RuntimeError("unknown generation failure"),
                     )
-                    if variants:
-                        v = variants[0]
-                        v["variant_index"] = i + 1
-                        v["template_key"] = assigned_template
-                        all_variants.append(v)
-                        _logger.info("Generated variant %d with template '%s'", i + 1, assigned_template)
-                except Exception as e:
-                    _logger.warning("Failed to generate variant %d with template '%s': %s", i + 1, assigned_template, e)
+
+                variant["variant_index"] = i + 1
+                variant["template_key"] = assigned_template
+                all_variants.append(variant)
+                _logger.info("Generated variant %d with template '%s'", i + 1, assigned_template)
 
             # Save to DB
+            db_task.query(ProductPrompt).filter(ProductPrompt.product_id == product_id).delete()
             for v in all_variants:
                 pp = ProductPrompt(
                     product_id=product_id,
