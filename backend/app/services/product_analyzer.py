@@ -25,7 +25,7 @@ def _call_with_retry(fn, max_retries: int = 3, base_wait: int = 10):
             else:
                 raise
 
-PRODUCT_IMAGE_PROMPT = (
+_PRODUCT_IMAGE_PROMPT_FALLBACK = (
     "Analyze this product image and return a JSON object with exactly these 3 fields:\n"
     '{"basic_recognition":"Describe what you see: the object, colors, materials, background scene",'
     '"product_understanding":"Product details: appearance features, selling points, target audience, use cases",'
@@ -33,14 +33,41 @@ PRODUCT_IMAGE_PROMPT = (
     "\nAll descriptions must be in English. Return ONLY the JSON, no other text."
 )
 
+# Keep the old name as an alias so any existing callers still work
+PRODUCT_IMAGE_PROMPT = _PRODUCT_IMAGE_PROMPT_FALLBACK
+
+
+def _get_product_image_prompt(db=None) -> str:
+    """Return the product_image_analyzer system_prompt from DB, falling back to the hardcoded default."""
+    if db is not None:
+        try:
+            from app.api.agent_prompts import get_agent_prompt
+            system_prompt, _ = get_agent_prompt(db, "product_image_analyzer")
+            if system_prompt:
+                return system_prompt
+        except Exception as e:
+            logger.warning("Could not load product_image_analyzer prompt from DB: %s", e)
+    return _PRODUCT_IMAGE_PROMPT_FALLBACK
+
 PRODUCT_DOC_PROMPT = (
     "Based on the following product information and image analysis results, "
     "generate a structured product document in JSON format with these exact fields:\n"
     '{{"title":"Product title in English",'
     '"description":"1-2 sentence product description in English",'
-    '"appearance":"Detailed appearance description in English (color, shape, material, size)",'
+    '"appearance":"Detailed appearance description in English (color, shape, material, size, all visible parts labeled)",'
+    '"category":"Product category (beauty/digital device/clothing/perfume/stationery/home/fitness/other)",'
+    '"target_users":"Who this product is for",'
+    '"usage_scenarios":"Where and when to use this product",'
     '"usage":"Primary use cases in English",'
+    '"usage_steps":["Step 1: action","Step 2: action","Step 3: action","Step 4: action"],'
+    '"preparation":["Prep 1: what to do before using","Prep 2: ..."],'
+    '"tips":["Tip 1: best practice","Tip 2: ...","Tip 3: ..."],'
+    '"warnings":["Warning 1: what to avoid","Warning 2: ..."],'
+    '"key_parts":["Part name: function","Part name: function"],'
     '"selling_points":"Key selling points in English (comma-separated)"}}\n\n'
+    "IMPORTANT: For usage_steps, provide 4-8 concrete steps in correct real-world order. "
+    "For key_parts, identify all visible/important physical parts from the images. "
+    "For warnings, think about common user mistakes.\n\n"
     "Product info:\nTitle: {title}\nDescription: {description}\n\n"
     "Image analysis results:\n{image_results}\n\n"
     "Return ONLY the JSON, no other text."
@@ -50,9 +77,12 @@ PRODUCT_DOC_PROMPT = (
 def analyze_product_images(
     image_paths: list[str],
     vision_model: AIModel,
+    db=None,
 ) -> list[dict]:
     """Run 3-layer AI recognition on each product image."""
     import time
+
+    image_prompt = _get_product_image_prompt(db)
 
     results = []
     for path in image_paths:
@@ -65,7 +95,7 @@ def analyze_product_images(
                 context = json.dumps(frame_results[0] if frame_results else {}, ensure_ascii=False)
                 raw = _call_with_retry(
                     lambda ctx=context: vision_model.analyze_text(
-                        f"Based on this image analysis: {ctx}\n\n{PRODUCT_IMAGE_PROMPT}",
+                        f"Based on this image analysis: {ctx}\n\n{image_prompt}",
                         task="direct",
                     )
                 )
@@ -106,24 +136,35 @@ def _filter_relevant_images(results: list[dict], vision_model: AIModel) -> list[
         # Keep all if we have 3 or fewer images
         return results
 
-    # Ask AI to identify which images are product-related
-    filter_prompt = (
-        "Review these product image analysis results and identify which images show the actual product "
-        "(not website logos, decorative elements, advertisements, or unrelated content).\n\n"
-        "Image analysis results:\n"
-    )
+    # Build image analysis text for the prompt
+    image_analysis_lines = ""
     for r in results:
-        filter_prompt += (
+        image_analysis_lines += (
             f"Image {r['index']} ({r['filename']}): "
             f"Basic: {r['basic_recognition'][:100]} | "
             f"Product: {r['product_understanding'][:100]}\n"
         )
 
-    filter_prompt += (
+    # Try to load prompt template from DB; fallback to hardcoded default
+    _DEFAULT_FILTER_PROMPT = (
+        "Review these product image analysis results and identify which images show the actual product "
+        "(not website logos, decorative elements, advertisements, or unrelated content).\n\n"
+        "Image analysis results:\n"
+        "{image_analysis_results}"
         "\n\nReturn a JSON array of image indices (numbers) that show the actual product. "
         "Example: [1, 3, 5, 7]\n"
         "Return ONLY the JSON array, no other text."
     )
+    from app.database import SessionLocal
+    from app.api.agent_prompts import get_agent_prompt
+    db_ap = SessionLocal()
+    try:
+        _sys, _ = get_agent_prompt(db_ap, "image_filter")
+        prompt_template = _sys if _sys else _DEFAULT_FILTER_PROMPT
+    finally:
+        db_ap.close()
+
+    filter_prompt = prompt_template.format(image_analysis_results=image_analysis_lines)
 
     try:
         raw = vision_model.analyze_text(filter_prompt, task="direct")
@@ -158,9 +199,22 @@ def generate_product_doc(
         f"Creative: {r['creative_usage']}"
         for r in image_results
     )
-    prompt = PRODUCT_DOC_PROMPT.format(
-        title=title, description=description, image_results=image_text
-    )
+
+    # Read agent prompt from DB (real-time, no cache)
+    from app.database import SessionLocal
+    from app.api.agent_prompts import get_agent_prompt
+    db_ap = SessionLocal()
+    try:
+        _sys, _usr_tmpl = get_agent_prompt(db_ap, "product_doc_generator")
+    finally:
+        db_ap.close()
+
+    if _sys and _usr_tmpl:
+        prompt = _sys + "\n\n" + _usr_tmpl.format(title=title, description=description, image_results=image_text)
+    else:
+        prompt = PRODUCT_DOC_PROMPT.format(
+            title=title, description=description, image_results=image_text
+        )
     raw = analysis_model.analyze_text(prompt, task="direct")
     parsed = analysis_model._parse_json_safe(raw) if isinstance(raw, str) else raw
     if not isinstance(parsed, dict) or not parsed:

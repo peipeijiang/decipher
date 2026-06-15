@@ -42,6 +42,7 @@ class ModelConfigOut(BaseModel):
     laozhang_api_key_configured: bool = False
     volcengine_api_key_configured: bool = False
     aliyun_api_key_configured: bool = False
+    updrama_api_key_configured: bool = False
     updated_at: datetime
 
 
@@ -64,6 +65,7 @@ class ModelConfigUpdate(BaseModel):
     laozhang_api_key: str | None = None
     volcengine_api_key: str | None = None
     aliyun_api_key: str | None = None
+    updrama_api_key: str | None = None
 
 
-SUPPORTED_MODELS = ["doubao", "openai", "claude", "minimax", "zhipu", "deepseek"]
+SUPPORTED_MODELS = ["doubao", "openai", "claude", "minimax", "zhipu", "deepseek", "aliyun"]

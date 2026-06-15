@@ -5,6 +5,7 @@ import tempfile
 import uuid
 import base64
 import json
+from datetime import datetime
 from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -138,7 +139,7 @@ def get_frame(video_id: str, frame_index: int, db: Session = Depends(get_db)):
 
 @router.post("/{video_id}/adapt")
 async def adapt_video(video_id: str, file: UploadFile = File(None), description: str = Form(""), db: Session = Depends(get_db)):
-    """创意改写：基于爆款视频的营销策略（内容钩子+情感共鸣点）生成多个创意角度和视频Prompt。"""
+    """创意改写：基于爆款视频的完整结构（分镜+策略+节奏）生成可复刻的创意角度和视频Prompt。"""
     video = db.get(Video, video_id)
     if not video:
         raise HTTPException(404, "Video not found")
@@ -149,7 +150,7 @@ async def adapt_video(video_id: str, file: UploadFile = File(None), description:
 
     from app.ai_models import get_model
     from app.models.config import ModelConfig
-    from app.api.creative import ANGLE_SYSTEM_PROMPT, PROMPT_SYSTEM_PROMPT, _call_text, _parse_json_array
+    from app.api.creative import PROMPT_SYSTEM_PROMPT, _call_text, _parse_json_array
 
     cfg = db.query(ModelConfig).first() or ModelConfig()
     analysis_model = get_model(cfg.analysis_model, cfg)
@@ -163,43 +164,129 @@ async def adapt_video(video_id: str, file: UploadFile = File(None), description:
             tmp_path = tmp.name
 
     try:
-        # Extract 内容钩子分析 and 情感共鸣点 from strategy markdown
+        # Extract key analysis data (keep concise to avoid model timeout)
         strategy_text = report.strategy or ""
-        hook_section = _extract_section(strategy_text, "内容钩子分析")
-        emotion_section = _extract_section(strategy_text, "情感共鸣点")
+        hook_section = _extract_section(strategy_text, "内容钩子分析")[:300]
+        emotion_section = _extract_section(strategy_text, "情感共鸣点")[:300]
+        replication_section = _extract_section(strategy_text, "复制建议")[:400]
 
-        # Build context that includes the video analysis insights
-        video_context = f"""参考爆款视频分析结果（请基于以下洞察生成创意角度）：
+        # Parse shots data — compact format
+        shots_text = ""
+        if report.shots:
+            import json as json_mod
+            try:
+                shots_data = json_mod.loads(report.shots) if isinstance(report.shots, str) else report.shots
+                shots_lines = []
+                for shot in shots_data:
+                    parts = [f"镜头{shot.get('index', '?')}"]
+                    if shot.get('timestamp'):
+                        parts.append(f"[{shot['timestamp']}]")
+                    if shot.get('description'):
+                        parts.append(shot['description'][:80])
+                    if shot.get('camera_angle'):
+                        parts.append(f"({shot['camera_angle']})")
+                    if shot.get('dialogue'):
+                        parts.append(f"\"{shot['dialogue'][:50]}\"")
+                    shots_lines.append(" ".join(parts))
+                shots_text = "\n".join(shots_lines)
+            except Exception:
+                shots_text = str(report.shots)[:1000]
 
-【内容钩子分析】
-{hook_section or '（未提取到）'}
+        # Build concise video context
+        video_context = f"""爆款视频分析摘要：
 
-【情感共鸣点】
-{emotion_section or '（未提取到）'}
+【分镜结构】
+{shots_text or '（无）'}
 
-【原视频逆向提示词参考】
-{report.prompt or '（无）'}
+【内容钩子】
+{hook_section or '（无）'}
+
+【情感共鸣】
+{emotion_section or '（无）'}
+
+【复制建议】
+{replication_section or '（无）'}
+
+【视觉风格参考】
+{(report.prompt or '')[:500]}
 """
+
         product_part = description.strip() if description.strip() else "（用户未填写产品描述，请根据图片推断）"
         user_msg = f"产品描述：{product_part}\n\n{video_context}"
 
-        # Step 1: Generate creative angles
-        angles_raw = _call_text(analysis_model, cfg, ANGLE_SYSTEM_PROMPT, user_msg, tmp_path)
-        import re as _re
+        # Step 1: Generate creative angles with structure-aware prompt
+        adapt_angle_prompt = """你是TikTok爆款视频复刻专家。基于爆款视频的分镜结构，为用户产品生成4个可复刻的创意角度。
+
+核心原则：保留爆款骨架（节奏、镜头模式、情绪曲线），替换产品内容。
+
+输出JSON数组，每个角度包含：
+[
+  {
+    "index": 1,
+    "title": "角度标题",
+    "structure_reference": "复刻了原视频的哪个结构特点",
+    "hook_visual": "前3秒视觉钩子",
+    "hook_copy": "前3秒文案",
+    "shot_sequence": "镜头序列（景别→景别→...）",
+    "concept": "拍摄思路",
+    "emotion_curve": "情绪曲线（如：好奇→惊喜→满足→行动）",
+    "why": "为什么适合该产品"
+  }
+]
+
+4个角度分别覆盖：完全复刻、变体节奏、反转结构、混合创新。只输出JSON。"""
+
+        angles_raw = _call_text(analysis_model, cfg, adapt_angle_prompt, user_msg, tmp_path)
         angles = _parse_json_array(angles_raw)
         if not angles:
             raise ValueError(f"No JSON array in angles response: {angles_raw[:200]}")
 
         # Step 2: Generate video prompt per angle
+        adapt_prompt_system = """You are a TikTok video director. Generate a shooting prompt that replicates the original viral video's rhythm with the new product.
+
+Output format (English only, no other text):
+
+[Title] <catchy title>
+[Equipment] <camera setup>
+[Video Style] <TikTok style>
+[Video Music] <music style>
+[Video Effects] <editing effects>
+[Hook] <hook that stops the scroll>
+[Video Content] <shot-by-shot with timestamps based on content rhythm>
+[Product Consistency] <product appearance for AI consistency>
+
+Rules: mirror the original video's rhythm, specify camera angles per timestamp, keep concise."""
+
         results = []
         for angle in angles:
-            angle_msg = f"产品描述：{product_part}\n\n创意角度：\n标题：{angle.get('title','')}\nHook（视觉）：{angle.get('hook_visual','')}\nHook（文案）：{angle.get('hook_copy','')}\nConcept：{angle.get('concept','')}\n\n参考爆款视频风格：\n{report.prompt or ''}"
+            angle_msg = f"""Product: {product_part}
+
+Angle: {angle.get('title','')}
+Structure: {angle.get('structure_reference','')}
+Shots: {angle.get('shot_sequence','')}
+Emotion: {angle.get('emotion_curve','')}
+
+Original video shots:
+{shots_text}"""
             try:
-                prompt_text = _call_text(analysis_model, cfg, PROMPT_SYSTEM_PROMPT, angle_msg, tmp_path)
+                prompt_text = _call_text(analysis_model, cfg, adapt_prompt_system, angle_msg, tmp_path)
             except Exception as e:
                 prompt_text = ""
                 logger.warning("Prompt gen failed for angle %s: %s", angle.get("index"), e)
             results.append({"angle": angle, "prompt": prompt_text.strip()})
+
+        # Save to creative history
+        import json as json_mod
+        from app.models.creative_prompt import CreativePrompt
+        record = CreativePrompt(
+            id=str(uuid.uuid4()),
+            description=description.strip() or "爆款复刻改写",
+            results=json_mod.dumps(results, ensure_ascii=False),
+            video_id=video_id,
+            created_at=datetime.utcnow(),
+        )
+        db.add(record)
+        db.commit()
 
         return {"results": results}
 

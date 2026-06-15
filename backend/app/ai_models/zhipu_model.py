@@ -34,6 +34,8 @@ class ZhipuModel(AIModel):
 
     def _post(self, payload: dict, timeout: int = 60) -> dict:
         """POST to Zhipu API, bypassing proxy env vars."""
+        import time
+
         old_env = {}
         for k in list(os.environ.keys()):
             if 'proxy' in k.lower():
@@ -48,8 +50,24 @@ class ZhipuModel(AIModel):
                     "Content-Type": "application/json",
                 },
             )
-            with urllib.request.urlopen(req, timeout=timeout, context=self._ssl_ctx) as resp:
-                return json.loads(resp.read().decode())
+
+            # Retry logic for rate limiting
+            last_err = None
+            for attempt in range(3):
+                try:
+                    with urllib.request.urlopen(req, timeout=timeout, context=self._ssl_ctx) as resp:
+                        return json.loads(resp.read().decode())
+                except urllib.error.HTTPError as e:
+                    body = e.read().decode()[:500]
+                    last_err = RuntimeError(f"智谱 API error {e.code}: {body}")
+                    # Retry on rate limit (429) or server errors (500, 502, 503, 504)
+                    if e.code in (429, 500, 502, 503, 504) and attempt < 2:
+                        wait = (2 ** attempt) * (60 if e.code == 429 else 5)
+                        logger.warning("智谱 %s error, retry %d/3 in %ds", e.code, attempt + 1, wait)
+                        time.sleep(wait)
+                        continue
+                    raise last_err from e
+            raise last_err
         finally:
             os.environ.update(old_env)
 
@@ -100,3 +118,27 @@ class ZhipuModel(AIModel):
         except Exception as e:
             logger.error("智谱 text analysis failed: %s", e)
             raise
+
+    def _analyze_single_image(self, b64_image: str, prompt: str, max_tokens: int) -> str:
+        """Analyze a single image with custom prompt."""
+        try:
+            resp = self._post(
+                {
+                    "model": self._vision_model,
+                    "messages": [{
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"},
+                            },
+                            {"type": "text", "text": prompt},
+                        ],
+                    }],
+                    "max_tokens": max_tokens,
+                }
+            )
+            return resp.get("choices", [{}])[0].get("message", {}).get("content", "") or ""
+        except Exception as e:
+            logger.warning("智谱 single image analysis failed: %s", e)
+            return ""

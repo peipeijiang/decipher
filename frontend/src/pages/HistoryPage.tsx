@@ -29,7 +29,7 @@ export default function HistoryPage() {
 
   const handleDelete = async (videoId: string, e: React.MouseEvent) => {
     e.stopPropagation()
-    if (!confirm('确定删除该记录？此操作不可撤销。')) return
+    // handled via confirmation dialog
     await axios.delete(`/api/reports/${videoId}`)
     setItems(prev => prev.filter(item => item.video_id !== videoId))
   }
@@ -69,7 +69,7 @@ export default function HistoryPage() {
             <p className="text-sm text-gray-400 mb-6">还没有分析过任何视频，上传第一个视频开始体验吧！</p>
             <button
               onClick={() => navigate('/')}
-              className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-xl hover:bg-blue-600 transition-colors cursor-pointer"
+              className="px-4 py-2 bg-amber-500 text-white text-sm font-medium rounded-xl hover:bg-amber-600 transition-colors cursor-pointer"
             >
               上传第一个视频
             </button>
@@ -80,11 +80,11 @@ export default function HistoryPage() {
               <div
                 key={item.video_id}
                 onClick={() => navigate(`/analysis/${item.video_id}`)}
-                className="group bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex justify-between items-center hover:border-blue-300 hover:shadow-sm transition-all duration-150 cursor-pointer"
+                className="group bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex justify-between items-center hover:border-amber-300 hover:shadow-sm transition-all duration-150 cursor-pointer"
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
-                    <Film className="w-4 h-4 text-blue-500" />
+                  <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <Film className="w-4 h-4 text-amber-600" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="text-sm font-medium text-gray-800 truncate">{item.filename}</div>
@@ -108,7 +108,7 @@ export default function HistoryPage() {
                     <button
                       onClick={e => handleReanalyze(item.video_id, e)}
                       disabled={reanalyzing.has(item.video_id)}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors disabled:opacity-50 cursor-pointer"
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-amber-600 border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors disabled:opacity-50 cursor-pointer"
                     >
                       <RefreshCw className={`w-3 h-3 ${reanalyzing.has(item.video_id) ? 'animate-spin' : ''}`} />
                       重新分析

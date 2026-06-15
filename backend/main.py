@@ -13,12 +13,20 @@ from app.api.reports import router as reports_router, config_router
 from app.api.segments import router as segments_router
 from app.api.creative import router as creative_router
 from app.api.products import router as products_router
+from app.api.video_gen import router as video_gen_router
+from app.api.templates import router as templates_router
+from app.api.agent_prompts import router as agent_prompts_router
+from app.api.storyboard import router as storyboard_router
+from app.api.dashboard import router as dashboard_router
 from app.models.config import ModelConfig  # noqa: F401 - registers with Base.metadata
 from app.models.creative_prompt import CreativePrompt  # noqa: F401
 from app.models.product import Product  # noqa: F401 - registers with Base.metadata
 from app.models.product_prompt import ProductPrompt  # noqa: F401
 from app.models.batch_job import BatchJob  # noqa: F401
 from app.models.auto_pipeline_config import AutoPipelineConfig  # noqa: F401
+from app.models.video_generation import VideoGeneration  # noqa: F401
+from app.models.template import VideoTemplate, ImageLayoutTemplate, HookTemplate  # noqa: F401
+from app.models.storyboard_replication import StoryboardReplication  # noqa: F401
 
 logging.basicConfig(level=logging.INFO)
 
@@ -151,6 +159,7 @@ async def lifespan(app: FastAPI):
     _migrate()
     os.makedirs("uploads", exist_ok=True)
     os.makedirs("processed", exist_ok=True)
+    os.makedirs("data/storyboards", exist_ok=True)
     yield
 
 
@@ -170,6 +179,11 @@ app.include_router(config_router)
 app.include_router(segments_router)
 app.include_router(creative_router)
 app.include_router(products_router)
+app.include_router(video_gen_router)
+app.include_router(templates_router)
+app.include_router(agent_prompts_router)
+app.include_router(storyboard_router)
+app.include_router(dashboard_router)
 
 
 @app.get("/health")

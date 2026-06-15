@@ -54,3 +54,22 @@ class ClaudeModel(AIModel):
             messages=[{"role": "user", "content": prompt}],
         )
         return msg.content[0].text
+
+    def _analyze_single_image(self, b64_image: str, prompt: str, max_tokens: int) -> str:
+        """Analyze a single image with custom prompt."""
+        try:
+            msg = self._client.messages.create(
+                model=self._vision_model,
+                max_tokens=max_tokens,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": b64_image}},
+                        {"type": "text", "text": prompt},
+                    ],
+                }],
+            )
+            return msg.content[0].text
+        except Exception as e:
+            logger.warning("Claude single image analysis failed: %s", e)
+            return ""

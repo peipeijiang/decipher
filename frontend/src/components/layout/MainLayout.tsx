@@ -1,6 +1,5 @@
 import { ReactNode } from 'react'
 import { Sidebar } from './Sidebar'
-import { HistorySidebar } from './HistorySidebar'
 
 interface MainLayoutProps {
   children: ReactNode
@@ -8,12 +7,11 @@ interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen" style={{ backgroundColor: '#faf9f7' }}>
       <Sidebar />
-      <main className="flex-1 ml-52 min-w-0">
+      <main className="flex-1 ml-60 min-w-0">
         {children}
       </main>
-      <HistorySidebar />
     </div>
   )
 }

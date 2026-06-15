@@ -39,7 +39,7 @@ function formatTime(iso: string) {
 
 const statusMap: Record<string, { label: string; icon: any; cls: string }> = {
   completed: { label: '完成', icon: CheckCircle2, cls: 'text-green-600 bg-green-50 border-green-200' },
-  processing: { label: '分析中', icon: Loader2, cls: 'text-blue-600 bg-blue-50 border-blue-200' },
+  processing: { label: '分析中', icon: Loader2, cls: 'text-amber-600 bg-amber-50 border-amber-200' },
   pending: { label: '排队中', icon: Clock, cls: 'text-gray-600 bg-gray-50 border-gray-200' },
   failed: { label: '失败', icon: AlertCircle, cls: 'text-red-600 bg-red-50 border-red-200' },
 }
@@ -111,7 +111,7 @@ export function HistorySidebar() {
         className="fixed right-5 top-5 z-50 group"
         title="历史记录"
       >
-        <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/25 flex items-center justify-center text-white transition-all group-hover:scale-105 group-hover:shadow-xl group-hover:shadow-blue-500/30">
+        <div className="relative w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/25 flex items-center justify-center text-white transition-all group-hover:scale-105 group-hover:shadow-xl group-hover:shadow-amber-500/30">
           <PanelRightOpen className="w-5 h-5" />
           <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 border-2 border-white rounded-full" />
         </div>
@@ -147,7 +147,7 @@ export function HistorySidebar() {
           <button
             onClick={() => setTab('video')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold transition-colors ${
-              tab === 'video' ? 'text-blue-600 border-b-2 border-blue-500 bg-blue-50/50' : 'text-gray-400 hover:text-gray-600'
+              tab === 'video' ? 'text-amber-600 border-b-2 border-amber-500 bg-amber-50/50' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
             <Film className="w-3.5 h-3.5" />
@@ -194,7 +194,7 @@ export function HistorySidebar() {
                     <button
                       key={v.video_id}
                       onClick={() => { navigate(`/analysis/${v.video_id}`); setOpen(false) }}
-                      className="w-full rounded-xl border border-gray-200 p-3 hover:border-blue-300 hover:bg-blue-50/30 transition-all text-left group"
+                      className="w-full rounded-xl border border-gray-200 p-3 hover:border-amber-300 hover:bg-amber-50/30 transition-all text-left group"
                     >
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="min-w-0 flex-1">

@@ -1,6 +1,10 @@
 import requests
 import time
+import base64
+import logging
 from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 class VideoGeneratorService:
@@ -14,31 +18,42 @@ class VideoGeneratorService:
 
     def generate_video(
         self,
-        image_url: str,
-        prompt: str,
+        image_url: str = None,
+        prompt: str = "",
         model: str = "seedance-2.0",
         reference_images: Optional[list[str]] = None,
+        duration: int = 5,
+        local_image_path: str = None,
     ) -> dict:
         """Generate video from image + prompt (Seedance 2.0 via Volcengine)"""
         try:
             # Build content array
             content = [{"type": "text", "text": prompt}]
+
+            # Add image: prefer URL, fallback to base64 from local file
             if image_url:
-                content.append({"type": "image_url", "image_url": image_url})
+                content.append({"type": "image_url", "image_url": {"url": image_url}})
+            elif local_image_path:
+                with open(local_image_path, 'rb') as f:
+                    img_b64 = base64.b64encode(f.read()).decode()
+                data_url = f"data:image/png;base64,{img_b64}"
+                content.append({"type": "image_url", "image_url": {"url": data_url}})
+
             if reference_images:
                 for ref_img in reference_images:
-                    content.append({"type": "image_url", "image_url": ref_img})
+                    content.append({"type": "image_url", "image_url": {"url": ref_img}})
 
-            # Submit generation request with correct endpoint and format
+            # Submit generation request
             payload = {
                 "model": "doubao-seedance-2-0-260128",
                 "content": content,
                 "ratio": "9:16",
                 "resolution": "720p",
-                "duration": 5,
-                "generate_audio": False
+                "duration": duration,
+                "generate_audio": False,
             }
 
+            logger.info("Submitting Seedance 2.0 task to %s/contents/generations/tasks", self.base_url)
             response = requests.post(
                 f"{self.base_url}/contents/generations/tasks",
                 headers=self.headers,
@@ -48,18 +63,18 @@ class VideoGeneratorService:
             response.raise_for_status()
             data = response.json()
 
-            task_id = data.get("task_id")
+            task_id = data.get("id") or data.get("task_id")
             if not task_id:
-                raise Exception("No task_id in response")
+                raise Exception(f"No task_id in response: {data}")
 
-            # Poll for result
+            logger.info("Seedance 2.0 task submitted: %s", task_id)
             return self._poll_task(task_id)
 
         except Exception as e:
             raise Exception(f"Video generation failed: {str(e)}")
 
     def _poll_task(self, task_id: str, max_attempts: int = 120) -> dict:
-        """Poll task status until completion (video takes longer)"""
+        """Poll task status until completion"""
         for attempt in range(max_attempts):
             try:
                 response = requests.get(
@@ -70,7 +85,7 @@ class VideoGeneratorService:
                 response.raise_for_status()
                 data = response.json()
 
-                status = data.get("status")
+                status = data.get("status", "")
                 if status == "succeeded":
                     video_url = data.get("content", {}).get("video_url")
                     return {
@@ -78,15 +93,14 @@ class VideoGeneratorService:
                         "video_url": video_url,
                         "task_id": task_id
                     }
-                elif status == "failed":
-                    raise Exception(
-                        f"Generation failed: {data.get('error', 'Unknown error')}"
-                    )
+                elif status in ("failed", "expired", "cancelled"):
+                    error_msg = data.get("error", {}).get("message", "Unknown error")
+                    raise Exception(f"Generation {status}: {error_msg}")
 
-                # Still processing, wait and retry
+                # queued / running → keep polling
                 time.sleep(3)
 
-            except Exception as e:
+            except requests.exceptions.HTTPError as e:
                 if attempt == max_attempts - 1:
                     raise Exception(f"Polling failed: {str(e)}")
                 time.sleep(3)
@@ -98,11 +112,8 @@ class VideoGeneratorService:
         try:
             response = requests.get(video_url, timeout=60)
             response.raise_for_status()
-
             with open(save_path, "wb") as f:
                 f.write(response.content)
-
             return save_path
-
         except Exception as e:
             raise Exception(f"Video download failed: {str(e)}")

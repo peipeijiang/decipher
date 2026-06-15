@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
-import axios from 'axios'
+import api from '../api/client'
+import { ImageIcon, Clapperboard, Zap, Palette } from 'lucide-react'
 import { MainLayout } from '../components/layout/MainLayout'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -23,6 +24,7 @@ interface CurrentConfig {
   laozhang_api_key_configured: boolean
   volcengine_api_key_configured: boolean
   aliyun_api_key_configured: boolean
+  updrama_api_key_configured: boolean
   updated_at: string
 }
 
@@ -65,6 +67,7 @@ export default function ConfigPage() {
   const [laozhangApiKey, setLaozhangApiKey] = useState('')
   const [volcengineApiKey, setVolcengineApiKey] = useState('')
   const [aliyunApiKey, setAliyunApiKey] = useState('')
+  const [updramaApiKey, setUpdramaApiKey] = useState('')
   const [autoEnabled, setAutoEnabled] = useState(false)
   const [autoImages, setAutoImages] = useState(false)
   const [autoVideos, setAutoVideos] = useState(false)
@@ -72,8 +75,8 @@ export default function ConfigPage() {
 
   useEffect(() => {
     Promise.all([
-      axios.get<CurrentConfig>('/api/config/models/current'),
-      axios.get<ProviderPreset[]>('/api/config/providers'),
+      api.get<CurrentConfig>('/api/config/models/current'),
+      api.get<ProviderPreset[]>('/api/config/providers'),
     ]).then(([configRes, presetsRes]) => {
       const c = configRes.data
       const ps = presetsRes.data
@@ -142,7 +145,22 @@ export default function ConfigPage() {
         // but always send endpoint/models so user overrides are saved
         void preset
       }
-      const res = await axios.patch<CurrentConfig>('/api/config/models', {
+
+      // Special handling for aliyun: also save to providers.aliyun when aliyunApiKey is provided
+      if (aliyunApiKey) {
+        const aliyunPreset = presets.find(p => p.id === 'aliyun')
+        const aliyunFields = providerFields['aliyun']
+        if (aliyunPreset && aliyunFields) {
+          providers['aliyun'] = {
+            api_key: aliyunApiKey,
+            endpoint: aliyunFields.endpoint || aliyunPreset.endpoint,
+            vision_model: aliyunFields.vision_model || aliyunPreset.vision_model,
+            text_model: aliyunFields.text_model || aliyunPreset.text_model,
+          }
+        }
+      }
+
+      const res = await api.patch<CurrentConfig>('/api/config/models', {
         vision_model: visionModel,
         analysis_model: analysisModel,
         image_model: imageModel,
@@ -154,6 +172,7 @@ export default function ConfigPage() {
         ...(laozhangApiKey ? { laozhang_api_key: laozhangApiKey } : {}),
         ...(volcengineApiKey ? { volcengine_api_key: volcengineApiKey } : {}),
         ...(aliyunApiKey ? { aliyun_api_key: aliyunApiKey } : {}),
+        ...(updramaApiKey ? { updrama_api_key: updramaApiKey } : {}),
       })
       setConfig(res.data)
       setImageModel(res.data.image_model)
@@ -261,7 +280,7 @@ export default function ConfigPage() {
           <p className="text-sm text-gray-500 mb-6">选择图片生成和视频生成模型，在下方配置对应 API Key</p>
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">🎨 图片生成模型</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">图片生成模型</label>
               <p className="text-xs text-gray-400 mb-2">用于生成营销图片</p>
               <select
                 value={imageModel}
@@ -269,10 +288,11 @@ export default function ConfigPage() {
                 className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
               >
                 <option value="laozhang-image-2-vip">🖼️ 老张图片生成 2.0 VIP (推荐)</option>
+                <option value="updrama-image-2">🖼️ Updrama Image 2</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">🎬 视频生成模型</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">视频生成模型</label>
               <p className="text-xs text-gray-400 mb-2">用于生成营销视频</p>
               <select
                 value={videoModel}
@@ -298,7 +318,7 @@ export default function ConfigPage() {
             <div className={`border rounded-xl overflow-hidden transition-all ${laozhangApiKey ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}>
               <div className="flex items-center justify-between px-4 py-3.5">
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">🖼️</span>
+                  <ImageIcon className="w-5 h-5" />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-900">老张图片生成</span>
@@ -338,7 +358,7 @@ export default function ConfigPage() {
             <div className={`border rounded-xl overflow-hidden transition-all ${volcengineApiKey ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}>
               <div className="flex items-center justify-between px-4 py-3.5">
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">🎬</span>
+                  <Clapperboard className="w-5 h-5" />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-900">火山引擎视频生成</span>
@@ -378,7 +398,7 @@ export default function ConfigPage() {
             <div className={`border rounded-xl overflow-hidden transition-all ${aliyunApiKey ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}>
               <div className="flex items-center justify-between px-4 py-3.5">
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">🐴</span>
+                  <Zap className="w-5 h-5" />
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-gray-900">阿里云视频生成</span>
@@ -409,6 +429,46 @@ export default function ConfigPage() {
                   placeholder={config?.aliyun_api_key_configured ? '输入新 Key 以覆盖...' : '输入阿里云 API Key...'}
                   value={aliyunApiKey}
                   onChange={e => { setAliyunApiKey(e.target.value); mark() }}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Updrama provider card */}
+            <div className={`border rounded-xl overflow-hidden transition-all ${updramaApiKey ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <Palette className="w-5 h-5" />
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-gray-900">Updrama 图片生成</span>
+                      {config?.updrama_api_key_configured ? (
+                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ 已配置</span>
+                      ) : (
+                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">用于 Updrama Image 2 图片生成</p>
+                  </div>
+                </div>
+                <a
+                  href="https://up.lk888.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-700 text-xs"
+                >
+                  获取 Key →
+                </a>
+              </div>
+              <div className="px-4 pb-4 pt-2 border-t border-gray-100">
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  API Key{config?.updrama_api_key_configured && <span className="text-green-600 font-normal ml-1">(已保存，留空则不修改)</span>}
+                </label>
+                <input
+                  type="password"
+                  placeholder={config?.updrama_api_key_configured ? '输入新 Key 以覆盖...' : '输入 Updrama API Key...'}
+                  value={updramaApiKey}
+                  onChange={e => { setUpdramaApiKey(e.target.value); mark() }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
                 />
               </div>

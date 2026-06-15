@@ -58,3 +58,22 @@ class DoubaoModel(AIModel):
         except Exception as e:
             logger.error("豆包 text analysis failed: %s", e)
             raise
+
+    def _analyze_single_image(self, b64_image: str, prompt: str, max_tokens: int) -> str:
+        """Analyze a single image with custom prompt."""
+        try:
+            resp = self._client.chat.completions.create(
+                model=self._vision_model,
+                messages=[{
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64_image}"}},
+                    ],
+                }],
+                max_tokens=max_tokens,
+            )
+            return resp.choices[0].message.content or ""
+        except Exception as e:
+            logger.warning("豆包 single image analysis failed: %s", e)
+            return ""
