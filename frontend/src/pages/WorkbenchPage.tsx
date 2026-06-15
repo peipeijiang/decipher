@@ -77,7 +77,7 @@ function ItemRow({ item, onDel }: { item: WorkbenchItem; onDel: (e:React.MouseEv
 
   return (
     <div onClick={() => { if(item.type==='replica') nav(`/replica/${item.video_id}`); else if(item.type==='product') nav(`/product/${item.product_id}`); else if(item.type==='creative') nav('/creative/new'); else nav('/video-gen') }}
-      className="card card-hover px-4 py-4 flex items-center gap-4 animate-slideUp">
+      className="card card-hover px-4 py-4 flex items-center gap-4 animate-slideUp group">
       <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0 relative" style={{background:c.g}}>
         <I className="w-5 h-5 text-gray-700" />
         {ip && <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-amber-400 rounded-full border-2 border-white animate-pulse" />}
