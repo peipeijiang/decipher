@@ -29,11 +29,11 @@ import api from '../api/client'
 import type { Product, ProductPrompt, ProductProgress, ProductDoc, VideoTemplate } from '../types/product'
 
 const PIPELINE_STEPS = [
-  { key: 'scrape', label: '抓取', icon: '📦', desc: '商品信息' },
-  { key: 'doc', label: '文档', icon: '📄', desc: '结构化' },
-  { key: 'prompts', label: '提示词', icon: '✍️', desc: '生成中' },
-  { key: 'image', label: '图片', icon: '🖼️', desc: '待生成' },
-  { key: 'video', label: '视频', icon: '🎬', desc: '待生成' },
+  { key: 'scrape', label: '抓取', desc: '爬取商品页面，提取图片与信息' },
+  { key: 'doc', label: '文档', desc: 'AI 识别图片生成结构化文档' },
+  { key: 'prompts', label: '提示词', desc: '按模板生成多条视频脚本' },
+  { key: 'image', label: '图片', desc: 'AI 生成分镜图 / 产品图' },
+  { key: 'video', label: '视频', desc: 'AI 生成最终营销短视频' },
 ]
 
 export default function ProductPage() {
@@ -130,6 +130,49 @@ export default function ProductPage() {
     } finally {
       setCreating(false)
     }
+  }
+
+  const getStepDetail = (key: string): string => {
+    // Scrape: image count
+    if (key === 'scrape') {
+      const cnt = doc?.images?.length || 0
+      if (cnt > 0) return `${cnt} 张商品图片`
+      if (progress?.scrape && progress.scrape > 0) return '抓取中…'
+      return ''
+    }
+    // Doc
+    if (key === 'doc') {
+      if (doc?.appearance) return '文档已生成'
+      if (progress?.doc && progress.doc > 0) return 'AI 分析中…'
+      return ''
+    }
+    // Prompts
+    if (key === 'prompts') {
+      if (prompts.length > 0) {
+        const imgCnt = prompts.filter(p => p.image_status === 'completed').length
+        const vidCnt = prompts.filter(p => p.video_status === 'completed').length
+        if (vidCnt > 0) return `${prompts.length} 条脚本 · ${vidCnt} 条视频`
+        if (imgCnt > 0) return `${prompts.length} 条脚本 · ${imgCnt} 张图`
+        return `${prompts.length} 条脚本`
+      }
+      if (progress?.prompts && progress.prompts > 0) return '生成中…'
+      return ''
+    }
+    // Image
+    if (key === 'image') {
+      const cnt = prompts.filter(p => p.image_status === 'completed').length
+      if (cnt > 0) return `${cnt} 张已生成`
+      if (prompts.length > 0) return '等待生成'
+      return ''
+    }
+    // Video
+    if (key === 'video') {
+      const cnt = prompts.filter(p => p.video_status === 'completed').length
+      if (cnt > 0) return `${cnt} 条已生成`
+      if (prompts.length > 0) return '等待生成'
+      return ''
+    }
+    return ''
   }
 
   const getStepProgress = (key: string): 'pending' | 'active' | 'completed' | 'failed' => {
@@ -258,37 +301,49 @@ export default function ProductPage() {
                 {progress.error}
               </div>
             )}
-            <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-2">
+            <div className="flex items-stretch gap-1 bg-gray-50 rounded-xl p-2 overflow-x-auto">
               {PIPELINE_STEPS.map((step, idx) => {
                 const status = getStepProgress(step.key)
+                const detail = getStepDetail(step.key)
+                const isLast = idx === PIPELINE_STEPS.length - 1
                 return (
-                  <div key={step.key} className="flex items-center flex-1">
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg flex-1 transition-all ${
+                  <div key={step.key} className="flex items-center flex-1 min-w-0" title={step.desc}>
+                    <div className={`flex flex-col justify-center px-3 py-2 rounded-lg flex-1 min-w-0 transition-all ${
                       status === 'completed' ? 'bg-green-100' :
                       status === 'active' ? 'bg-blue-100' :
                       status === 'failed' ? 'bg-red-100' :
                       'bg-transparent'
                     }`}>
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-                        status === 'completed' ? 'bg-green-500 text-white' :
-                        status === 'active' ? 'bg-blue-500 text-white' :
-                        status === 'failed' ? 'bg-red-500 text-white' :
-                        'bg-gray-300 text-white'
-                      }`}>
-                        {status === 'completed' ? <Check className="w-3 h-3" /> :
-                         status === 'active' ? <Loader2 className="w-3 h-3 animate-spin" /> :
-                         status === 'failed' ? <X className="w-3 h-3" /> :
-                         idx + 1}
+                      <div className="flex items-center gap-2">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+                          status === 'completed' ? 'bg-green-500 text-white' :
+                          status === 'active' ? 'bg-blue-500 text-white animate-pulse' :
+                          status === 'failed' ? 'bg-red-500 text-white' :
+                          'bg-gray-300 text-white'
+                        }`}>
+                          {status === 'completed' ? <Check className="w-3 h-3" /> :
+                           status === 'active' ? <Loader2 className="w-3 h-3 animate-spin" /> :
+                           status === 'failed' ? <X className="w-3 h-3" /> :
+                           idx + 1}
+                        </div>
+                        <span className={`text-xs font-semibold truncate ${
+                          status === 'completed' ? 'text-green-700' :
+                          status === 'active' ? 'text-blue-700' :
+                          status === 'failed' ? 'text-red-700' :
+                          'text-gray-400'
+                        }`}>{step.label}</span>
                       </div>
-                      <span className={`text-xs font-medium ${
-                        status === 'completed' ? 'text-green-700' :
-                        status === 'active' ? 'text-blue-700' :
-                        status === 'failed' ? 'text-red-700' :
-                        'text-gray-400'
-                      }`}>{step.label}</span>
+                      {detail && status !== 'pending' && (
+                        <span className={`text-[10px] mt-0.5 ml-7 truncate ${
+                          status === 'completed' ? 'text-green-600/70' :
+                          status === 'active' ? 'text-blue-600/70' :
+                          status === 'failed' ? 'text-red-600/70' :
+                          'text-gray-400'
+                        }`}>{detail}</span>
+                      )}
                     </div>
-                    {idx < PIPELINE_STEPS.length - 1 && (
-                      <div className={`w-4 h-0.5 flex-shrink-0 ${
+                    {!isLast && (
+                      <div className={`w-4 h-0.5 flex-shrink-0 self-center ${
                         status === 'completed' ? 'bg-green-300' : 'bg-gray-200'
                       }`} />
                     )}
