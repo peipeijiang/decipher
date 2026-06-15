@@ -92,6 +92,7 @@ def run_analysis(video_id: str):
             whisper_segments=whisper_segments,
             vision_model=vision_model,
             analysis_model=analysis_model,
+            db=db,
         )
         _set_progress(video_id, strategy=100, prompt=100)
 
@@ -183,6 +184,7 @@ def analyze_segment(segment_id: str):
             script=script,
             vision_model=vision_model,
             analysis_model=analysis_model,
+            db=db,
         )
 
         seg.strategy = ai_result["strategy"]
