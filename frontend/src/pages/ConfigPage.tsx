@@ -149,12 +149,29 @@ export default function ConfigPage() {
 
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto px-6 pt-12 pb-12 space-y-8">
+      <div className="max-w-4xl mx-auto px-6 pb-12 space-y-8">
+
+      {/* ── Sticky Save Bar ── */}
+      <div className="sticky top-0 z-30 bg-[#faf9f7]/90 backdrop-blur-md -mx-6 px-6 py-3 mb-6 border-b border-gray-200/60">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">模型配置</h1>
+            {error && <p className="text-sm text-red-600 mt-0.5">{error}</p>}
+            {saved && <p className="text-sm text-emerald-600 mt-0.5 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />保存成功</p>}
+          </div>
+          <button onClick={handleSave} disabled={saving || !dirty}
+            className="px-7 py-2.5 rounded-full text-sm font-semibold text-white transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+            style={{ background: saving ? '#92400e' : '#d97706', boxShadow: '0 2px 8px rgba(217,119,6,0.25)' }}>
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" />保存中…</> : <><Check className="w-4 h-4" />保存配置</>}
+          </button>
+        </div>
+      </div>
+
+
 
         {/* ── Section 1: Model Role Assignment ── */}
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">模型角色分配</h2>
-          <p className="text-sm text-gray-500 mb-5">为每个分析/生成环节选择模型提供商</p>
+          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-5">模型角色分配</h2>
           <div className="grid grid-cols-2 gap-4">
             <RoleCard label="视觉分析模型" sub="逐帧识别画面、构图、光线、主体" value={visionModel}
               options={presets.filter(p => p.supports_vision).map(p => ({ value: p.id, label: p.name }))}
@@ -332,18 +349,7 @@ export default function ConfigPage() {
           </div>
         </section>
 
-        {/* ── Save bar ── */}
-        <div className="flex items-center justify-between pt-2">
-          <div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            {saved && <p className="text-sm text-emerald-600 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />保存成功</p>}
-          </div>
-          <button onClick={handleSave} disabled={saving || !dirty}
-            className="px-8 py-2.5 rounded-full text-sm font-semibold text-white transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-            style={{ background: saving ? '#92400e' : '#d97706', boxShadow: '0 2px 8px rgba(217,119,6,0.25)' }}>
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin" />保存中…</> : <>保存配置</>}
-          </button>
-        </div>
+
 
       </div>
     </MainLayout>
