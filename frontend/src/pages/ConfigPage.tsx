@@ -1,53 +1,71 @@
 import { useEffect, useState, useCallback } from 'react'
 import api from '../api/client'
-import { ImageIcon, Clapperboard, Zap, Palette } from 'lucide-react'
+import { ImageIcon, Clapperboard, Zap, Palette, ChevronDown, ChevronRight, Eye, EyeOff, Check, RotateCcw, Loader2 } from 'lucide-react'
 import { MainLayout } from '../components/layout/MainLayout'
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-interface ProviderStatus {
-  configured: boolean
-  endpoint: string
-  vision_model: string
-  text_model: string
-}
-
+// ── Types ──────────────────────────────────────────────────
+interface ProviderStatus { configured: boolean; endpoint: string; vision_model: string; text_model: string }
 interface CurrentConfig {
-  id: string
-  vision_model: string
-  analysis_model: string
-  image_model: string
-  video_model: string
-  providers: Record<string, ProviderStatus>
-  temperature: number
-  max_tokens: number
-  laozhang_api_key_configured: boolean
-  volcengine_api_key_configured: boolean
-  aliyun_api_key_configured: boolean
-  updrama_api_key_configured: boolean
-  updated_at: string
+  id: string; vision_model: string; analysis_model: string; image_model: string; video_model: string
+  providers: Record<string, ProviderStatus>; temperature: number; max_tokens: number
+  laozhang_api_key_configured: boolean; volcengine_api_key_configured: boolean
+  aliyun_api_key_configured: boolean; updrama_api_key_configured: boolean; updated_at: string
 }
-
 interface ProviderPreset {
-  id: string
-  name: string
-  endpoint: string
-  vision_model: string
-  text_model: string
-  supports_vision: boolean
-  icon: string
-  api_key_url: string
+  id: string; name: string; endpoint: string; vision_model: string; text_model: string
+  supports_vision: boolean; icon: string; api_key_url: string
+}
+interface ProviderFields { api_key: string; endpoint: string; vision_model: string; text_model: string }
+
+// ── Generation provider definitions ────────────────────────
+const GEN_PROVIDERS = [
+  { id: 'laozhang', name: '老张图片生成', desc: '产品营销图片生成', icon: ImageIcon, getKeyUrl: 'https://laozhang.ai', configuredKey: 'laozhang_api_key_configured' as const },
+  { id: 'volcengine', name: '火山引擎视频', desc: 'Seedance 2.0 视频生成', icon: Clapperboard, getKeyUrl: 'https://console.volcengine.com', configuredKey: 'volcengine_api_key_configured' as const },
+  { id: 'aliyun', name: '阿里云视频/图片', desc: 'Wan 2.6 / Qwen 生成', icon: Zap, getKeyUrl: 'https://dashscope.aliyun.com', configuredKey: 'aliyun_api_key_configured' as const },
+  { id: 'updrama', name: 'Updrama 图片', desc: 'Updrama Image 2 图片生成', icon: Palette, getKeyUrl: 'https://up.lk888.ai', configuredKey: 'updrama_api_key_configured' as const },
+]
+
+const IMAGE_MODELS = [
+  { value: 'laozhang-image-2-vip', label: '老张图片 2.0 VIP (推荐)' },
+  { value: 'updrama-image-2', label: 'Updrama Image 2' },
+  { value: 'qwen-image-2.0-pro', label: 'Qwen Image 2.0 Pro' },
+]
+const VIDEO_MODELS = [
+  { value: 'seedance-2.0', label: 'Seedance 2.0 (火山引擎)' },
+  { value: 'veo-3.1', label: 'Veo 3.1 (老张)' },
+  { value: 'wan-2.6', label: 'Wan 2.6 (阿里云)' },
+  { value: 'happyhorse-1.0', label: 'HappyHorse 1.0 (阿里云)' },
+]
+
+// ── Model role card ────────────────────────────────────────
+interface RoleCardProps {
+  label: string; sub: string; value: string; options: { value: string; label: string }[]
+  onChange: (v: string) => void; onDirty: () => void
+}
+function RoleCard({ label, sub, value, options, onChange, onDirty }: RoleCardProps) {
+  return (
+    <div className="card rounded-xl p-5">
+      <label className="text-sm font-semibold text-gray-800">{label}</label>
+      <p className="text-xs text-gray-400 mt-0.5 mb-3">{sub}</p>
+      <select value={value} onChange={e => { onChange(e.target.value); onDirty() }}
+        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 bg-gray-50 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200 transition-all">
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </div>
+  )
 }
 
-interface ProviderFields {
-  api_key: string
-  endpoint: string
-  vision_model: string
-  text_model: string
+// ── Toggle switch ──────────────────────────────────────────
+function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button type="button" onClick={onChange}
+      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 cursor-pointer ${checked ? 'bg-amber-500' : 'bg-gray-300'}`}>
+      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform duration-300 ${checked ? 'translate-x-5' : 'translate-x-1'}`} />
+    </button>
+  )
 }
 
-// ── Component ─────────────────────────────────────────────────────────────────
-
+// ── Main page ──────────────────────────────────────────────
 export default function ConfigPage() {
   const [config, setConfig] = useState<CurrentConfig | null>(null)
   const [presets, setPresets] = useState<ProviderPreset[]>([])
@@ -68,600 +86,266 @@ export default function ConfigPage() {
   const [volcengineApiKey, setVolcengineApiKey] = useState('')
   const [aliyunApiKey, setAliyunApiKey] = useState('')
   const [updramaApiKey, setUpdramaApiKey] = useState('')
-  const [autoEnabled, setAutoEnabled] = useState(false)
-  const [autoImages, setAutoImages] = useState(false)
-  const [autoVideos, setAutoVideos] = useState(false)
-  const [archiveDays, setArchiveDays] = useState(30)
 
+  // Fetch current config + provider presets
   useEffect(() => {
     Promise.all([
       api.get<CurrentConfig>('/api/config/models/current'),
       api.get<ProviderPreset[]>('/api/config/providers'),
     ]).then(([configRes, presetsRes]) => {
-      const c = configRes.data
-      const ps = presetsRes.data
-      setConfig(c)
-      setPresets(ps)
-      setVisionModel(c.vision_model)
-      setAnalysisModel(c.analysis_model)
-      setImageModel(c.image_model)
-      setVideoModel(c.video_model)
-      setTemperature(c.temperature)
-      setMaxTokens(c.max_tokens)
-
+      const c = configRes.data; const ps = presetsRes.data
+      setConfig(c); setPresets(ps)
+      setVisionModel(c.vision_model); setAnalysisModel(c.analysis_model)
+      setImageModel(c.image_model); setVideoModel(c.video_model)
+      setTemperature(c.temperature); setMaxTokens(c.max_tokens)
       const fields: Record<string, ProviderFields> = {}
       for (const p of ps) {
         const cur = c.providers[p.id] ?? {}
-        fields[p.id] = {
-          api_key: '',
-          endpoint: cur.endpoint || p.endpoint,
-          vision_model: cur.vision_model || p.vision_model,
-          text_model: cur.text_model || p.text_model,
-        }
+        fields[p.id] = { api_key: '', endpoint: cur.endpoint || p.endpoint, vision_model: cur.vision_model || p.vision_model, text_model: cur.text_model || p.text_model }
       }
       setProviderFields(fields)
     }).catch(() => setError('加载配置失败'))
   }, [])
 
   const mark = useCallback(() => setDirty(true), [])
-
-  const setField = (pid: string, key: keyof ProviderFields, value: string) => {
-    setProviderFields(prev => ({ ...prev, [pid]: { ...prev[pid], [key]: value } }))
-    mark()
-  }
-
-  const resetProvider = (preset: ProviderPreset) => {
-    setProviderFields(prev => ({
-      ...prev,
-      [preset.id]: {
-        api_key: '',
-        endpoint: preset.endpoint,
-        vision_model: preset.vision_model,
-        text_model: preset.text_model,
-      },
-    }))
-    mark()
-  }
-
-  const toggleExpand = (pid: string) =>
-    setExpanded(prev => ({ ...prev, [pid]: !prev[pid] }))
+  const setField = (pid: string, key: keyof ProviderFields, value: string) => { setProviderFields(prev => ({ ...prev, [pid]: { ...prev[pid], [key]: value } })); mark() }
+  const resetProvider = (preset: ProviderPreset) => { setProviderFields(prev => ({ ...prev, [preset.id]: { api_key: '', endpoint: preset.endpoint, vision_model: preset.vision_model, text_model: preset.text_model } })); mark() }
+  const isConfigured = (pid: string) => config?.providers[pid]?.configured ?? false
 
   const handleSave = async () => {
-    setSaving(true)
-    setError('')
-    setSaved(false)
+    setSaving(true); setError(''); setSaved(false)
     try {
       const providers: Record<string, Partial<ProviderFields>> = {}
       for (const [pid, f] of Object.entries(providerFields)) {
-        const preset = presets.find(p => p.id === pid)
-        providers[pid] = {
-          endpoint: f.endpoint,
-          vision_model: f.vision_model,
-          text_model: f.text_model,
-          // Only send api_key when user typed something
-          ...(f.api_key ? { api_key: f.api_key } : {}),
-        }
-        // Omit fields that match the preset to keep payload clean,
-        // but always send endpoint/models so user overrides are saved
-        void preset
+        providers[pid] = { endpoint: f.endpoint, vision_model: f.vision_model, text_model: f.text_model, ...(f.api_key ? { api_key: f.api_key } : {}) }
       }
-
-      // Special handling for aliyun: also save to providers.aliyun when aliyunApiKey is provided
       if (aliyunApiKey) {
-        const aliyunPreset = presets.find(p => p.id === 'aliyun')
-        const aliyunFields = providerFields['aliyun']
-        if (aliyunPreset && aliyunFields) {
-          providers['aliyun'] = {
-            api_key: aliyunApiKey,
-            endpoint: aliyunFields.endpoint || aliyunPreset.endpoint,
-            vision_model: aliyunFields.vision_model || aliyunPreset.vision_model,
-            text_model: aliyunFields.text_model || aliyunPreset.text_model,
-          }
-        }
+        const af = providerFields['aliyun']; const ap = presets.find(p => p.id === 'aliyun')
+        if (ap && af) providers['aliyun'] = { api_key: aliyunApiKey, endpoint: af.endpoint || ap.endpoint, vision_model: af.vision_model || ap.vision_model, text_model: af.text_model || ap.text_model }
       }
-
       const res = await api.patch<CurrentConfig>('/api/config/models', {
-        vision_model: visionModel,
-        analysis_model: analysisModel,
-        image_model: imageModel,
-        video_model: videoModel,
-        temperature,
-        max_tokens: maxTokens,
-        providers,
-        // Only send generation-model keys when user typed something
+        vision_model: visionModel, analysis_model: analysisModel, image_model: imageModel, video_model: videoModel,
+        temperature, max_tokens: maxTokens, providers,
         ...(laozhangApiKey ? { laozhang_api_key: laozhangApiKey } : {}),
         ...(volcengineApiKey ? { volcengine_api_key: volcengineApiKey } : {}),
         ...(aliyunApiKey ? { aliyun_api_key: aliyunApiKey } : {}),
         ...(updramaApiKey ? { updrama_api_key: updramaApiKey } : {}),
       })
-      setConfig(res.data)
-      setImageModel(res.data.image_model)
-      setVideoModel(res.data.video_model)
-      setDirty(false)
-      setSaved(true)
-      // Clear api_key inputs after successful save
-      setProviderFields(prev => {
-        const next = { ...prev }
-        for (const pid of Object.keys(next)) {
-          next[pid] = { ...next[pid], api_key: '' }
-        }
-        return next
-      })
-      setLaozhangApiKey('')
-      setVolcengineApiKey('')
-      setAliyunApiKey('')
-      setTimeout(() => setSaved(false), 2000)
-    } catch (e: any) {
-      setError(e.response?.data?.detail || '保存失败')
-    } finally {
-      setSaving(false)
-    }
+      setConfig(res.data); setDirty(false); setSaved(true)
+      setProviderFields(prev => { const n = { ...prev }; for (const pid of Object.keys(n)) n[pid] = { ...n[pid], api_key: '' }; return n })
+      setLaozhangApiKey(''); setVolcengineApiKey(''); setAliyunApiKey(''); setUpdramaApiKey('')
+      setTimeout(() => setSaved(false), 2500)
+    } catch (e: any) { setError(e.response?.data?.detail || '保存失败') }
+    finally { setSaving(false) }
   }
 
-  const visionProviders = presets.filter(p => p.supports_vision)
-  const isConfigured = (pid: string) => config?.providers[pid]?.configured ?? false
+  const textPresets = presets.filter(p => p.supports_vision)
+  const genKeyState: Record<string, { val: string; set: (v: string) => void; configured: boolean }> = {
+    laozhang: { val: laozhangApiKey, set: setLaozhangApiKey, configured: config?.laozhang_api_key_configured ?? false },
+    volcengine: { val: volcengineApiKey, set: setVolcengineApiKey, configured: config?.volcengine_api_key_configured ?? false },
+    aliyun: { val: aliyunApiKey, set: setAliyunApiKey, configured: config?.aliyun_api_key_configured ?? false },
+    updrama: { val: updramaApiKey, set: setUpdramaApiKey, configured: config?.updrama_api_key_configured ?? false },
+  }
 
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto px-4 pt-8 pb-16">
-        <h1 className="text-3xl font-bold font-heading mb-8">模型配置</h1>
+      <div className="max-w-4xl mx-auto px-6 pt-12 pb-12 space-y-8">
 
-        <div className="space-y-6">
-
-        {/* Global Parameters */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">全局参数</h2>
-          <p className="text-sm text-gray-500 mb-6">所有模型共享的参数配置</p>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Temperature</label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="range" min="0" max="1" step="0.1"
-                  value={temperature}
-                  onChange={e => { setTemperature(parseFloat(e.target.value)); mark() }}
-                  className="flex-1"
-                />
-                <span className="text-sm text-gray-600 w-10">{temperature}</span>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">控制随机性，越低越确定</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Max Tokens</label>
-              <input
-                type="number"
-                value={maxTokens}
-                onChange={e => { setMaxTokens(parseInt(e.target.value) || 4096); mark() }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                min="100" max="128000"
-              />
-              <p className="text-xs text-gray-400 mt-1">单次响应最大token数</p>
-            </div>
+        {/* ── Section 1: Model Role Assignment ── */}
+        <section>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">模型角色分配</h2>
+          <p className="text-sm text-gray-500 mb-5">为每个分析/生成环节选择模型提供商</p>
+          <div className="grid grid-cols-2 gap-4">
+            <RoleCard label="视觉分析模型" sub="逐帧识别画面、构图、光线、主体" value={visionModel}
+              options={presets.filter(p => p.supports_vision).map(p => ({ value: p.id, label: p.name }))}
+              onChange={setVisionModel} onDirty={mark} />
+            <RoleCard label="综合分析模型" sub="策略分析、分镜解析、提示词生成、语音分段" value={analysisModel}
+              options={presets.map(p => ({ value: p.id, label: p.name }))}
+              onChange={setAnalysisModel} onDirty={mark} />
+            <RoleCard label="图片生成模型" sub="生成分镜图、产品营销图、说明书" value={imageModel}
+              options={IMAGE_MODELS}
+              onChange={setImageModel} onDirty={mark} />
+            <RoleCard label="视频生成模型" sub="AI 生成最终营销短视频" value={videoModel}
+              options={VIDEO_MODELS}
+              onChange={setVideoModel} onDirty={mark} />
           </div>
-        </div>
+        </section>
 
-        {/* Model Selection */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">模型选择</h2>
-          <p className="text-sm text-gray-500 mb-6">分别选择视觉分析模型和综合分析模型</p>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">🔍 视觉分析模型</label>
-              <p className="text-xs text-gray-400 mb-2">用于分析视频关键帧（6帧图片）</p>
-              <select
-                value={visionModel}
-                onChange={e => { setVisionModel(e.target.value); mark() }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
-              >
-                {visionProviders.map(p => (
-                  <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">🧠 综合分析模型</label>
-              <p className="text-xs text-gray-400 mb-2">策略分析、分镜解析、Prompt生成、语音分段</p>
-              <select
-                value={analysisModel}
-                onChange={e => { setAnalysisModel(e.target.value); mark() }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
-              >
-                {presets.map(p => (
-                  <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
+        {/* ── Section 2: API Key Configuration ── */}
+        <section>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">模型提供商</h2>
+          <p className="text-sm text-gray-500 mb-5">配置各模型提供商的 API Key 和端点参数</p>
 
-        {/* Image & Video Generation Models */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">生成模型配置</h2>
-          <p className="text-sm text-gray-500 mb-6">选择图片生成和视频生成模型，在下方配置对应 API Key</p>
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">图片生成模型</label>
-              <p className="text-xs text-gray-400 mb-2">用于生成营销图片</p>
-              <select
-                value={imageModel}
-                onChange={e => { setImageModel(e.target.value); mark() }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
-              >
-                <option value="laozhang-image-2-vip">🖼️ 老张图片生成 2.0 VIP (推荐)</option>
-                <option value="updrama-image-2">🖼️ Updrama Image 2</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">视频生成模型</label>
-              <p className="text-xs text-gray-400 mb-2">用于生成营销视频</p>
-              <select
-                value={videoModel}
-                onChange={e => { setVideoModel(e.target.value); mark() }}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm"
-              >
-                <option value="veo-3.1">🎬 Veo 3.1 (老张)</option>
-                <option value="seedance-2.0">🎥 Seedance 2.0 (火山引擎)</option>
-                <option value="happyhorse-1.0">🐴 HappyHorse 1.0 (阿里云)</option>
-                <option value="wan-2.6">🌊 Wan 2.6 (阿里云)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Generation Model Provider Cards */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">生成模型 API Key</h2>
-          <p className="text-sm text-gray-500 mb-4">配置图片和视频生成服务的 API Key</p>
-          <div className="space-y-3">
-
-            {/* 老张 provider card */}
-            <div className={`border rounded-xl overflow-hidden transition-all ${laozhangApiKey ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}>
-              <div className="flex items-center justify-between px-4 py-3.5">
-                <div className="flex items-center gap-3">
-                  <ImageIcon className="w-5 h-5" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">老张图片生成</span>
-                      {config?.laozhang_api_key_configured ? (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ 已配置</span>
-                      ) : (
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-0.5">用于产品营销图片生成</p>
-                  </div>
-                </div>
-                <a
-                  href="https://laozhang.ai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700 text-xs"
-                >
-                  获取 Key →
-                </a>
-              </div>
-              <div className="px-4 pb-4 pt-2 border-t border-gray-100">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  API Key{config?.laozhang_api_key_configured && <span className="text-green-600 font-normal ml-1">(已保存，留空则不修改)</span>}
-                </label>
-                <input
-                  type="password"
-                  placeholder={config?.laozhang_api_key_configured ? '输入新 Key 以覆盖...' : '输入老张 API Key...'}
-                  value={laozhangApiKey}
-                  onChange={e => { setLaozhangApiKey(e.target.value); mark() }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
-                />
-              </div>
-            </div>
-
-            {/* 火山引擎 provider card */}
-            <div className={`border rounded-xl overflow-hidden transition-all ${volcengineApiKey ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}>
-              <div className="flex items-center justify-between px-4 py-3.5">
-                <div className="flex items-center gap-3">
-                  <Clapperboard className="w-5 h-5" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">火山引擎视频生成</span>
-                      {config?.volcengine_api_key_configured ? (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ 已配置</span>
-                      ) : (
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-0.5">用于产品营销视频生成</p>
-                  </div>
-                </div>
-                <a
-                  href="https://console.volcengine.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700 text-xs"
-                >
-                  获取 Key →
-                </a>
-              </div>
-              <div className="px-4 pb-4 pt-2 border-t border-gray-100">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  API Key{config?.volcengine_api_key_configured && <span className="text-green-600 font-normal ml-1">(已保存，留空则不修改)</span>}
-                </label>
-                <input
-                  type="password"
-                  placeholder={config?.volcengine_api_key_configured ? '输入新 Key 以覆盖...' : '输入火山引擎 API Key...'}
-                  value={volcengineApiKey}
-                  onChange={e => { setVolcengineApiKey(e.target.value); mark() }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
-                />
-              </div>
-            </div>
-
-            {/* 阿里云 provider card */}
-            <div className={`border rounded-xl overflow-hidden transition-all ${aliyunApiKey ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}>
-              <div className="flex items-center justify-between px-4 py-3.5">
-                <div className="flex items-center gap-3">
-                  <Zap className="w-5 h-5" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">阿里云视频生成</span>
-                      {config?.aliyun_api_key_configured ? (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ 已配置</span>
-                      ) : (
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-0.5">用于 Wan 2.6 视频生成</p>
-                  </div>
-                </div>
-                <a
-                  href="https://dashscope.aliyun.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700 text-xs"
-                >
-                  获取 Key →
-                </a>
-              </div>
-              <div className="px-4 pb-4 pt-2 border-t border-gray-100">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  API Key{config?.aliyun_api_key_configured && <span className="text-green-600 font-normal ml-1">(已保存，留空则不修改)</span>}
-                </label>
-                <input
-                  type="password"
-                  placeholder={config?.aliyun_api_key_configured ? '输入新 Key 以覆盖...' : '输入阿里云 API Key...'}
-                  value={aliyunApiKey}
-                  onChange={e => { setAliyunApiKey(e.target.value); mark() }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Updrama provider card */}
-            <div className={`border rounded-xl overflow-hidden transition-all ${updramaApiKey ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}>
-              <div className="flex items-center justify-between px-4 py-3.5">
-                <div className="flex items-center gap-3">
-                  <Palette className="w-5 h-5" />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">Updrama 图片生成</span>
-                      {config?.updrama_api_key_configured ? (
-                        <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ 已配置</span>
-                      ) : (
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-0.5">用于 Updrama Image 2 图片生成</p>
-                  </div>
-                </div>
-                <a
-                  href="https://up.lk888.ai"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-700 text-xs"
-                >
-                  获取 Key →
-                </a>
-              </div>
-              <div className="px-4 pb-4 pt-2 border-t border-gray-100">
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  API Key{config?.updrama_api_key_configured && <span className="text-green-600 font-normal ml-1">(已保存，留空则不修改)</span>}
-                </label>
-                <input
-                  type="password"
-                  placeholder={config?.updrama_api_key_configured ? '输入新 Key 以覆盖...' : '输入 Updrama API Key...'}
-                  value={updramaApiKey}
-                  onChange={e => { setUpdramaApiKey(e.target.value); mark() }}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono"
-                />
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        {/* Provider Cards */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">API Key 配置</h2>
-          <p className="text-sm text-gray-500 mb-4">点击卡片展开配置，已配置的显示绿色徽章</p>
-          <div className="space-y-3">
-            {presets.map(preset => {
+          {/* Sub: 文本/视觉模型 */}
+          <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">文本 & 视觉分析模型</h3>
+          <div className="space-y-2 mb-6">
+            {textPresets.map(preset => {
               const f = providerFields[preset.id] ?? { api_key: '', endpoint: preset.endpoint, vision_model: preset.vision_model, text_model: preset.text_model }
               const configured = isConfigured(preset.id)
               const isOpen = expanded[preset.id] ?? false
               const seeKey = showKey[preset.id] ?? false
-
               return (
-                <div
-                  key={preset.id}
-                  className={`border rounded-xl overflow-hidden transition-all ${isOpen ? 'border-blue-200 shadow-sm' : 'border-gray-200'}`}
-                >
-                  {/* Card header — always visible, click to expand */}
-                  <button
-                    onClick={() => toggleExpand(preset.id)}
-                    className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors text-left"
-                  >
+                <div key={preset.id} className={`border rounded-xl overflow-hidden transition-all ${isOpen ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200 bg-white'}`}>
+                  <button onClick={() => setExpanded(prev => ({ ...prev, [preset.id]: !prev[preset.id] }))}
+                    className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/50 transition-colors text-left cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <span className="text-xl">{preset.icon}</span>
+                      <span className="text-lg">{preset.icon}</span>
                       <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">{preset.name}</span>
-                          {configured ? (
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">✓ 已配置</span>
-                          ) : (
-                            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">未配置</span>
-                          )}
-                          {!preset.supports_vision && (
-                            <span className="text-xs bg-orange-50 text-orange-500 px-2 py-0.5 rounded-full">仅文本</span>
-                          )}
-                        </div>
-                        {!isOpen && configured && (
-                          <div className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{f.endpoint}</div>
-                        )}
+                        <span className="font-medium text-gray-900 text-sm">{preset.name}</span>
+                        {configured && <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">已配置</span>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <a
-                        href={preset.api_key_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={e => e.stopPropagation()}
-                        className="text-blue-600 hover:text-blue-700 text-xs"
-                      >
-                        获取 Key →
-                      </a>
-                      <span className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}>▾</span>
+                    <div className="flex items-center gap-2">
+                      {!configured && <span className="text-[10px] text-gray-400">未配置</span>}
+                      {isOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
                     </div>
                   </button>
-
-                  {/* Expanded content */}
                   {isOpen && (
-                    <div className="px-4 pb-4 pt-2 border-t border-gray-100 space-y-3">
-                      {/* API Key row */}
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          API Key {configured && <span className="text-green-600 font-normal">(已保存，留空则不修改)</span>}
+                    <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
+                      <div className="flex items-center gap-2">
+                        <label className="flex-1">
+                          <span className="block text-xs font-medium text-gray-600 mb-1">API Key {configured && <span className="text-green-600 font-normal">(已保存，留空不修改)</span>}</span>
+                          <div className="relative">
+                            <input type={seeKey ? 'text' : 'password'} value={f.api_key}
+                              onChange={e => setField(preset.id, 'api_key', e.target.value)}
+                              placeholder={configured ? '输入新 Key 以覆盖…' : `输入 ${preset.name} API Key…`}
+                              className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-9 text-sm font-mono focus:outline-none focus:border-amber-400" />
+                            <button onClick={() => setShowKey(prev => ({ ...prev, [preset.id]: !prev[preset.id] }))}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
+                              {seeKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
                         </label>
-                        <div className="relative">
-                          <input
-                            type={seeKey ? 'text' : 'password'}
-                            placeholder={configured ? '输入新 Key 以覆盖...' : 'sk-... 或 apikey-...'}
-                            value={f.api_key}
-                            onChange={e => setField(preset.id, 'api_key', e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm font-mono pr-10"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowKey(prev => ({ ...prev, [preset.id]: !seeKey }))}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-sm"
-                            tabIndex={-1}
-                          >
-                            {seeKey ? '🙈' : '👁'}
-                          </button>
-                        </div>
                       </div>
-
-                      {/* Endpoint + models row */}
                       <div className="grid grid-cols-3 gap-3">
                         <div className="col-span-3 sm:col-span-1">
-                          <label className="block text-xs font-medium text-gray-600 mb-1">API Endpoint</label>
-                          <input
-                            type="url"
-                            value={f.endpoint}
-                            onChange={e => setField(preset.id, 'endpoint', e.target.value)}
-                            placeholder={preset.endpoint}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                          />
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Endpoint</label>
+                          <input type="url" value={f.endpoint} onChange={e => setField(preset.id, 'endpoint', e.target.value)}
+                            placeholder={preset.endpoint} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400" />
                         </div>
                         {preset.supports_vision && (
                           <div>
                             <label className="block text-xs font-medium text-gray-600 mb-1">视觉模型</label>
-                            <input
-                              type="text"
-                              value={f.vision_model}
-                              onChange={e => setField(preset.id, 'vision_model', e.target.value)}
-                              placeholder={preset.vision_model}
-                              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                            />
+                            <input type="text" value={f.vision_model} onChange={e => setField(preset.id, 'vision_model', e.target.value)}
+                              placeholder={preset.vision_model} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400" />
                           </div>
                         )}
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">文本模型</label>
-                          <input
-                            type="text"
-                            value={f.text_model}
-                            onChange={e => setField(preset.id, 'text_model', e.target.value)}
-                            placeholder={preset.text_model}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                          />
+                          <input type="text" value={f.text_model} onChange={e => setField(preset.id, 'text_model', e.target.value)}
+                            placeholder={preset.text_model} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400" />
                         </div>
                       </div>
-
-                      {/* Reset button */}
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => resetProvider(preset)}
-                          className="text-xs text-gray-400 hover:text-gray-600 underline"
-                        >
-                          重置为默认
-                        </button>
-                      </div>
+                      {preset.api_key_url && (
+                        <div className="flex items-center justify-between pt-1">
+                          <a href={preset.api_key_url} target="_blank" rel="noopener noreferrer"
+                            className="text-xs text-amber-600 hover:text-amber-700">获取 Key →</a>
+                          <button onClick={() => resetProvider(preset)}
+                            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 cursor-pointer">
+                            <RotateCcw className="w-3 h-3" />重置默认</button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )
             })}
           </div>
-        </div>
 
-        {/* Auto-Pipeline Configuration */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">自动流程配置</h2>
-          <p className="text-sm text-gray-500 mb-4">配置自动生成和自动归档策略</p>
-          <div className="space-y-3 text-sm">
-            <label className="flex items-center justify-between">
-              <span>启用自动流程</span>
-              <input type="checkbox" checked={autoEnabled} onChange={e => setAutoEnabled(e.target.checked)} />
-            </label>
-            <label className="flex items-center justify-between">
-              <span>自动生成图片</span>
-              <input type="checkbox" checked={autoImages} onChange={e => setAutoImages(e.target.checked)} />
-            </label>
-            <label className="flex items-center justify-between">
-              <span>自动生成视频</span>
-              <input type="checkbox" checked={autoVideos} onChange={e => setAutoVideos(e.target.checked)} />
-            </label>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">自动归档天数</label>
-              <input type="number" value={archiveDays} onChange={e => setArchiveDays(parseInt(e.target.value) || 30)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+          {/* Sub: 生成模型 */}
+          <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">图片 & 视频生成模型</h3>
+          <div className="space-y-2">
+            {GEN_PROVIDERS.map(gp => {
+              const ks = genKeyState[gp.id]
+              const isOpen = expanded[`gen_${gp.id}`] ?? false
+              const seeKey = showKey[`gen_${gp.id}`] ?? false
+              const Icon = gp.icon
+              return (
+                <div key={gp.id} className={`border rounded-xl overflow-hidden transition-all ${isOpen ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200 bg-white'}`}>
+                  <button onClick={() => setExpanded(prev => ({ ...prev, [`gen_${gp.id}`]: !prev[`gen_${gp.id}`] }))}
+                    className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-gray-50/50 transition-colors text-left cursor-pointer">
+                    <div className="flex items-center gap-3">
+                      <Icon className="w-5 h-5 text-gray-600" />
+                      <div>
+                        <span className="font-medium text-gray-900 text-sm">{gp.name}</span>
+                        {ks.configured && <span className="ml-2 text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">已配置</span>}
+                        <p className="text-[11px] text-gray-400 mt-0.5">{gp.desc}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!ks.configured && <span className="text-[10px] text-gray-400">未配置</span>}
+                      {isOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
+                    </div>
+                  </button>
+                  {isOpen && (
+                    <div className="px-4 pb-4 space-y-3 border-t border-gray-100 pt-3">
+                      <label>
+                        <span className="block text-xs font-medium text-gray-600 mb-1">API Key {ks.configured && <span className="text-green-600 font-normal">(已保存，留空不修改)</span>}</span>
+                        <div className="relative">
+                          <input type={seeKey ? 'text' : 'password'} value={ks.val}
+                            onChange={e => { ks.set(e.target.value); mark() }}
+                            placeholder={ks.configured ? '输入新 Key 以覆盖…' : `输入 ${gp.name} API Key…`}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 pr-9 text-sm font-mono focus:outline-none focus:border-amber-400" />
+                          <button onClick={() => setShowKey(prev => ({ ...prev, [`gen_${gp.id}`]: !prev[`gen_${gp.id}`] }))}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer">
+                            {seeKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </label>
+                      <a href={gp.getKeyUrl} target="_blank" rel="noopener noreferrer"
+                        className="inline-block text-xs text-amber-600 hover:text-amber-700">获取 Key →</a>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* ── Section 3: Global Parameters ── */}
+        <section>
+          <h2 className="text-lg font-bold text-gray-900 mb-1">全局参数</h2>
+          <p className="text-sm text-gray-500 mb-5">所有模型共享的温度和 token 限制</p>
+          <div className="card rounded-xl p-6">
+            <div className="grid grid-cols-2 gap-8">
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-semibold text-gray-700">Temperature</label>
+                  <span className="text-sm font-mono text-amber-600 bg-amber-50 px-2 py-0.5 rounded">{temperature}</span>
+                </div>
+                <input type="range" min="0" max="1" step="0.1" value={temperature}
+                  onChange={e => { setTemperature(parseFloat(e.target.value)); mark() }}
+                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amber-500" />
+                <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+                  <span>精确</span><span>平衡</span><span>创意</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Max Tokens</label>
+                <input type="number" value={maxTokens}
+                  onChange={e => { setMaxTokens(parseInt(e.target.value) || 4096); mark() }}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-amber-400"
+                  min={100} max={128000} step={100} />
+                <p className="text-[11px] text-gray-400 mt-1">最大输出长度，范围 100-128000</p>
+              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Error */}
-        {error && (
-          <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{error}</div>
-        )}
-
-        {/* Footer — last updated + save */}
-        <div className="flex items-center justify-between pb-8">
-          <div className="text-xs text-gray-400">
-            {config?.updated_at && <>最后更新：{new Date(config.updated_at).toLocaleString('zh-CN')}</>}
+        {/* ── Save bar ── */}
+        <div className="flex items-center justify-between pt-2">
+          <div>
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            {saved && <p className="text-sm text-emerald-600 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />保存成功</p>}
           </div>
-          <button
-            onClick={handleSave}
-            disabled={saving || !dirty}
-            className={`px-8 py-3 rounded-xl text-sm font-semibold transition-all ${
-              saved
-                ? 'bg-green-600 text-white'
-                : dirty
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 shadow-sm'
-                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {saving ? '保存中...' : saved ? '✓ 已保存' : '保存配置'}
+          <button onClick={handleSave} disabled={saving || !dirty}
+            className="px-8 py-2.5 rounded-full text-sm font-semibold text-white transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+            style={{ background: saving ? '#92400e' : '#d97706', boxShadow: '0 2px 8px rgba(217,119,6,0.25)' }}>
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" />保存中…</> : <>保存配置</>}
           </button>
         </div>
+
       </div>
-    </div>
     </MainLayout>
   )
 }
