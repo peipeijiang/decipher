@@ -102,6 +102,21 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Secondary nav — 工作台 + 设置 */}
+      <div className="px-3 pt-2 border-t border-gray-100">
+        {NAV_CONFIG.secondary.map(item => {
+          const a = l.pathname === item.path || l.pathname.startsWith(item.path)
+          return (
+            <button key={item.path} onClick={() => n(item.path)}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full text-[15px] font-semibold mb-1 transition-all duration-500 cursor-pointer ${
+                a ? 'bg-amber-500 text-white shadow-[0_3px_12px_rgba(217,119,6,0.25)]' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+              }`}>
+              <NI name={item.icon} className="w-[18px] h-[18px] flex-shrink-0" />{item.label}
+            </button>
+          )
+        })}
+      </div>
+
       {/* User area */}
       <div className="mt-auto pt-5 px-4 border-t border-gray-100">
         <div className="flex items-center gap-3">
