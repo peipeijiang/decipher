@@ -32,7 +32,6 @@ export const NAV_CONFIG: NavConfig = {
       path: '/replica/new',
       children: [
         { path: '/replica/new', label: '新建分析', icon: 'PlusSquare' },
-        { path: '/agent-workflow', label: '智能体工作流', icon: 'GitBranch' },
       ],
     },
     {
@@ -50,8 +49,14 @@ export const NAV_CONFIG: NavConfig = {
       children: [
         { path: '/product/new', label: '新建项目', icon: 'PlusSquare' },
         { path: '/settings/templates', label: '模板管理', icon: 'Settings' },
-        { path: '/agent-workflow', label: '智能体工作流', icon: 'GitBranch' },
       ],
+    },
+    {
+      id: 'agent-workflow',
+      label: '智能体工作流',
+      icon: 'GitBranch',
+      path: '/agent-workflow',
+      children: [],
     },
     {
       id: 'video-gen',

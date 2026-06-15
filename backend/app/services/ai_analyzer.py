@@ -101,10 +101,9 @@ def _safe_analyze(model: AIModel, text: str, task: str, fallback: str, agent_pro
         if agent_prompt:
             system = agent_prompt.system_prompt or ""
             user_tpl = agent_prompt.user_prompt_template or ""
-            # Build the full prompt by replacing {{context}} in both system and user template
-            full_prompt = system.replace("{{context}}", text)
-            if user_tpl:
-                full_prompt += "\n\n" + user_tpl.replace("{{context}}", text)
+            # system_prompt = instructions (role), user_prompt_template = data injection
+            user_msg = user_tpl.replace("{{context}}", text) if user_tpl else text
+            full_prompt = system + "\n\n" + user_msg
             logger.info("_safe_analyze: using agent_prompt '%s' (len=%d)", agent_prompt.key, len(full_prompt))
             result = model.analyze_text(full_prompt, "direct")
         else:
