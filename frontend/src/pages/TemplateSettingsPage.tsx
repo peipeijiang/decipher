@@ -36,10 +36,10 @@ function StatusTags({ isCustom, isActive }: { isCustom: boolean; isActive: boole
   return (
     <div className="flex items-center gap-1.5 flex-wrap">
       <span className={`tag ${isCustom ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
-        {isCustom ? 'Custom' : 'Built-in'}
+        {isCustom ? '自定义' : '内置'}
       </span>
       <span className={`tag ${isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-400'}`}>
-        {isActive ? 'Enabled' : 'Disabled'}
+        {isActive ? '启用' : '禁用'}
       </span>
     </div>
   )
