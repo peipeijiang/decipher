@@ -20,7 +20,12 @@ import { MissingDataAlert } from '../components/ui/MissingDataAlert'
 import { MainLayout } from '../components/layout/MainLayout'
 import type { Video, Report, Progress } from '../types'
 
-const STEPS = ['视频上传', '智能解析', '策略拆解', '提示词生成']
+const STEPS = [
+  { label: '视频上传', desc: '上传 TikTok 对标视频' },
+  { label: '智能解析', desc: '提取关键帧 + Whisper 语音转文字' },
+  { label: '策略拆解', desc: 'AI 深度分析生成策略与分镜报告' },
+  { label: '提示词生成', desc: '逆向生成可复用的 AI 视频提示词' },
+]
 const TABS = ['营销策略', '分镜分析', '逆向提示词', '创意改写', '分镜复刻']
 
 const TAB_AGENTS: Record<number, string> = {
@@ -359,6 +364,43 @@ export default function AnalysisPage() {
 
   const handleLoadedMetadata = () => {}
 
+  const getStepDetail = (idx: number): string => {
+    // Step 0: 视频上传
+    if (idx === 0) {
+      if (progress.upload >= 100) {
+        const dur = video?.duration
+        return dur ? `上传完成 · ${Math.round(dur)}s` : '上传完成'
+      }
+      if (progress.upload > 0) return '上传中…'
+      return ''
+    }
+    // Step 1: 智能解析
+    if (idx === 1) {
+      if (progress.parse >= 100) {
+        return '关键帧 + 语音识别完成'
+      }
+      if (progress.parse > 0) {
+        if (progress.parse < 40) return '提取关键帧…'
+        if (progress.parse < 70) return 'Whisper 转文字…'
+        return '智能解析中…'
+      }
+      return ''
+    }
+    // Step 2: 策略拆解
+    if (idx === 2) {
+      if (progress.strategy >= 100) return '策略报告已生成'
+      if (progress.strategy > 0) return 'AI 深度分析中…'
+      return ''
+    }
+    // Step 3: 提示词生成
+    if (idx === 3) {
+      if (progress.prompt >= 100) return '提示词已生成'
+      if (progress.prompt > 0) return '逆向生成中…'
+      return ''
+    }
+    return ''
+  }
+
   const getStepStatus = (idx: number) => {
     const values = [progress.upload, progress.parse, progress.strategy, progress.prompt]
     if (values[idx] >= 100) return 'completed'
@@ -540,26 +582,47 @@ export default function AnalysisPage() {
 
         {/* Progress Steps */}
         <div className="glass rounded-xl px-6 py-3 mb-6">
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-stretch gap-2 flex-wrap">
             {STEPS.map((step, idx) => {
               const status = getStepStatus(idx)
+              const detail = getStepDetail(idx)
+              const isLast = idx === STEPS.length - 1
               return (
-                <div key={step} className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all ${
-                    status === 'completed' ? 'bg-status-success text-white' :
-                    status === 'active' ? 'bg-accent text-white animate-pulse' :
-                    'bg-gray-100 text-text-muted'
+                <div key={step.label} className="flex items-center gap-2" title={step.desc}>
+                  <div className={`flex flex-col justify-center px-3 py-2 rounded-lg min-w-0 transition-all ${
+                    status === 'completed' ? 'bg-green-50' :
+                    status === 'active' ? 'bg-accent/10' :
+                    'bg-transparent'
                   }`}>
-                    {status === 'completed' ? <Check className="w-3.5 h-3.5" /> : idx + 1}
+                    <div className="flex items-center gap-2">
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all flex-shrink-0 ${
+                        status === 'completed' ? 'bg-status-success text-white' :
+                        status === 'active' ? 'bg-accent text-white animate-pulse' :
+                        'bg-gray-100 text-text-muted'
+                      }`}>
+                        {status === 'completed' ? <Check className="w-3.5 h-3.5" /> : idx + 1}
+                      </div>
+                      <span className={`text-sm font-semibold truncate ${
+                        status === 'completed' ? 'text-status-success' :
+                        status === 'active' ? 'text-accent' :
+                        'text-text-muted'
+                      }`}>
+                        {step.label}
+                      </span>
+                    </div>
+                    {detail && status !== 'pending' && (
+                      <span className={`text-[10px] mt-0.5 ml-9 truncate ${
+                        status === 'completed' ? 'text-green-600/60' :
+                        status === 'active' ? 'text-amber-600/60' :
+                        'text-gray-400'
+                      }`}>{detail}</span>
+                    )}
                   </div>
-                  <span className={`text-sm font-medium ${
-                    status === 'completed' ? 'text-status-success' :
-                    status === 'active' ? 'text-accent' :
-                    'text-text-muted'
-                  }`}>
-                    {step}
-                  </span>
-                  {idx < STEPS.length - 1 && <div className="w-6 h-0.5 bg-gray-200" />}
+                  {!isLast && (
+                    <div className={`w-6 h-0.5 flex-shrink-0 self-center ${
+                      status === 'completed' ? 'bg-green-300' : 'bg-gray-200'
+                    }`} />
+                  )}
                 </div>
               )
             })}
