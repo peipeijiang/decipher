@@ -18,6 +18,8 @@ class AgentPromptOut(BaseModel):
     system_prompt: str
     user_prompt_template: str
     variables: str
+    input_fields: str = "[]"
+    output_fields: str = "[]"
     is_custom: bool
     is_active: bool
     created_at: datetime
@@ -31,6 +33,8 @@ class AgentPromptUpdate(BaseModel):
     description: str | None = None
     system_prompt: str | None = None
     user_prompt_template: str | None = None
+    input_fields: str | None = None
+    output_fields: str | None = None
     is_active: bool | None = None
 
 
@@ -70,6 +74,10 @@ def update_agent_prompt(agent_id: str, body: AgentPromptUpdate, db: Session = De
         ap.name = body.name
     if body.description is not None:
         ap.description = body.description
+    if body.input_fields is not None:
+        ap.input_fields = body.input_fields
+    if body.output_fields is not None:
+        ap.output_fields = body.output_fields
     if body.is_active is not None:
         ap.is_active = body.is_active
 

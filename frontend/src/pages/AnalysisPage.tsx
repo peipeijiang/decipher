@@ -7,7 +7,7 @@ import {
   ArrowLeft,
   Check,
   Loader2,
-  Copy,
+  Copy, GitBranch,
   Film,
   Sparkles,
   AlertCircle,
@@ -22,6 +22,14 @@ import type { Video, Report, Progress } from '../types'
 
 const STEPS = ['视频上传', '智能解析', '策略拆解', '提示词生成']
 const TABS = ['营销策略', '分镜分析', '逆向提示词', '创意改写', '分镜复刻']
+
+const TAB_AGENTS: Record<number, string> = {
+  0: 'replica_strategy',
+  1: 'replica_shots',
+  2: 'replica_prompt_gen',
+  3: 'replica_creative_rewrite',
+  4: 'replica_storyboard_gen',
+}
 
 // ── Creative angle card (reused in tab 3) ────────────────────────────────────
 
@@ -656,6 +664,15 @@ export default function AnalysisPage() {
                     }`}
                   >
                     {tab}
+                    {activeTab === idx && TAB_AGENTS[idx] && (
+                      <span
+                        onClick={(e) => { e.stopPropagation(); navigate(`/agent-workflow?agent=${TAB_AGENTS[idx]}`) }}
+                        className="ml-1.5 inline-flex items-center text-accent/50 hover:text-accent cursor-pointer"
+                        title={`编辑「${tab}」智能体`}
+                      >
+                        <GitBranch className="w-2.5 h-2.5" />
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>

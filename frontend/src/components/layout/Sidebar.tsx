@@ -2,13 +2,13 @@ import { useState } from 'react'
 import {
   Film, Sparkles, PenTool, Clapperboard, Upload, History, Wand2,
   Clock3, PlusSquare, FolderOpen, LayoutGrid, Settings, ChevronDown,
-  ChevronRight, Video, Play, Home, User,
+  ChevronRight, Video, Play, Home, User, GitBranch,
 } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { NAV_CONFIG } from '../../config/navigation'
 
 const IM: Record<string, React.ComponentType<{ className?: string }>> = {
-  Home, Sparkles, PenTool, Clapperboard, Upload, History, Wand2,
+  Home, Sparkles, PenTool, Clapperboard, Upload, History, Wand2, GitBranch,
   Clock3, PlusSquare, FolderOpen, LayoutGrid, Settings, Video, Play,
 }
 

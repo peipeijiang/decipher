@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   ReactFlow,
   Background,
@@ -13,6 +14,7 @@ import {
   Upload, FileText, Video, Image, GitBranch, Layers, Square, X, RotateCcw, Check,
   Filter, Eye, MousePointer, RefreshCw, Scan, BookOpen, Wand2, Zap, PenTool,
   Film, Mic, BarChart3, Sparkles, Camera,
+  ArrowDownRight, ArrowUpRight,
 } from 'lucide-react'
 import { MainLayout } from '../components/layout/MainLayout'
 import { getAgentPrompts, updateAgentPrompt, resetAgentPrompt } from '../api/client'
@@ -108,10 +110,10 @@ const REPLICA_PIPELINE: PipelineDef = {
   id: 'replica', label: '爆款复刻',
   nodes: [
     { id: 'replica_upload', type: 'workflow', position: { x: -40, y: 220 }, data: { label: '视频上传', description: '上传TikTok对标视频', icon: <Upload className="w-5 h-5" />, isEditable: false } },
-    { id: 'replica_frames', type: 'workflow', position: { x: GX, y: 80 }, data: { label: 'FFmpeg 帧提取', description: '均匀提取关键帧', icon: <Film className="w-5 h-5" />, isEditable: false } },
+    { id: 'replica_frames', type: 'workflow', position: { x: GX, y: 80 }, data: { label: 'FFmpeg 帧提取', description: 'I帧场景检测 + 自适应采样', icon: <Film className="w-5 h-5" />, isEditable: false } },
     { id: 'replica_whisper', type: 'workflow', position: { x: GX, y: 360 }, data: { label: 'Whisper 语音转文字', description: '提取口播文案+时间戳', icon: <Mic className="w-5 h-5" />, isEditable: false } },
     { id: 'replica_vision', type: 'workflow', position: { x: GX * 2, y: 220 }, data: { label: '视觉帧分析', description: '逐帧识别画面构图光线', icon: <Camera className="w-5 h-5" />, agentKey: 'replica_vision_analysis', isEditable: true } },
-    { id: 'replica_strategy', type: 'workflow', position: { x: GX * 3, y: 20 }, data: { label: '策略+脚本框架', description: '拆解营销策略+脚本结构', icon: <BarChart3 className="w-5 h-5" />, agentKey: 'replica_strategy', isEditable: true } },
+    { id: 'replica_strategy', type: 'workflow', position: { x: GX * 3, y: 20 }, data: { label: '营销策略分析', description: '拆解营销策略与受众画像', icon: <BarChart3 className="w-5 h-5" />, agentKey: 'replica_strategy', isEditable: true } },
     { id: 'replica_shots', type: 'workflow', position: { x: GX * 3, y: 170 }, data: { label: '逐镜头拉片', description: '按剪辑点逐镜头拆解', icon: <Film className="w-5 h-5" />, agentKey: 'replica_shots', isEditable: true } },
     { id: 'replica_prompt', type: 'workflow', position: { x: GX * 3, y: 320 }, data: { label: '逆向提示词生成', description: '生成提示词+物理验证', icon: <Sparkles className="w-5 h-5" />, agentKey: 'replica_prompt_gen', isEditable: true } },
     { id: 'replica_script_fw', type: 'workflow', position: { x: GX * 4, y: 95 }, data: { label: '脚本框架分析', description: '提炼可复刻结构+仿写规则', icon: <FileText className="w-5 h-5" />, agentKey: 'replica_script_framework', isEditable: true } },
@@ -126,7 +128,7 @@ const REPLICA_PIPELINE: PipelineDef = {
     { id: 'r4', source: 'replica_whisper', target: 'replica_vision' },
     { id: 'r5', source: 'replica_vision', target: 'replica_strategy' },
     { id: 'r6', source: 'replica_vision', target: 'replica_shots' },
-    { id: 'r7', source: 'replica_vision', target: 'replica_prompt' },
+    { id: 'r7', source: 'replica_shots', target: 'replica_prompt' },
     { id: 'r8', source: 'replica_strategy', target: 'replica_script_fw' },
     { id: 'r9', source: 'replica_shots', target: 'replica_script_fw' },
     { id: 'r10', source: 'replica_script_fw', target: 'replica_blueprint' },
@@ -175,9 +177,61 @@ function EditPanel({ prompt, onClose, onUpdated }: EditPanelProps) {
       </div>
       <div className="flex-1 overflow-y-auto p-5 space-y-5">
         <p className="text-sm text-gray-500">{prompt.description}</p>
+
+        {/* I/O Fields */}
+        {(() => {
+          try {
+            const ins = JSON.parse(prompt.input_fields || '[]') as {name:string;label:string;desc:string;type:string}[]
+            const outs = JSON.parse(prompt.output_fields || '[]') as {name:string;label:string;desc:string;type:string}[]
+            if (ins.length === 0 && outs.length === 0) return null
+            return (
+              <div className="space-y-3">
+                {ins.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <ArrowDownRight className="w-3.5 h-3.5 text-blue-500" />
+                      <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">输入</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {ins.map(f => (
+                        <div key={f.name} className="flex items-start gap-2 px-3 py-1.5 rounded-lg bg-blue-50/60 border border-blue-100">
+                          <span className="text-[10px] font-mono font-semibold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0">{f.type}</span>
+                          <div className="min-w-0">
+                            <span className="text-xs font-semibold text-blue-800">{f.label}</span>
+                            <p className="text-[10px] text-blue-600/70 leading-tight mt-0.5">{f.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {outs.length > 0 && (
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <ArrowUpRight className="w-3.5 h-3.5 text-amber-500" />
+                      <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">输出</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {outs.map(f => (
+                        <div key={f.name} className="flex items-start gap-2 px-3 py-1.5 rounded-lg bg-amber-50/60 border border-amber-100">
+                          <span className="text-[10px] font-mono font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0">{f.type}</span>
+                          <div className="min-w-0">
+                            <span className="text-xs font-semibold text-amber-800">{f.label}</span>
+                            <p className="text-[10px] text-amber-600/70 leading-tight mt-0.5">{f.desc}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          } catch { return null }
+        })()}
+
         {vars.length > 0 && <div><p className="text-xs font-semibold text-gray-600 mb-2">可用变量</p><div className="flex flex-wrap gap-1.5">{vars.map(v => <code key={v} className="px-2 py-1 bg-amber-50 text-amber-700 text-xs rounded-md font-mono">{`{{${v}}}`}</code>)}</div></div>}
-        <div><p className="text-xs font-semibold text-gray-600 mb-2">System Prompt</p><textarea value={sp} onChange={e => setSp(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3.5 py-3 text-sm resize-y font-mono focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200" rows={8} /></div>
-        <div><p className="text-xs font-semibold text-gray-600 mb-2">User Prompt Template</p><textarea value={ut} onChange={e => setUt(e.target.value)} placeholder="使用 {{变量名}} 引用动态数据" className="w-full border border-gray-200 rounded-lg px-3.5 py-3 text-sm resize-y font-mono focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200" rows={8} /></div>
+        <div><p className="text-xs font-semibold text-gray-600 mb-1">System Prompt</p><p className="text-[10px] text-gray-400 mb-2">定义 AI 角色与行为准则，不包含数据</p><textarea value={sp} onChange={e => setSp(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3.5 py-3 text-sm resize-y font-mono focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200" rows={8} /></div>
+        <div><p className="text-xs font-semibold text-gray-600 mb-1">User Prompt Template</p><p className="text-[10px] text-gray-400 mb-2">数据注入点，运行时替换变量为上游输出</p><textarea value={ut} onChange={e => setUt(e.target.value)} placeholder="使用 {{变量名}} 引用动态数据" className="w-full border border-gray-200 rounded-lg px-3.5 py-3 text-sm resize-y font-mono focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-200" rows={8} /></div>
       </div>
       <div className="px-5 py-4 border-t border-gray-200">
         {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
@@ -198,7 +252,24 @@ export default function AgentWorkflowPage() {
   const [loading, setLoading] = useState(true)
   const [pipe, setPipe] = useState('replica')
 
-  useEffect(() => { getAgentPrompts().then(setPrompts).finally(() => setLoading(false)) }, [])
+  const [searchParams] = useSearchParams()
+
+  useEffect(() => {
+    getAgentPrompts().then(ps => {
+      setPrompts(ps)
+      const agentKey = searchParams.get('agent')
+      if (agentKey) {
+        const p = ps.find(x => x.key === agentKey)
+        if (p) {
+          // Auto-switch pipeline for the target agent
+          const replicaKeys = REPLICA_PIPELINE.nodes.map(n => (n.data as WorkflowNodeData).agentKey).filter(Boolean)
+          if (replicaKeys.includes(agentKey)) setPipe('replica')
+          else setPipe('product')
+          setTimeout(() => setSel(p), 100)
+        }
+      }
+    }).finally(() => setLoading(false))
+  }, [searchParams])
 
   const onNodeClick = useCallback((_e: React.MouseEvent, node: Node) => {
     const d = node.data as unknown as WorkflowNodeData

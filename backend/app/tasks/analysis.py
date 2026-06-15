@@ -9,7 +9,7 @@ from app.models.video import Video
 from app.models.report import Report
 from app.models.segment import Segment
 from app.models.config import ModelConfig
-from app.services.video_processor import extract_frames, extract_audio, extract_segment, get_video_info, frames_for_duration
+from app.services.video_processor import extract_frames, extract_audio, extract_segment, get_video_info, frames_for_duration, detect_scene_changes
 
 logger = logging.getLogger(__name__)
 
@@ -47,13 +47,25 @@ def run_analysis(video_id: str):
         db.commit()
         _set_progress(video_id, parse=10)
 
-        # Step 2: Extract frames (dynamic count based on duration)
+        # Step 2: Smart frame extraction — detect scene density first
         duration = info.get("duration") or 30
-        num_frames = frames_for_duration(duration)
+        scene_density: float | None = None
+        try:
+            scene_ts = detect_scene_changes(video.filepath)
+            if scene_ts and duration > 0:
+                scene_density = len(scene_ts) / duration
+        except Exception as e:
+            logger.warning("Scene detection skipped: %s", e)
+        num_frames = frames_for_duration(duration, scene_density=scene_density)
+        logger.info(
+            "Frame extraction: duration=%.1fs, scene_density=%s, target_frames=%d",
+            duration, f"{scene_density:.3f}" if scene_density else "none", num_frames
+        )
         frames = extract_frames(
             video.filepath,
             output_dir=processed_base / "frames",
             num_frames=num_frames,
+            use_scene_detection=True,
         )
         _set_progress(video_id, parse=40)
 
@@ -158,6 +170,7 @@ def analyze_segment(segment_id: str):
             clip_path,
             output_dir=processed_base / "frames",
             num_frames=num_frames,
+            use_scene_detection=False,  # segment clips are short, even spacing is fine
         )
 
         # Step 3: Extract audio + Whisper transcription

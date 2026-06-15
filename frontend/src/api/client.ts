@@ -118,6 +118,8 @@ export interface AgentPrompt {
   system_prompt: string
   user_prompt_template: string
   variables: string  // JSON array of variable names
+  input_fields: string   // JSON array of {name, label, desc, type}
+  output_fields: string  // JSON array of {name, label, desc, type}
   is_custom: boolean
   is_active: boolean
   created_at: string

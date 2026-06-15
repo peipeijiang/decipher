@@ -16,6 +16,8 @@ class AgentPrompt(Base):
     system_prompt: Mapped[str] = mapped_column(Text, default="")
     user_prompt_template: Mapped[str] = mapped_column(Text, default="")
     variables: Mapped[str] = mapped_column(Text, default="")  # JSON list of available variables
+    input_fields: Mapped[str] = mapped_column(Text, default="[]")  # JSON array of {name, label, desc, type}
+    output_fields: Mapped[str] = mapped_column(Text, default="[]")  # JSON array of {name, label, desc, type}
     is_custom: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
