@@ -107,20 +107,17 @@ const PRODUCT_PIPELINE: PipelineDef = {
 const REPLICA_PIPELINE: PipelineDef = {
   id: 'replica', label: '爆款复刻',
   nodes: [
-    // Column 0: input
     { id: 'replica_upload', type: 'workflow', position: { x: -40, y: 220 }, data: { label: '视频上传', description: '上传TikTok对标视频', icon: <Upload className="w-5 h-5" />, isEditable: false } },
-    // Column 1: preprocessing
     { id: 'replica_frames', type: 'workflow', position: { x: GX, y: 80 }, data: { label: 'FFmpeg 帧提取', description: '均匀提取关键帧', icon: <Film className="w-5 h-5" />, isEditable: false } },
     { id: 'replica_whisper', type: 'workflow', position: { x: GX, y: 360 }, data: { label: 'Whisper 语音转文字', description: '提取口播文案+时间戳', icon: <Mic className="w-5 h-5" />, isEditable: false } },
-    // Column 2: vision
     { id: 'replica_vision', type: 'workflow', position: { x: GX * 2, y: 220 }, data: { label: '视觉帧分析', description: '逐帧识别画面构图光线', icon: <Camera className="w-5 h-5" />, agentKey: 'replica_vision_analysis', isEditable: true } },
-    // Column 3: core analysis (3 parallel)
-    { id: 'replica_strategy', type: 'workflow', position: { x: GX * 3, y: 50 }, data: { label: '营销策略分析', description: '拆解营销钩子+共鸣点', icon: <BarChart3 className="w-5 h-5" />, agentKey: 'replica_strategy', isEditable: true } },
-    { id: 'replica_shots', type: 'workflow', position: { x: GX * 3, y: 220 }, data: { label: '分镜场景分析', description: '逐帧拆解镜头语言', icon: <Film className="w-5 h-5" />, agentKey: 'replica_shots', isEditable: true } },
-    { id: 'replica_prompt', type: 'workflow', position: { x: GX * 3, y: 390 }, data: { label: '逆向提示词生成', description: '生成Sora/即梦提示词', icon: <Sparkles className="w-5 h-5" />, agentKey: 'replica_prompt_gen', isEditable: true } },
-    // Column 4: creative + storyboard
-    { id: 'replica_creative', type: 'workflow', position: { x: GX * 4, y: 130 }, data: { label: '创意改写', description: '适配新产品+多角度创意', icon: <Wand2 className="w-5 h-5" />, agentKey: 'replica_creative_rewrite', isEditable: true } },
-    { id: 'replica_storyboard', type: 'workflow', position: { x: GX * 4, y: 310 }, data: { label: '分镜复刻', description: '逐帧替换产品+15s压缩', icon: <Layers className="w-5 h-5" />, agentKey: 'replica_storyboard_gen', isEditable: true } },
+    { id: 'replica_strategy', type: 'workflow', position: { x: GX * 3, y: 20 }, data: { label: '策略+脚本框架', description: '拆解营销策略+脚本结构', icon: <BarChart3 className="w-5 h-5" />, agentKey: 'replica_strategy', isEditable: true } },
+    { id: 'replica_shots', type: 'workflow', position: { x: GX * 3, y: 170 }, data: { label: '逐镜头拉片', description: '按剪辑点逐镜头拆解', icon: <Film className="w-5 h-5" />, agentKey: 'replica_shots', isEditable: true } },
+    { id: 'replica_prompt', type: 'workflow', position: { x: GX * 3, y: 320 }, data: { label: '逆向提示词生成', description: '生成提示词+物理验证', icon: <Sparkles className="w-5 h-5" />, agentKey: 'replica_prompt_gen', isEditable: true } },
+    { id: 'replica_script_fw', type: 'workflow', position: { x: GX * 4, y: 95 }, data: { label: '脚本框架分析', description: '提炼可复刻结构+仿写规则', icon: <FileText className="w-5 h-5" />, agentKey: 'replica_script_framework', isEditable: true } },
+    { id: 'replica_blueprint', type: 'workflow', position: { x: GX * 5, y: 170 }, data: { label: '复刻蓝图(中控)', description: '筛选关键分镜+统一规划', icon: <GitBranch className="w-5 h-5" />, agentKey: 'replica_blueprint', isEditable: true } },
+    { id: 'replica_creative', type: 'workflow', position: { x: GX * 6, y: 70 }, data: { label: '创意改写(仿写)', description: '逐句仿写+多角度创意', icon: <Wand2 className="w-5 h-5" />, agentKey: 'replica_creative_rewrite', isEditable: true } },
+    { id: 'replica_storyboard', type: 'workflow', position: { x: GX * 6, y: 270 }, data: { label: '分镜复刻', description: '蓝图驱动+产品替换', icon: <Layers className="w-5 h-5" />, agentKey: 'replica_storyboard_gen', isEditable: true } },
   ],
   edges: [
     { id: 'r1', source: 'replica_upload', target: 'replica_frames', animated: true },
@@ -130,12 +127,14 @@ const REPLICA_PIPELINE: PipelineDef = {
     { id: 'r5', source: 'replica_vision', target: 'replica_strategy' },
     { id: 'r6', source: 'replica_vision', target: 'replica_shots' },
     { id: 'r7', source: 'replica_vision', target: 'replica_prompt' },
-    { id: 'r8', source: 'replica_strategy', target: 'replica_creative' },
-    { id: 'r9', source: 'replica_shots', target: 'replica_creative' },
-    { id: 'r10', source: 'replica_prompt', target: 'replica_creative' },
-    { id: 'r11', source: 'replica_creative', target: 'replica_storyboard' },
+    { id: 'r8', source: 'replica_strategy', target: 'replica_script_fw' },
+    { id: 'r9', source: 'replica_shots', target: 'replica_script_fw' },
+    { id: 'r10', source: 'replica_script_fw', target: 'replica_blueprint' },
+    { id: 'r11', source: 'replica_prompt', target: 'replica_blueprint' },
+    { id: 'r12', source: 'replica_blueprint', target: 'replica_creative' },
+    { id: 'r13', source: 'replica_blueprint', target: 'replica_storyboard' },
   ],
-}
+};
 
 const PIPELINES = [REPLICA_PIPELINE, PRODUCT_PIPELINE]
 
