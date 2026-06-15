@@ -113,11 +113,23 @@ export default function WorkbenchPage() {
   useEffect(() => {
     (async () => {
       try {
-        const [rr, cr, pr, vr] = await Promise.all([axios.get('/api/reports'), axios.get('/api/creative/history'), axios.get('/api/products'), axios.get('/api/video-gen',{params:{limit:50}})])
-        const ri: ReplicaItem[] = rr.data.map((i:any)=>({id:`replica-${i.video_id}`,type:'replica' as const,video_id:i.video_id,title:i.filename,filename:i.filename,status:i.status,duration:i.duration,created_at:i.created_at}))
-        const ci: CreativeItem[] = cr.data.map((i:any)=>({id:`creative-${i.id}`,type:'creative' as const,title:i.description||'创意改写',description:i.description||'',style:'',count:i.results?.length||0,created_at:i.created_at}))
-        const pi: ProductItem[] = (pr.data||[]).map((i:any)=>({id:`product-${i.id}`,type:'product' as const,product_id:i.id,title:i.title||i.url||'产品',url:i.url||'',status:i.status,created_at:i.created_at}))
-        const vi: VideoGenItem[] = (vr.data.items||[]).map((i:any)=>({id:`video-gen-${i.id}`,type:'video-gen' as const,gen_id:i.id,title:i.prompt?.slice(0,60)+(i.prompt?.length>60?'...':'')||'视频生成',model:i.model,status:i.status,created_at:i.created_at}))
+        const [rr, cr, pr, vr] = await Promise.allSettled([
+          axios.get('/api/reports'),
+          axios.get('/api/creative/history'),
+          axios.get('/api/products'),
+          axios.get('/api/video-gen', { params: { limit: 50 } }),
+        ])
+        const reports = rr.status === 'fulfilled' ? rr.value.data : []
+        const creative = cr.status === 'fulfilled' ? cr.value.data : []
+        const products = pr.status === 'fulfilled' ? pr.value.data : []
+        const videoGen = vr.status === 'fulfilled' ? vr.value.data : { items: [] }
+        ;[rr, cr, pr, vr].forEach((res, idx) => {
+          if (res.status === 'rejected') console.warn(`Workbench source ${idx} failed`, res.reason)
+        })
+        const ri: ReplicaItem[] = reports.map((i:any)=>({id:`replica-${i.video_id}`,type:'replica' as const,video_id:i.video_id,title:i.filename,filename:i.filename,status:i.status,duration:i.duration,created_at:i.created_at}))
+        const ci: CreativeItem[] = creative.map((i:any)=>({id:`creative-${i.id}`,type:'creative' as const,title:i.description||'创意改写',description:i.description||'',style:'',count:i.results?.length||0,created_at:i.created_at}))
+        const pi: ProductItem[] = (products||[]).map((i:any)=>({id:`product-${i.id}`,type:'product' as const,product_id:i.id,title:i.title||i.url||'产品',url:i.url||'',status:i.status,created_at:i.created_at}))
+        const vi: VideoGenItem[] = (videoGen.items||[]).map((i:any)=>({id:`video-gen-${i.id}`,type:'video-gen' as const,gen_id:i.id,title:i.prompt?.slice(0,60)+(i.prompt?.length>60?'...':'')||'视频生成',model:i.model,status:i.status,created_at:i.created_at}))
         const all = [...ri,...ci,...pi,...vi]; all.sort((a,b)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime()); setItems(all)
       } catch {} finally { setLd(false) }
     })()
