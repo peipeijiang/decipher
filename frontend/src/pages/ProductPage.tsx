@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MainLayout } from '../components/layout/MainLayout'
+import { TaskQueueSidebar } from '../components/TaskQueueSidebar'
 import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X } from 'lucide-react'
 import {
   createProduct,
@@ -13,12 +14,19 @@ import {
   getProductImageUrl,
   getGeneratedImageUrl,
   updatePrompt,
+  regeneratePrompt,
   triggerBatchVideoGeneration,
   archiveProduct,
   rerunProduct,
   resumeProduct,
+  getVideoTemplates,
+  getHookTemplates,
+  getImageLayoutTemplates,
+  generatePrompts,
+  refinePrompt,
 } from '../api/client'
-import type { Product, ProductPrompt, ProductProgress, ProductDoc } from '../types/product'
+import api from '../api/client'
+import type { Product, ProductPrompt, ProductProgress, ProductDoc, VideoTemplate } from '../types/product'
 
 const PIPELINE_STEPS = [
   { key: 'scrape', label: '抓取', icon: '📦', desc: '商品信息' },
@@ -37,13 +45,23 @@ export default function ProductPage() {
   const [progress, setProgress] = useState<ProductProgress | null>(null)
   const [doc, setDoc] = useState<ProductDoc | null>(null)
   const [prompts, setPrompts] = useState<ProductPrompt[]>([])
+  const [templates, setTemplates] = useState<VideoTemplate[]>([])
+  const [hookTemplates, setHookTemplates] = useState<{ id: string; key: string; name: string }[]>([])
+  const [imageLayoutTemplates, setImageLayoutTemplates] = useState<{ id: string; key: string; name: string }[]>([])
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const [gridLayout, setGridLayout] = useState<'single' | '2x3' | '3x2'>('single')
-  const [aspectRatio, setAspectRatio] = useState('16:9')
   const [batchGenerating, setBatchGenerating] = useState(false)
+  const [taskQueueOpen, setTaskQueueOpen] = useState(false)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loadingProduct, setLoadingProduct] = useState(false)
+
+  // Load templates on mount
+  useEffect(() => {
+    getVideoTemplates().then(setTemplates).catch(console.error)
+    getHookTemplates().then(setHookTemplates).catch(console.error)
+    getImageLayoutTemplates().then(setImageLayoutTemplates).catch(console.error)
+  }, [])
 
   const fetchProduct = useCallback(async (isInitial = false) => {
     if (!id) return
@@ -137,21 +155,6 @@ export default function ProductPage() {
     return 'pending'
   }
 
-  const getStepDetail = (key: string): string => {
-    if (!progress) return ''
-    if (key === 'scrape' && progress.scrape >= 100 && doc) return `${doc.images.length} 张图`
-    if (key === 'doc' && progress.doc >= 100) return '已完成'
-    if (key === 'prompts' && progress.prompts >= 100) return `${prompts.length}/10`
-    if (key === 'image') {
-      const done = prompts.filter(p => p.image_status === 'completed').length
-      return done > 0 ? `${done}/${prompts.length}` : ''
-    }
-    if (key === 'video') {
-      const done = prompts.filter(p => p.video_status === 'completed').length
-      return done > 0 ? `${done}/${prompts.length}` : ''
-    }
-    return ''
-  }
 
   return (
     <MainLayout>
@@ -220,66 +223,90 @@ export default function ProductPage() {
         {/* Product Detail View - Only show when id exists and loaded successfully */}
         {id && !loadingProduct && !loadError && product && (
           <>
-            {/* Header with Archive Button */}
+            {/* Header */}
             <div className="mb-6">
-              <div className="flex items-center justify-between mb-1">
-                <h1 className="text-2xl font-bold text-gray-900">{product.title || '产品详情'}</h1>
-                <button
-                  onClick={async () => {
-                    await archiveProduct(product.id)
-                    navigate('/product/history')
-                  }}
-                  className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  归档项目
-                </button>
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl font-bold text-gray-900 leading-tight mb-1">{product.title || '产品详情'}</h1>
+                  <p className="text-xs text-gray-400 truncate">{product.url}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => setTaskQueueOpen(v => !v)}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    任务队列
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await archiveProduct(product.id)
+                      navigate('/product/history')
+                    }}
+                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
+                  >
+                    归档
+                  </button>
+                </div>
               </div>
-              <p className="text-xs text-gray-400 truncate">{product.url}</p>
             </div>
 
-            {/* Kanban Pipeline */}
-            <div className="mb-8">
+            {/* Pipeline Progress */}
+            <div className="mb-6">
             {product.status === 'failed' && progress?.error && (
-              <div className="mb-4 flex items-center gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <div className="mb-3 flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                 {progress.error}
               </div>
             )}
-            <div className="grid grid-cols-5 gap-3">
-              {PIPELINE_STEPS.map(step => {
+            <div className="flex items-center gap-1 bg-gray-50 rounded-xl p-2">
+              {PIPELINE_STEPS.map((step, idx) => {
                 const status = getStepProgress(step.key)
-                const detail = getStepDetail(step.key)
                 return (
-                  <div
-                    key={step.key}
-                    className={`rounded-xl border p-4 text-center transition-all ${
-                      status === 'completed' ? 'bg-green-50 border-green-200' :
-                      status === 'active' ? 'bg-blue-50 border-blue-200' :
-                      status === 'failed' ? 'bg-red-50 border-red-200' :
-                      'bg-gray-50 border-gray-200'
-                    }`}
-                  >
-                    <div className="text-2xl mb-1">{step.icon}</div>
-                    <div className="text-xs font-semibold text-gray-800 mb-0.5">{step.label}</div>
-                    {status === 'active' && <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-500 mx-auto" />}
-                    {status === 'completed' && <Check className="w-3.5 h-3.5 text-green-500 mx-auto" />}
-                    {status === 'failed' && <AlertCircle className="w-3.5 h-3.5 text-red-500 mx-auto" />}
-                    {detail && <div className="text-[10px] text-gray-500 mt-1">{detail}</div>}
+                  <div key={step.key} className="flex items-center flex-1">
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg flex-1 transition-all ${
+                      status === 'completed' ? 'bg-green-100' :
+                      status === 'active' ? 'bg-blue-100' :
+                      status === 'failed' ? 'bg-red-100' :
+                      'bg-transparent'
+                    }`}>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+                        status === 'completed' ? 'bg-green-500 text-white' :
+                        status === 'active' ? 'bg-blue-500 text-white' :
+                        status === 'failed' ? 'bg-red-500 text-white' :
+                        'bg-gray-300 text-white'
+                      }`}>
+                        {status === 'completed' ? <Check className="w-3 h-3" /> :
+                         status === 'active' ? <Loader2 className="w-3 h-3 animate-spin" /> :
+                         status === 'failed' ? <X className="w-3 h-3" /> :
+                         idx + 1}
+                      </div>
+                      <span className={`text-xs font-medium ${
+                        status === 'completed' ? 'text-green-700' :
+                        status === 'active' ? 'text-blue-700' :
+                        status === 'failed' ? 'text-red-700' :
+                        'text-gray-400'
+                      }`}>{step.label}</span>
+                    </div>
+                    {idx < PIPELINE_STEPS.length - 1 && (
+                      <div className={`w-4 h-0.5 flex-shrink-0 ${
+                        status === 'completed' ? 'bg-green-300' : 'bg-gray-200'
+                      }`} />
+                    )}
                   </div>
                 )
               })}
             </div>
           </div>
 
-          {/* Rerun/Resume Buttons */}
+          {/* Action Buttons */}
           {product && (product.status === 'completed' || product.status === 'failed') && (
-            <div className="flex gap-3 mb-6">
+            <div className="flex gap-2 mb-6">
               <button
                 onClick={async () => {
                   await rerunProduct(product.id)
                   window.location.reload()
                 }}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+                className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-xs font-medium hover:bg-blue-600 transition-colors"
               >
                 重新运行
               </button>
@@ -289,7 +316,7 @@ export default function ProductPage() {
                     await resumeProduct(product.id)
                     window.location.reload()
                   }}
-                  className="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+                  className="px-3 py-1.5 rounded-lg bg-green-500 text-white text-xs font-medium hover:bg-green-600 transition-colors"
                 >
                   继续运行
                 </button>
@@ -308,7 +335,11 @@ export default function ProductPage() {
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {doc.images.map(img => (
-                  <div key={img.index} className="aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
+                  <div
+                    key={img.index}
+                    className="aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+                    onClick={() => setPreviewImage(getProductImageUrl(id!, img.filename))}
+                  >
                     <img
                       src={getProductImageUrl(id!, img.filename)}
                       alt={`商品图 ${img.index + 1}`}
@@ -348,48 +379,111 @@ export default function ProductPage() {
           </div>
         )}
 
-        {/* Image Analysis Results */}
+        {/* Image Analysis & Instruction Board */}
         {doc && doc.images && doc.images.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-sm font-semibold text-gray-800 mb-3">图片识别结果</h2>
-            <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-sm font-semibold text-gray-800">图片识别结果</h2>
+              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{doc.images.length} 张</span>
+              {product && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await resumeProduct(product.id)
+                      alert('重新识别已启动')
+                    } catch (e: any) {
+                      alert('重试失败: ' + (e.response?.data?.detail || e.message))
+                    }
+                  }}
+                  className="text-[10px] text-blue-500 hover:text-blue-600 px-2 py-0.5 border rounded-md hover:bg-blue-50 transition-colors"
+                >
+                  重新识别
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {doc.images.map(img => (
-                <div key={img.index} className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="flex items-start gap-4">
-                    <div className="w-24 h-24 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                      <img
-                        src={getProductImageUrl(id!, img.filename)}
-                        alt={`图片 ${img.index}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="flex-1 space-y-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900">图片 {img.index}</span>
-                        <span className="text-gray-400">·</span>
-                        <span className="text-gray-500">{img.filename}</span>
-                      </div>
-                      <div>
-                        <div className="text-xs font-semibold text-blue-600 mb-1">🔍 基础识别</div>
-                        <div className="text-gray-700 leading-relaxed">{img.basic_recognition}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-semibold text-green-600 mb-1">📦 产品理解</div>
-                        <div className="text-gray-700 leading-relaxed">{img.product_understanding}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-semibold text-purple-600 mb-1">🎬 创意建议</div>
-                        <div className="text-gray-700 leading-relaxed">{img.creative_usage}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ImageAnalysisCard key={img.index} img={img} productId={id!} onPreview={setPreviewImage} />
               ))}
             </div>
           </div>
         )}
 
-        {/* PLACEHOLDER_PROMPTS */}
+        {/* Instruction Board Section */}
+        {product && product.status === 'completed' && (
+          <div className="mb-8">
+            <div className="flex items-center gap-3 mb-3">
+              <h2 className="text-sm font-semibold text-gray-800">产品使用说明</h2>
+              {product.instruction_board_status === 'completed' && (
+                <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">已生成</span>
+              )}
+              {product.instruction_board_status === 'generating' && (
+                <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full animate-pulse">生成中...</span>
+              )}
+              {(product.instruction_board_status === 'none' || product.instruction_board_status === 'failed') && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await api.post(`/api/products/${product.id}/generate-instruction-board`)
+                    } catch (e: any) {
+                      alert('生成失败: ' + (e.response?.data?.detail || e.message))
+                    }
+                  }}
+                  className="px-3 py-1 text-[10px] font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors"
+                >
+                  生成说明图
+                </button>
+              )}
+              {product.instruction_board_status === 'failed' && (
+                <span className="text-[10px] text-red-500">生成失败，可重试</span>
+              )}
+            </div>
+
+            {product.instruction_board_status === 'completed' && (
+              <div className="rounded-xl overflow-hidden border border-gray-200 bg-white max-w-3xl">
+                <img
+                  src={`/api/products/${product.id}/instruction-board`}
+                  alt="Product Instruction Board"
+                  className="w-full"
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Generate Prompts Section - Show when product is completed */}
+        {product && product.status === 'completed' && (
+          <div className="mb-8">
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6">
+              <h2 className="text-sm font-semibold text-gray-800 mb-1">生成视频提示词</h2>
+              <p className="text-xs text-gray-600 mb-4">
+                {prompts.length > 0
+                  ? `已有 ${prompts.length} 个提示词，可继续选择其他风格生成更多`
+                  : '选择视频风格模板，每种风格生成 10 个提示词变体'}
+              </p>
+              <GeneratePromptsForm
+                productId={product.id}
+                templates={templates}
+                onGenerated={async () => {
+                  // Poll for prompts
+                  const pollInterval = setInterval(async () => {
+                    try {
+                      const newPrompts = await getProductPrompts(product.id)
+                      if (newPrompts.length > 0) {
+                        setPrompts(newPrompts)
+                        clearInterval(pollInterval)
+                      }
+                    } catch (e) {
+                      // ignore
+                    }
+                  }, 2000)
+                  // Stop polling after 60 seconds
+                  setTimeout(() => clearInterval(pollInterval), 60000)
+                }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Prompt List Section */}
         {prompts.length > 0 && (
@@ -401,24 +495,6 @@ export default function ProductPage() {
 
             {/* Control Panel */}
             <div className="flex flex-wrap items-center gap-3 mb-4">
-              <select
-                value={gridLayout}
-                onChange={e => setGridLayout(e.target.value as any)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="single">单图模式</option>
-                <option value="2x3">6宫格 2×3</option>
-                <option value="3x2">6宫格 3×2</option>
-              </select>
-              <select
-                value={aspectRatio}
-                onChange={e => setAspectRatio(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              >
-                <option value="16:9">16:9</option>
-                <option value="9:16">9:16</option>
-                <option value="1:1">1:1</option>
-              </select>
               <button
                 onClick={async () => {
                   if (!product) return
@@ -442,6 +518,10 @@ export default function ProductPage() {
                 <PromptCard
                   key={prompt.id}
                   prompt={prompt}
+                  templates={templates}
+                  hookTemplates={hookTemplates}
+                  imageLayoutTemplates={imageLayoutTemplates}
+                  onPreviewImage={setPreviewImage}
                   onUpdate={async () => {
                     if (id) {
                       try { setPrompts(await getProductPrompts(id)) } catch { /* ignore */ }
@@ -455,17 +535,138 @@ export default function ProductPage() {
           </>
         )}
       </div>
+      {id && product && (
+        <TaskQueueSidebar
+          prompts={prompts}
+          productId={id}
+          onUpdate={async () => {
+            try { setPrompts(await getProductPrompts(id)) } catch { /* ignore */ }
+          }}
+          open={taskQueueOpen}
+          onToggle={() => setTaskQueueOpen(v => !v)}
+        />
+      )}
+
+      {/* Image Preview Modal */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <img
+              src={previewImage}
+              alt="Preview"
+              className="max-w-full max-h-[90vh] object-contain rounded-lg"
+            />
+            <button
+              onClick={() => setPreviewImage(null)}
+              className="absolute top-2 right-2 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/70"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </MainLayout>
   )
 }
 
-function PromptCard({ prompt, onUpdate }: { prompt: ProductPrompt; onUpdate: () => void }) {
+function ImageAnalysisCard({ img, productId, onPreview }: { img: any; productId: string; onPreview: (url: string) => void }) {
+  const [expanded, setExpanded] = useState(false)
+  const hasFailed = !img.basic_recognition && !img.product_understanding
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow">
+      <div className="flex items-start gap-3 p-3">
+        <div
+          className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-100 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+          onClick={() => onPreview(getProductImageUrl(productId, img.filename))}
+        >
+          <img
+            src={getProductImageUrl(productId, img.filename)}
+            alt={`图片 ${img.index}`}
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-gray-800">图片 {img.index}</span>
+            {hasFailed && (
+              <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded">识别失败</span>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); setExpanded(v => !v) }}
+              className="text-[10px] text-blue-500 hover:text-blue-600"
+            >
+              {expanded ? '收起' : '展开'}
+            </button>
+          </div>
+          {hasFailed ? (
+            <div className="text-[11px] text-gray-500">
+              图片识别失败，请重新运行分析
+            </div>
+          ) : (
+            <>
+              <div className={`text-[11px] leading-relaxed text-gray-700 ${expanded ? '' : 'line-clamp-2'}`}>
+                <span className="text-blue-600 font-medium">识别：</span>{img.basic_recognition}
+              </div>
+              {expanded && (
+                <>
+                  <div className="text-[11px] leading-relaxed text-gray-700">
+                    <span className="text-green-600 font-medium">产品理解：</span>{img.product_understanding}
+                  </div>
+                  <div className="text-[11px] leading-relaxed text-gray-700">
+                    <span className="text-purple-600 font-medium">创意建议：</span>{img.creative_usage}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTemplates, onPreviewImage }: {
+  prompt: ProductPrompt
+  onUpdate: () => void
+  templates: VideoTemplate[]
+  hookTemplates: { id: string; key: string; name: string }[]
+  imageLayoutTemplates: { id: string; key: string; name: string }[]
+  onPreviewImage: (url: string) => void
+}) {
   const [copied, setCopied] = useState(false)
   const [generating, setGenerating] = useState<'image' | 'video' | null>(null)
   const [expanded, setExpanded] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState(prompt.prompt_text)
   const [saving, setSaving] = useState(false)
+  const [showImagePrompt, setShowImagePrompt] = useState(false)
+
+  // Local state for grid layout, aspect ratio, video style, video model, and video duration
+  const [gridLayout, setGridLayout] = useState<'single' | '2x3' | '3x2' | '3x3' | '3x4' | '4x3' | '4x4'>(prompt.grid_layout as any || 'single')
+  const [aspectRatio, setAspectRatio] = useState(prompt.aspect_ratio || '9:16')
+  const [videoStyle, setVideoStyle] = useState(prompt.video_style || 'grwm')
+  const [hookKey, setHookKey] = useState<string>(prompt.hook_key || 'auto')
+  const [videoModel, setVideoModel] = useState(prompt.video_model || 'happyhorse-1.0')
+  const [videoDuration, setVideoDuration] = useState(prompt.video_duration || 15)
+
+  // Media display toggle: 'image' or 'video'
+  const [mediaView, setMediaView] = useState<'image' | 'video'>('image')
+  const [regenerating, setRegenerating] = useState(false)
+  const [refining, setRefining] = useState(false)
+  const [showRefine, setShowRefine] = useState(false)
+  const [refineText, setRefineText] = useState('')
+
+  // Dynamic duration options based on video model
+  const VIDEO_DURATION_MAP: Record<string, number[]> = {
+    'seedance-2.0': [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    'happyhorse-1.0': [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    'wan-2.6': [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    'veo-3.1': [5, 6, 7, 8],
+  }
+  const durationOptions = VIDEO_DURATION_MAP[videoModel] || [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
   const handleCopy = () => {
     navigator.clipboard.writeText(prompt.prompt_text)
@@ -498,10 +699,16 @@ function PromptCard({ prompt, onUpdate }: { prompt: ProductPrompt; onUpdate: () 
   }
 
   const handleGenerateImage = async () => {
+    if (prompt.image_status === 'completed') {
+      if (!confirm('图片已生成，确定要重新生成吗？')) return
+    }
     setGenerating('image')
     try {
-      await triggerImageGeneration(prompt.id)
-      alert('图片生成已启动，请稍候刷新查看')
+      await triggerImageGeneration(prompt.id, {
+        grid_layout: gridLayout,
+        aspect_ratio: aspectRatio,
+      })
+      onUpdate()
     } catch (e: any) {
       alert('启动失败：' + (e.response?.data?.detail || e.message))
     } finally {
@@ -510,10 +717,13 @@ function PromptCard({ prompt, onUpdate }: { prompt: ProductPrompt; onUpdate: () 
   }
 
   const handleGenerateVideo = async () => {
+    if (prompt.video_status === 'completed') {
+      if (!confirm('视频已生成，确定要重新生成吗？')) return
+    }
     setGenerating('video')
     try {
       await triggerVideoGeneration(prompt.id)
-      alert('视频生成已启动，请稍候刷新查看')
+      onUpdate()
     } catch (e: any) {
       alert('启动失败：' + (e.response?.data?.detail || e.message))
     } finally {
@@ -528,8 +738,40 @@ function PromptCard({ prompt, onUpdate }: { prompt: ProductPrompt; onUpdate: () 
     return null
   }
 
-  const shouldTruncate = prompt.prompt_text.length > 100
-  const displayText = expanded || !shouldTruncate ? prompt.prompt_text : prompt.prompt_text.slice(0, 100) + '...'
+  const shouldTruncate = prompt.prompt_text.length > 150
+  const displayText = expanded || !shouldTruncate ? prompt.prompt_text : prompt.prompt_text.slice(0, 150) + '...'
+
+  // Format prompt text with highlighted section tags
+  const formatPromptText = (text: string) => {
+    const lines = text.split('\n')
+    return lines.map((line, i) => {
+      const tagMatch = line.match(/^\[([^\]]+)\]\s*(.*)/)
+      if (tagMatch) {
+        return (
+          <div key={i} className="mt-2 first:mt-0">
+            <span className="inline-block text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded mr-1">{tagMatch[1]}</span>
+            <span className="text-xs text-gray-700">{tagMatch[2]}</span>
+          </div>
+        )
+      }
+      // Match timestamp patterns: "0-2s:", "- 0-2s:", "0:00-0:03 |", "- 0:00-0:02 [..."
+      // Also: "0s-2s:", "(0-2s)", "  0-2s:", "0-2 seconds:", "**0-2s:**"
+      const cleanLine = line.replace(/^\s*[-–•*]*\s*\**/, '').trim()
+      const timeMatch = cleanLine.match(/^(\d+s?\s*[-–]\s*\d+s?(?:\s*(?:seconds?|sec))?)\s*[:||\[]\s*(.*)/) ||
+                         cleanLine.match(/^\((\d+s?\s*[-–]\s*\d+s?)\)\s*[:||\[]\s*(.*)/) ||
+                         cleanLine.match(/^(\d+:\d+\s*[-–]\s*\d+:\d+)\s*[:||\[]\s*(.*)/)
+      if (timeMatch) {
+        return (
+          <div key={i} className="mt-1 pl-2">
+            <span className="inline-block text-[10px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded mr-1">{timeMatch[1]}</span>
+            <span className="text-xs text-gray-700">{timeMatch[2]}</span>
+          </div>
+        )
+      }
+      if (line.trim() === '') return <div key={i} className="h-1" />
+      return <div key={i} className="text-xs text-gray-600 leading-relaxed pl-1">{line}</div>
+    })
+  }
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4">
@@ -539,6 +781,15 @@ function PromptCard({ prompt, onUpdate }: { prompt: ProductPrompt; onUpdate: () 
           <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{prompt.template_name}</span>
         </div>
         <div className="flex items-center gap-2">
+          {prompt.image_prompt && (
+            <button
+              onClick={() => setShowImagePrompt(v => !v)}
+              className="text-[10px] text-gray-400 hover:text-purple-500 flex items-center gap-0.5 transition-colors"
+            >
+              <ImageIcon className="w-3 h-3" />
+              图片提示词
+            </button>
+          )}
           <button
             onClick={handleEdit}
             disabled={editing}
@@ -556,6 +807,13 @@ function PromptCard({ prompt, onUpdate }: { prompt: ProductPrompt; onUpdate: () 
           </button>
         </div>
       </div>
+
+      {/* Image prompt expandable */}
+      {showImagePrompt && prompt.image_prompt && (
+        <div className="mb-2 px-2 py-1.5 bg-purple-50 border border-purple-100 rounded-lg">
+          <p className="text-[10px] text-purple-600 leading-relaxed">{prompt.image_prompt}</p>
+        </div>
+      )}
 
       {editing ? (
         <div className="mb-3">
@@ -587,9 +845,13 @@ function PromptCard({ prompt, onUpdate }: { prompt: ProductPrompt; onUpdate: () 
         </div>
       ) : (
         <>
-          <p className="text-xs text-gray-700 leading-relaxed mb-2 whitespace-pre-wrap">
-            {displayText}
-          </p>
+          {expanded ? (
+            <div className="mb-2 bg-gray-50 rounded-lg p-3 max-h-96 overflow-y-auto">
+              {formatPromptText(prompt.prompt_text)}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-600 leading-relaxed mb-2 line-clamp-3">{displayText}</p>
+          )}
           {shouldTruncate && (
             <button
               onClick={() => setExpanded(!expanded)}
@@ -609,6 +871,218 @@ function PromptCard({ prompt, onUpdate }: { prompt: ProductPrompt; onUpdate: () 
             </button>
           )}
         </>
+      )}
+
+      {/* Selectors: 2 rows */}
+      <div className="space-y-2 mb-3">
+        {/* Row 1: Image settings */}
+        <div className="flex gap-2">
+          <div className="flex-1 min-w-0">
+            <label className="text-[10px] text-gray-400 mb-0.5 block">图片布局</label>
+            <select
+              value={gridLayout}
+              onChange={async (e) => {
+                const newLayout = e.target.value as 'single' | '2x3' | '3x2'
+                setGridLayout(newLayout)
+                try {
+                  await updatePrompt(prompt.id, prompt.prompt_text, { grid_layout: newLayout })
+                  onUpdate()
+                } catch (e: any) {
+                  alert('更新失败：' + (e.response?.data?.detail || e.message))
+                }
+              }}
+              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs"
+            >
+              <option value="single">单图</option>
+              <option value="3x2">6宫格 (3x2)</option>
+              <option value="3x3">9宫格 (3x3)</option>
+              <option value="3x4">12宫格 (3x4)</option>
+              <option value="4x3">12宫格 (4x3)</option>
+              <option value="4x4">16宫格 (4x4)</option>
+              {imageLayoutTemplates.map(t => (
+                <option key={t.key} value={t.key}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1 min-w-0">
+            <label className="text-[10px] text-gray-400 mb-0.5 block">画面比例</label>
+            <select
+              value={aspectRatio}
+              onChange={async (e) => {
+                const newRatio = e.target.value
+                setAspectRatio(newRatio)
+                try {
+                  await updatePrompt(prompt.id, prompt.prompt_text, { aspect_ratio: newRatio })
+                  onUpdate()
+                } catch (e: any) {
+                  alert('更新失败：' + (e.response?.data?.detail || e.message))
+                }
+              }}
+              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs"
+            >
+              <option value="16:9">16:9</option>
+              <option value="9:16">9:16</option>
+              <option value="1:1">1:1</option>
+            </select>
+          </div>
+          <div className="flex-1 min-w-0">
+            <label className="text-[10px] text-gray-400 mb-0.5 block">视频风格</label>
+            <select
+              value={videoStyle}
+              onChange={async (e) => {
+                const newStyle = e.target.value
+                setVideoStyle(newStyle)
+                await updatePrompt(prompt.id, prompt.prompt_text, { video_style: newStyle })
+              }}
+              disabled={regenerating}
+              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs disabled:opacity-50"
+            >
+              {templates.map(t => (
+                <option key={t.key} value={t.key}>{t.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        {/* Row 2: Video settings */}
+        <div className="flex gap-2">
+          <div className="flex-1 min-w-0">
+            <label className="text-[10px] text-gray-400 mb-0.5 block">开场白</label>
+            <select
+              value={templates.find(t => t.key === videoStyle)?.has_builtin_hook ? 'none' : hookKey}
+              onChange={(e) => setHookKey(e.target.value)}
+              disabled={regenerating || !!templates.find(t => t.key === videoStyle)?.has_builtin_hook}
+              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs disabled:opacity-50"
+            >
+              <option value="none">不使用</option>
+              <option value="auto">智能选择</option>
+              {hookTemplates.map(h => (
+                <option key={h.key} value={h.key}>{h.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex-1 min-w-0">
+            <label className="text-[10px] text-gray-400 mb-0.5 block">视频模型</label>
+            <select
+              value={videoModel}
+              onChange={async (e) => {
+                const newModel = e.target.value
+                setVideoModel(newModel)
+                const newDurationOptions = VIDEO_DURATION_MAP[newModel] || [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+                let adjustedDuration = videoDuration
+                if (!newDurationOptions.includes(videoDuration)) {
+                  adjustedDuration = newDurationOptions[newDurationOptions.length - 1]
+                  setVideoDuration(adjustedDuration)
+                }
+                try {
+                  await updatePrompt(prompt.id, prompt.prompt_text, { video_model: newModel, video_duration: adjustedDuration })
+                  onUpdate()
+                } catch (e: any) {
+                  alert('更新失败：' + (e.response?.data?.detail || e.message))
+                }
+              }}
+              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs"
+            >
+              <option value="seedance-2.0">Seedance 2.0</option>
+              <option value="happyhorse-1.0">HappyHorse 1.0</option>
+              <option value="wan-2.6">Wan 2.6</option>
+              <option value="veo-3.1">Veo 3.1</option>
+            </select>
+          </div>
+          <div className="flex-1 min-w-0">
+            <label className="text-[10px] text-gray-400 mb-0.5 block">时长</label>
+            <select
+              value={videoDuration}
+              onChange={async (e) => {
+                const newDuration = Number(e.target.value)
+                setVideoDuration(newDuration)
+                try {
+                  await updatePrompt(prompt.id, prompt.prompt_text, { video_duration: newDuration })
+                  onUpdate()
+                } catch (e: any) {
+                  alert('更新失败：' + (e.response?.data?.detail || e.message))
+                }
+              }}
+              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs"
+            >
+              {durationOptions.map(d => (
+                <option key={d} value={d}>{d}秒</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex gap-2 mb-2">
+        <button
+          onClick={async () => {
+            setRegenerating(true)
+            try {
+              await regeneratePrompt(prompt.id, videoStyle, hookKey === 'none' ? undefined : hookKey)
+              onUpdate()
+            } catch (e: any) {
+              alert('重新生成失败：' + (e.response?.data?.detail || e.message))
+            } finally {
+              setRegenerating(false)
+            }
+          }}
+          disabled={regenerating || refining}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+        >
+          {regenerating ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Edit className="w-3.5 h-3.5" />
+          )}
+          重新生成提示词
+        </button>
+        <button
+          onClick={() => setShowRefine(v => !v)}
+          disabled={regenerating || refining}
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-violet-50 text-violet-600 rounded-lg hover:bg-violet-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+        >
+          微调
+        </button>
+      </div>
+
+      {showRefine && (
+        <div className="mb-2 bg-violet-50 border border-violet-200 rounded-lg p-3">
+          <textarea
+            value={refineText}
+            onChange={e => setRefineText(e.target.value)}
+            placeholder="输入微调指令，如：所有镜头都要有宠物出镜、加入产品特写、语气更活泼..."
+            rows={2}
+            className="w-full text-xs border border-violet-200 rounded-lg p-2 mb-2 focus:outline-none focus:ring-1 focus:ring-violet-400 resize-none"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                if (!refineText.trim()) return
+                setRefining(true)
+                try {
+                  await refinePrompt(prompt.id, refineText.trim())
+                  onUpdate()
+                  setRefineText('')
+                  setShowRefine(false)
+                } catch (e: any) {
+                  alert('微调失败：' + (e.response?.data?.detail || e.message))
+                } finally {
+                  setRefining(false)
+                }
+              }}
+              disabled={refining || !refineText.trim()}
+              className="px-3 py-1.5 text-xs font-medium bg-violet-500 text-white rounded-lg hover:bg-violet-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
+            >
+              {refining ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+              {refining ? '微调中...' : '确认微调'}
+            </button>
+            <button
+              onClick={() => { setShowRefine(false); setRefineText('') }}
+              className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700"
+            >
+              取消
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="flex gap-2">
@@ -643,11 +1117,122 @@ function PromptCard({ prompt, onUpdate }: { prompt: ProductPrompt; onUpdate: () 
         {getStatusBadge(prompt.video_status)}
       </div>
 
-      {prompt.image_url && prompt.image_status === 'completed' && (
-        <div className="mt-3 rounded-lg overflow-hidden border border-gray-200">
-          <img src={getGeneratedImageUrl(prompt.id)} alt="生成的图片" className="w-full" />
+      {/* Image generating progress */}
+      {prompt.image_status === 'generating' && (
+        <div className="mt-3 flex items-center gap-2 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-lg">
+          <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
+          <span className="text-xs text-blue-600 font-medium">图片生成中，预计需要 30-60 秒...</span>
         </div>
       )}
+
+      {/* Image failed */}
+      {prompt.image_status === 'failed' && (
+        <div className="mt-3 flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-lg">
+          <span className="text-xs text-red-600">图片生成失败，请重试</span>
+        </div>
+      )}
+
+      {/* Media toggle buttons - show when both image and video are available */}
+      {(prompt.image_status === 'completed' || prompt.video_status === 'completed') && (
+        <div className="mt-3 flex gap-2 border-b border-gray-200">
+          <button
+            onClick={() => setMediaView('image')}
+            disabled={prompt.image_status !== 'completed'}
+            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+              mediaView === 'image'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            } disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            图片 {prompt.image_status === 'completed' && '✓'}
+          </button>
+          <button
+            onClick={() => setMediaView('video')}
+            disabled={prompt.video_status !== 'completed'}
+            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
+              mediaView === 'video'
+                ? 'text-purple-600 border-b-2 border-purple-600'
+                : 'text-gray-500 hover:text-gray-700'
+            } disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            视频 {prompt.video_status === 'completed' && '✓'}
+          </button>
+        </div>
+      )}
+
+      {/* Image display */}
+      {mediaView === 'image' && prompt.image_status === 'completed' && (
+        <div className="mt-3 rounded-lg overflow-hidden border border-gray-200">
+          <img
+            src={`${getGeneratedImageUrl(prompt.id)}?t=${Date.now()}`}
+            alt="生成的图片"
+            className="w-full cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => onPreviewImage(`${getGeneratedImageUrl(prompt.id)}?t=${Date.now()}`)}
+          />
+        </div>
+      )}
+
+      {/* Video generating progress */}
+      {prompt.video_status === 'generating' && (
+        <div className="mt-3 flex items-center gap-2 px-3 py-2.5 bg-purple-50 border border-purple-100 rounded-lg">
+          <Loader2 className="w-4 h-4 text-purple-500 animate-spin flex-shrink-0" />
+          <span className="text-xs text-purple-600 font-medium">视频生成中，预计需要 2-5 分钟...</span>
+        </div>
+      )}
+
+      {/* Video failed */}
+      {prompt.video_status === 'failed' && (
+        <div className="mt-3 flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-lg">
+          <span className="text-xs text-red-600">视频生成失败，请重试</span>
+        </div>
+      )}
+
+      {/* Video display */}
+      {mediaView === 'video' && prompt.video_status === 'completed' && (
+        <div className="mt-3 rounded-lg overflow-hidden border border-gray-200">
+          <video src={`/api/products/prompts/${prompt.id}/video`} controls className="w-full" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function GeneratePromptsForm({ productId, templates, onGenerated }: { productId: string; templates: VideoTemplate[]; onGenerated: () => void }) {
+  const [generating, setGenerating] = useState(false)
+
+  const handleGenerate = async () => {
+    setGenerating(true)
+    try {
+      // No template_key = round-robin across all active templates
+      await generatePrompts(productId, '')
+      alert('提示词生成已启动，将使用多种风格随机分配')
+      onGenerated()
+    } catch (e: any) {
+      alert('生成失败：' + (e.response?.data?.detail || e.message))
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-gray-500">
+        将自动使用 {templates.length} 种视频风格轮流生成 10 个提示词变体，生成后可在每个卡片上单独切换风格并重新生成
+      </p>
+      <button
+        onClick={handleGenerate}
+        disabled={generating}
+        className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+      >
+        {generating ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            生成中...
+          </>
+        ) : (
+          '生成提示词'
+        )}
+      </button>
     </div>
   )
 }

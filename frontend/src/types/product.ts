@@ -9,6 +9,8 @@ export interface Product {
   updated_at: string
   archive_status: 'active' | 'archived'
   archived_at: string | null
+  instruction_board_status?: string
+  instruction_board_path?: string | null
 }
 
 export interface ProductPrompt {
@@ -17,6 +19,7 @@ export interface ProductPrompt {
   template_name: string
   variant_index: number
   prompt_text: string
+  image_prompt: string | null
   image_url: string | null
   image_status: 'pending' | 'generating' | 'completed' | 'failed'
   video_url: string | null
@@ -25,6 +28,10 @@ export interface ProductPrompt {
   width: number | null
   height: number | null
   aspect_ratio: string
+  video_style: string
+  hook_key: string | null
+  video_model: string
+  video_duration: number
   batch_id: string | null
   created_at: string
 }
@@ -49,4 +56,10 @@ export interface ProductDoc {
     product_understanding: string
     creative_usage: string
   }>
+}
+
+export interface VideoTemplate {
+  key: string
+  name: string
+  has_builtin_hook?: boolean
 }

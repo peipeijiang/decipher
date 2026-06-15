@@ -3,3 +3,4 @@ from app.models.report import Report
 from app.models.config import ModelConfig
 from app.models.video import Video
 from app.models.segment import Segment
+from app.models.template import VideoTemplate, ImageLayoutTemplate

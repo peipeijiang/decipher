@@ -100,11 +100,27 @@ class MinimaxModel(AIModel):
             # Anthropic endpoint returns content blocks: [{type: "thinking"}, {type: "text", text: "..."}]
             # We only want the text blocks, skipping thinking
             content_blocks = result.get("content", [])
+            logger.debug("MiniMax returned %d content blocks", len(content_blocks))
+
             text_parts = []
+            thinking_parts = []
             for block in content_blocks:
-                if block.get("type") == "text":
+                block_type = block.get("type")
+                if block_type == "text":
                     text_parts.append(block.get("text", ""))
-            return "".join(text_parts)
+                elif block_type == "thinking":
+                    thinking_parts.append(block.get("thinking", ""))
+
+            result_text = "".join(text_parts)
+
+            # Log warning if only thinking blocks were returned
+            if not result_text and thinking_parts:
+                logger.warning("MiniMax returned only thinking blocks (%d blocks), no text content. Thinking preview: %s",
+                             len(thinking_parts), thinking_parts[0][:200] if thinking_parts else "")
+            elif not result_text:
+                logger.warning("MiniMax returned empty response with %d content blocks", len(content_blocks))
+
+            return result_text
         except urllib.error.HTTPError as e:
             body = e.read().decode()[:500]
             logger.error("MiniMax HTTP error %s: %s", e.code, body)

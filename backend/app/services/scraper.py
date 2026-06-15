@@ -28,7 +28,7 @@ class ScraperService:
             os.makedirs(images_dir, exist_ok=True)
 
             downloaded_images = []
-            for idx, img_url in enumerate(images[:10]):
+            for idx, img_url in enumerate(images[:30]):
                 try:
                     img_path = self._download_image(img_url, images_dir, idx)
                     if img_path:
@@ -109,7 +109,16 @@ class ScraperService:
         try:
             parsed = urlparse(url)
             path = parsed.path.lower()
-            return any(path.endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".webp", ".gif"])
+            # Check common image extensions
+            if any(path.endswith(ext) for ext in [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]):
+                return True
+            # Support CDN URLs without extensions (Shopify, etc.)
+            if any(domain in parsed.netloc for domain in ["cdn.shopify.com", "shopifycdn", "cdninstagram", "cloudinary"]):
+                return True
+            # Check for image-related path patterns
+            if any(seg in path for seg in ["/products/", "/images/", "/photos/", "/media/"]):
+                return True
+            return False
         except Exception:
             return False
 

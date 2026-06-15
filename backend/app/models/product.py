@@ -15,6 +15,8 @@ class Product(Base):
     images_dir: Mapped[str] = mapped_column(String, default="")
     doc_path: Mapped[str] = mapped_column(String, default="")
     doc_json_path: Mapped[str] = mapped_column(String, default="")
+    instruction_board_path: Mapped[str | None] = mapped_column(String, nullable=True)
+    instruction_board_status: Mapped[str] = mapped_column(String, default="none")
     status: Mapped[str] = mapped_column(String, default="pending")
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     archive_status: Mapped[str] = mapped_column(String, default="active")

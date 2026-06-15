@@ -131,3 +131,39 @@ class AliyunModel(AIModel):
         except Exception as e:
             logger.error("阿里云 text analysis failed: %s", e)
             raise
+
+    def _analyze_single_image(self, b64_image: str, prompt: str, max_tokens: int) -> str:
+        """Analyze a single image with custom prompt."""
+        try:
+            endpoint = self._multimodal_endpoint if self._vision_model in VISION_MODELS else self._text_endpoint
+            resp = self._post(
+                endpoint,
+                {
+                    "model": self._vision_model,
+                    "input": {
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"image": f"data:image/jpeg;base64,{b64_image}"},
+                                    {"text": prompt},
+                                ],
+                            }
+                        ]
+                    },
+                },
+            )
+            content = (
+                resp.get("output", {})
+                .get("choices", [{}])[0]
+                .get("message", {})
+                .get("content", "")
+            )
+            if isinstance(content, list):
+                content = "".join(
+                    item.get("text", "") for item in content if isinstance(item, dict)
+                )
+            return content
+        except Exception as e:
+            logger.warning("阿里云 single image analysis failed: %s", e)
+            return ""

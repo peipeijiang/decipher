@@ -1,0 +1,261 @@
+import { useEffect, useState } from 'react'
+import { MainLayout } from '../components/layout/MainLayout'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Eye,
+  EyeOff,
+  X,
+  Search,
+  Film,
+  Image as ImageIcon,
+  ChevronDown,
+  ChevronUp,
+  Check
+} from 'lucide-react'
+import api from '../api/client'
+
+interface VideoTemplate {
+  id: string
+  key: string
+  name: string
+  structure: string
+  is_custom: boolean
+  is_active: boolean
+  created_at: string
+}
+
+interface ImageLayoutTemplate {
+  id: string
+  key: string
+  name: string
+  prompt_template: string
+  is_custom: boolean
+  is_active: boolean
+  created_at: string
+}
+
+type ModalMode = 'create-video' | 'edit-video' | 'create-image' | 'edit-image' | null
+
+export default function TemplateSettingsPage() {
+  const [videoTemplates, setVideoTemplates] = useState<VideoTemplate[]>([])
+  const [imageTemplates, setImageTemplates] = useState<ImageLayoutTemplate[]>([])
+  const [loading, setLoading] = useState(true)
+  const [modalMode, setModalMode] = useState<ModalMode>(null)
+  const [editingVideo, setEditingVideo] = useState<VideoTemplate | null>(null)
+  const [editingImage, setEditingImage] = useState<ImageLayoutTemplate | null>(null)
+  const [expandedVideo, setExpandedVideo] = useState<string | null>(null)
+  const [expandedImage, setExpandedImage] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const loadTemplates = async () => {
+    try {
+      const [videoRes, imageRes] = await Promise.all([
+        api.get<VideoTemplate[]>('/api/templates/video'),
+        api.get<ImageLayoutTemplate[]>('/api/templates/image-layout'),
+      ])
+      setVideoTemplates(videoRes.data)
+      setImageTemplates(imageRes.data)
+    } catch (error) {
+      console.error('Failed to load templates:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadTemplates()
+  }, [])
+
+  const handleVideoToggle = async (template: VideoTemplate) => {
+    try {
+      await api.patch(`/api/templates/video/${template.id}`, {
+        is_active: !template.is_active,
+      })
+      await loadTemplates()
+    } catch (error) {
+      console.error('Failed to toggle template:', error)
+    }
+  }
+
+  const handleImageToggle = async (template: ImageLayoutTemplate) => {
+    try {
+      await api.patch(`/api/templates/image-layout/${template.id}`, {
+        is_active: !template.is_active,
+      })
+      await loadTemplates()
+    } catch (error) {
+      console.error('Failed to toggle template:', error)
+    }
+  }
+
+  const handleVideoDelete = async (template: VideoTemplate) => {
+    if (!confirm(`确定删除模板 "${template.name}"？`)) return
+    try {
+      await api.delete(`/api/templates/video/${template.id}`)
+      await loadTemplates()
+    } catch (error) {
+      console.error('Failed to delete template:', error)
+    }
+  }
+
+  const handleVideoSave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const data = {
+      key: formData.get('key') as string,
+      name: formData.get('name') as string,
+      structure: formData.get('structure') as string,
+      is_active: true,
+    }
+
+    try {
+      if (editingVideo) {
+        await api.patch(`/api/templates/video/${editingVideo.id}`, {
+          name: data.name,
+          structure: data.structure,
+        })
+      } else {
+        await api.post('/api/templates/video', data)
+      }
+      await loadTemplates()
+      setModalMode(null)
+      setEditingVideo(null)
+    } catch (error) {
+      console.error('Failed to save template:', error)
+      alert('保存失败')
+    }
+  }
+
+  const filteredVideoTemplates = videoTemplates.filter(t =>
+    t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.key.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const filteredImageTemplates = imageTemplates.filter(t =>
+    t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.key.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500">加载中...</div>
+        </div>
+      </MainLayout>
+    )
+  }
+
+  return (
+    <MainLayout>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">模板管理</h1>
+          <p className="text-gray-600">
+            管理视频风格模板和图片布局转换提示词
+          </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="搜索模板名称或标识符..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-8">
+
+  const handleImageSave = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const formData = new FormData(e.currentTarget)
+    const data = {
+      key: formData.get('key') as string,
+      name: formData.get('name') as string,
+      prompt_template: formData.get('prompt_template') as string,
+      is_active: true,
+    }
+
+    try {
+      if (editingImage) {
+        await api.patch(`/api/templates/image-layout/${editingImage.id}`, {
+          name: data.name,
+          prompt_template: data.prompt_template,
+        })
+      } else {
+        await api.post('/api/templates/image-layout', data)
+      }
+      await loadTemplates()
+      setModalMode(null)
+      setEditingImage(null)
+    } catch (error) {
+      console.error('Failed to save template:', error)
+      alert('保存失败')
+    }
+  }
+
+  const filteredVideoTemplates = videoTemplates.filter(t =>
+    t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.key.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  const filteredImageTemplates = imageTemplates.filter(t =>
+    t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    t.key.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-gray-500">加载中...</div>
+        </div>
+      </MainLayout>
+    )
+  }
+
+  return (
+    <MainLayout>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">模板管理</h1>
+          <p className="text-gray-600">
+            管理视频风格模板和图片布局转换提示词
+          </p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="搜索模板名称或标识符..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-8">
+    }
+  }
+
+  const handleImageDelete = async (template: ImageLayoutTemplate) => {
+    if (!confirm(`确定删除模板 "${template.name}"？`)) return
+    try {
+      await api.delete(`/api/templates/image-layout/${template.id}`)
+      await loadTemplates()
+    } catch (error) {

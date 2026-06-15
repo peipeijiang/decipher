@@ -7,33 +7,84 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Light Clean Theme - 清新浅色主题
-        primary: '#FFFFFF',        // 纯白背景
-        secondary: '#F8FAFC',      // 浅灰背景
-        accent: '#3B82F6',         // 蓝色强调
-        surface: '#F1F5F9',        // 表面色
+        // Warm charcoal base
+        base: {
+          50:  '#f8f7f5',
+          100: '#f0eeea',
+          200: '#e3e0da',
+          300: '#d1cdc5',
+          400: '#a09b91',
+          500: '#7d7870',
+          600: '#5e5a54',
+          700: '#46433e',
+          800: '#2d2b27',
+          900: '#1a1916',
+        },
+        // Amber accent — breaks the blue/purple AI look
+        amber: {
+          50:  '#fffbeb',
+          100: '#fef3c7',
+          200: '#fde68a',
+          300: '#fcd34d',
+          400: '#fbbf24',
+          500: '#f59e0b',
+          600: '#d97706',
+          700: '#b45309',
+          800: '#92400e',
+          900: '#78350f',
+        },
+        // Keep Tailwind's gray for compatibility, re-tint to warm
+        gray: {
+          50:  '#f8f7f5',
+          100: '#f0eeea',
+          200: '#e3e0da',
+          300: '#d1cdc5',
+          400: '#a09b91',
+          500: '#7d7870',
+          600: '#5e5a54',
+          700: '#46433e',
+          800: '#2d2b27',
+          900: '#1a1916',
+        },
+        // Subtle accent colors
+        accent: {
+          DEFAULT: '#d97706',
+          light: '#fef3c7',
+          dark: '#b45309',
+        },
+        surface: {
+          DEFAULT: '#faf9f7',
+          raised: '#ffffff',
+          overlay: 'rgba(250, 249, 247, 0.85)',
+        },
         text: {
-          primary: '#0F172A',      // 深色文字
-          secondary: '#475569',    // 次要文字
-          muted: '#94A3B8',        // 弱化文字
+          primary: '#1a1916',
+          secondary: '#5e5a54',
+          muted: '#a09b91',
         },
         status: {
-          success: '#10B981',      // 成功绿
-          warning: '#F59E0B',      // 警告黄
-          error: '#EF4444',        // 错误红
-          info: '#3B82F6',         // 信息蓝
+          success: '#059669',
+          warning: '#d97706',
+          error: '#dc2626',
+          info: '#0d9488',
         },
       },
       fontFamily: {
-        heading: ['Poppins', 'sans-serif'],
-        body: ['Inter', 'sans-serif'],
-      },
-      backdropBlur: {
-        xs: '2px',
+        sans: ['Geist', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        mono: ['Geist Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
       },
       boxShadow: {
-        'card': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-        'card-hover': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+        'card': '0 1px 2px rgba(146,64,14,0.04), 0 2px 8px rgba(146,64,14,0.06), 0 0 0 1px rgba(146,64,14,0.03)',
+        'card-hover': '0 2px 4px rgba(146,64,14,0.06), 0 4px 16px rgba(146,64,14,0.10), 0 0 0 1px rgba(146,64,14,0.06)',
+        'amber': '0 1px 3px rgba(217,119,6,0.25)',
+        'amber-lg': '0 2px 6px rgba(217,119,6,0.35)',
+      },
+      borderRadius: {
+        'sm': '0.375rem',
+        'md': '0.5rem',
+        'lg': '0.625rem',
+        'xl': '0.75rem',
+        '2xl': '0.875rem',
       },
     },
   },

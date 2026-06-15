@@ -13,6 +13,7 @@ import {
   AlertCircle,
   ChevronUp,
   ChevronDown,
+  Camera,
 } from 'lucide-react'
 import { VideoSkeleton } from '../components/ui/LoadingSkeleton'
 import { MissingDataAlert } from '../components/ui/MissingDataAlert'
@@ -20,7 +21,7 @@ import { MainLayout } from '../components/layout/MainLayout'
 import type { Video, Report, Progress } from '../types'
 
 const STEPS = ['视频上传', '智能解析', '策略拆解', '提示词生成']
-const TABS = ['营销策略', '分镜分析', '逆向提示词', '创意改写']
+const TABS = ['营销策略', '分镜分析', '逆向提示词', '创意改写', '分镜复刻']
 
 // ── Creative angle card (reused in tab 3) ────────────────────────────────────
 
@@ -31,6 +32,9 @@ interface CreativeAngle {
   hook_copy: string
   concept: string
   why: string
+  structure_reference?: string
+  shot_sequence?: string
+  emotion_curve?: string
 }
 
 interface CreativeResult {
@@ -123,10 +127,28 @@ function AngleCard({ result, idx }: { result: CreativeResult; idx: number }) {
             <p className="text-xs text-gray-800 font-medium leading-relaxed">"{angle.hook_copy}"</p>
           </div>
         </div>
+        {angle.structure_reference && (
+          <div className="mb-2">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">结构参考</div>
+            <p className="text-xs text-gray-700 leading-relaxed">{angle.structure_reference}</p>
+          </div>
+        )}
+        {angle.shot_sequence && (
+          <div className="mb-2">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">镜头序列</div>
+            <p className="text-xs text-gray-700 leading-relaxed">{angle.shot_sequence}</p>
+          </div>
+        )}
         <div className="mb-2">
           <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Concept</div>
           <p className="text-xs text-gray-700 leading-relaxed">{angle.concept}</p>
         </div>
+        {angle.emotion_curve && (
+          <div className="mb-2">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">情绪曲线</div>
+            <p className="text-xs text-gray-700 leading-relaxed">{angle.emotion_curve}</p>
+          </div>
+        )}
         <div>
           <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Why it fits</div>
           <p className="text-xs text-gray-600 leading-relaxed italic">{angle.why}</p>
@@ -268,6 +290,22 @@ export default function AnalysisPage() {
   const [creativeHistory, setCreativeHistory] = useState<CreativeHistoryItem[]>([])
   const [expandedHistoryId, setExpandedHistoryId] = useState<string | null>(null)
 
+  // Storyboard replication state
+  const [storyboardData, setStoryboardData] = useState<{
+    id?: string
+    storyboard_image_url?: string
+    replaced_storyboard_url?: string
+    compressed_prompt?: string
+    status?: string
+    frame_count?: number
+    layout_grid?: string
+  } | null>(null)
+  const [productFile, setProductFile] = useState<File | null>(null)
+  const [productDesc, setProductDesc] = useState('')
+  const [selectedImageModel, setSelectedImageModel] = useState('laozhang-image-2-vip')
+  const [generating, setGenerating] = useState(false)
+  const storyboardPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
   const mainPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const startAnalysis = async () => {
@@ -333,12 +371,9 @@ export default function AnalysisPage() {
     setAdaptLoading(true)
     try {
       const formData = new FormData()
-      if (adaptImage) formData.append('image', adaptImage)
+      if (adaptImage) formData.append('file', adaptImage)
       formData.append('description', adaptDescription)
-      formData.append('count', '5')
-      formData.append('style', 'general')
-      formData.append('video_id', videoId)
-      const res = await axios.post('/api/creative/generate', formData, {
+      const res = await axios.post(`/api/videos/${videoId}/adapt`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       setAdaptResult(res.data.results || [])
@@ -361,6 +396,95 @@ export default function AnalysisPage() {
       setCreativeHistory(items)
     }).catch(() => {})
   }, [activeTab, adaptLoaded, videoId])
+
+  // Load storyboard replication data when tab 4 is opened
+  useEffect(() => {
+    if (activeTab !== 4 || !videoId) return
+    axios.get(`/api/storyboard/by-video/${videoId}`).then(res => {
+      setStoryboardData(res.data)
+    }).catch(() => {
+      setStoryboardData(null)
+    })
+  }, [activeTab, videoId])
+
+  // Cleanup storyboard poll on unmount
+  useEffect(() => {
+    return () => {
+      if (storyboardPollRef.current) clearInterval(storyboardPollRef.current)
+    }
+  }, [])
+
+  const pollStoryboardStatus = (id: string) => {
+    if (storyboardPollRef.current) clearInterval(storyboardPollRef.current)
+    storyboardPollRef.current = setInterval(async () => {
+      try {
+        const res = await axios.get(`/api/storyboard/${id}`)
+        setStoryboardData(res.data)
+        if (res.data.status === 'ready' || res.data.status === 'failed') {
+          clearInterval(storyboardPollRef.current!)
+          storyboardPollRef.current = null
+        }
+      } catch {
+        clearInterval(storyboardPollRef.current!)
+        storyboardPollRef.current = null
+      }
+    }, 2000)
+  }
+
+  const handleCreateStoryboard = async () => {
+    if (!videoId) return
+    try {
+      const res = await axios.post(`/api/storyboard/create?video_id=${videoId}`)
+      setStoryboardData({ id: res.data.id, status: res.data.status })
+      if (res.data.status !== 'ready' && res.data.status !== 'completed') {
+        pollStoryboardStatus(res.data.id)
+      } else {
+        const detail = await axios.get(`/api/storyboard/${res.data.id}`)
+        setStoryboardData(detail.data)
+      }
+    } catch (error: any) {
+      alert('创建失败: ' + (error.response?.data?.detail || error.message))
+    }
+  }
+
+  const handleGenerateReplacement = async () => {
+    if (!productFile || !storyboardData?.id) return
+    setGenerating(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', productFile)
+      formData.append('description', productDesc)
+      formData.append('image_model', selectedImageModel)
+      await axios.post(`/api/storyboard/${storyboardData.id}/generate`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      setStoryboardData(prev => prev ? { ...prev, status: 'generating' } : prev)
+      if (storyboardPollRef.current) clearInterval(storyboardPollRef.current)
+      storyboardPollRef.current = setInterval(async () => {
+        try {
+          const res = await axios.get(`/api/storyboard/${storyboardData.id}`)
+          if (res.data.status === 'completed') {
+            setStoryboardData(res.data)
+            setGenerating(false)
+            clearInterval(storyboardPollRef.current!)
+            storyboardPollRef.current = null
+          } else if (res.data.status === 'failed') {
+            setStoryboardData(res.data)
+            setGenerating(false)
+            clearInterval(storyboardPollRef.current!)
+            storyboardPollRef.current = null
+          }
+        } catch {
+          setGenerating(false)
+          clearInterval(storyboardPollRef.current!)
+          storyboardPollRef.current = null
+        }
+      }, 2000)
+    } catch (error: any) {
+      alert('提交失败: ' + (error.response?.data?.detail || error.message))
+      setGenerating(false)
+    }
+  }
 
   // Parse shots: try JSON array, with fallback cleanup for malformed strings
   let parsedShots: any[] = []
@@ -651,11 +775,170 @@ export default function AnalysisPage() {
                   </div>
                 )}
 
+                {/* Tab 4: 分镜复刻 */}
+                {activeTab === 4 && (
+                  <div className="space-y-6">
+                    {!storyboardData ? (
+                      <div className="text-center py-12">
+                        <p className="text-sm text-gray-600 mb-4">
+                          将视频关键帧拼接成分镜图，并用您的产品替换原产品，生成15秒营销视频提示词
+                        </p>
+                        <button
+                          onClick={handleCreateStoryboard}
+                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
+                        >
+                          开始生成分镜图
+                        </button>
+                      </div>
+                    ) : storyboardData.status === 'extracting' || storyboardData.status === 'pending' ? (
+                      <div className="text-center py-12">
+                        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4" />
+                        <p className="text-sm text-gray-600">正在提取关键帧并拼接分镜图...</p>
+                      </div>
+                    ) : (storyboardData.status === 'ready' && !storyboardData.replaced_storyboard_url) || storyboardData.status === 'generating' ? (
+                      <div>
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">原始分镜图</h3>
+                        <img
+                          src={storyboardData.storyboard_image_url}
+                          alt="Storyboard"
+                          className="w-full max-w-3xl mx-auto rounded-lg shadow mb-2 block"
+                        />
+                        <p className="text-xs text-gray-500 text-center mb-6">
+                          {storyboardData.frame_count} 个关键帧 · {storyboardData.layout_grid} 布局
+                        </p>
+
+                        {storyboardData.status === 'generating' ? (
+                          <div className="flex items-center justify-center gap-3 py-6 bg-blue-50 rounded-xl">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
+                            <p className="text-sm text-blue-600 font-medium">正在替换产品并生成提示词...</p>
+                          </div>
+                        ) : (
+                          <div className="max-w-xl mx-auto bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+                            <h3 className="text-sm font-semibold text-gray-800 mb-4">上传您的产品</h3>
+
+                            <div className="mb-4">
+                              <label className="block text-xs font-medium text-gray-700 mb-1.5">产品图片</label>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => setProductFile(e.target.files?.[0] || null)}
+                                className="block w-full text-sm text-gray-700 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                              />
+                            </div>
+
+                            <div className="mb-5">
+                              <label className="block text-xs font-medium text-gray-700 mb-1.5">产品描述</label>
+                              <textarea
+                                value={productDesc}
+                                onChange={(e) => setProductDesc(e.target.value)}
+                                placeholder="例如：高端无线充电器，铝合金外壳，支持15W快充"
+                                rows={3}
+                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 resize-none"
+                              />
+                            </div>
+
+                            <div className="mb-5">
+                              <label className="block text-xs font-medium text-gray-700 mb-1.5">图片生成模型</label>
+                              <select
+                                value={selectedImageModel}
+                                onChange={(e) => setSelectedImageModel(e.target.value)}
+                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
+                              >
+                                <option value="laozhang-image-2-vip">老张 GPT Image 2 VIP</option>
+                                <option value="qwen-image-2.0-pro">阿里云 Qwen Image 2.0 Pro</option>
+                              </select>
+                            </div>
+
+                            <button
+                              onClick={handleGenerateReplacement}
+                              disabled={!productFile || generating}
+                              className="w-full px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
+                            >
+                              {generating ? '生成中...' : '生成分镜复刻'}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : storyboardData.status === 'completed' ? (
+                      <div>
+                        {/* 原始分镜图 */}
+                        <div className="mb-8">
+                          <h3 className="text-sm font-semibold text-gray-700 mb-3">原始分镜图</h3>
+                          <img
+                            src={storyboardData.storyboard_image_url}
+                            alt="Original Storyboard"
+                            className="w-full max-w-3xl mx-auto rounded-lg shadow mb-2 block"
+                          />
+                          <p className="text-xs text-gray-500 text-center">
+                            {storyboardData.frame_count} 个关键帧 · {storyboardData.layout_grid} 布局
+                          </p>
+                        </div>
+
+                        {/* 替换后的分镜图 */}
+                        <div className="mb-6">
+                          <h3 className="text-sm font-semibold text-gray-700 mb-3">替换后的分镜图</h3>
+                          <img
+                            src={storyboardData.replaced_storyboard_url}
+                            alt="Replaced Storyboard"
+                            className="w-full max-w-3xl mx-auto rounded-lg shadow mb-6 block"
+                          />
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-semibold text-gray-700">15秒视频提示词</h3>
+                            <button
+                              onClick={() => navigator.clipboard.writeText(storyboardData.compressed_prompt || '')}
+                              className="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                              复制
+                            </button>
+                          </div>
+                          <pre className="bg-gray-50 border border-gray-200 p-4 rounded-xl whitespace-pre-wrap text-xs text-gray-800 leading-relaxed overflow-y-auto max-h-64">
+                            {storyboardData.compressed_prompt}
+                          </pre>
+
+                          <div className="flex gap-3 pt-2">
+                            <a
+                              href={storyboardData.replaced_storyboard_url}
+                              download="storyboard_replaced.jpg"
+                              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
+                            >
+                              下载分镜图
+                            </a>
+                            <button
+                              onClick={() => {
+                                setStoryboardData(prev => prev ? { ...prev, status: 'ready', replaced_storyboard_url: undefined } : prev)
+                                setProductFile(null)
+                                setProductDesc('')
+                              }}
+                              className="px-5 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700"
+                            >
+                              重新生成
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : storyboardData.status === 'failed' ? (
+                      <div className="text-center py-12">
+                        <p className="text-sm text-red-600 mb-4">{storyboardData.status === 'failed' ? '生成失败，请重试' : ''}</p>
+                        <button
+                          onClick={handleCreateStoryboard}
+                          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-semibold"
+                        >
+                          重新开始
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
                 {/* Tab 3: 创意改写 */}
                 {activeTab === 3 && (
                   <div className="space-y-4">
                     <div className="text-xs text-gray-500">
-                      AI 将读取本视频的内容钩子分析和情感共鸣点，结合你的产品信息，生成多个创意角度和视频提示词
+                      AI 将读取本视频的完整分析（分镜结构、营销策略、镜头语言、情绪曲线），结合你的产品信息，生成可直接复刻的创意角度和视频提示词
                     </div>
 
                     {/* Input row: image upload (top-left) + description */}
@@ -666,7 +949,7 @@ export default function AnalysisPage() {
                           {adaptPreview
                             ? <img src={adaptPreview} alt="product" className="w-full h-full object-cover" />
                             : <>
-                                <span className="text-xl">📷</span>
+                                <Camera className="w-5 h-5" />
                                 <span className="text-[9px] text-gray-500">上传图片</span>
                               </>
                           }

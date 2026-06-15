@@ -106,6 +106,7 @@ def _cfg_to_out(cfg: ModelConfig) -> ModelConfigOut:
         laozhang_api_key_configured=bool(providers.get("_laozhang_api_key")),
         volcengine_api_key_configured=bool(providers.get("_volcengine_api_key")),
         aliyun_api_key_configured=bool(providers.get("_aliyun_api_key")),
+        updrama_api_key_configured=bool(providers.get("_updrama_api_key")),
         updated_at=cfg.updated_at,
     )
 
@@ -170,7 +171,7 @@ def update_config(body: ModelConfigUpdate, db: Session = Depends(get_db)):
         cfg.set_providers(existing)
 
     # Persist standalone generation-model API keys into config_json
-    if body.laozhang_api_key or body.volcengine_api_key or body.aliyun_api_key:
+    if body.laozhang_api_key or body.volcengine_api_key or body.aliyun_api_key or body.updrama_api_key:
         existing = cfg.get_providers()
         if body.laozhang_api_key:
             existing["_laozhang_api_key"] = body.laozhang_api_key
@@ -178,6 +179,8 @@ def update_config(body: ModelConfigUpdate, db: Session = Depends(get_db)):
             existing["_volcengine_api_key"] = body.volcengine_api_key
         if body.aliyun_api_key:
             existing["_aliyun_api_key"] = body.aliyun_api_key
+        if body.updrama_api_key:
+            existing["_updrama_api_key"] = body.updrama_api_key
         cfg.set_providers(existing)
 
     cfg.updated_at = datetime.utcnow()
