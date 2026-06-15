@@ -67,6 +67,9 @@ def run_analysis(video_id: str):
             num_frames=num_frames,
             use_scene_detection=True,
         )
+        # Save frame count to video record
+        video.frame_count = num_frames
+        db.commit()
         _set_progress(video_id, parse=40)
 
         # Step 3: Extract audio (video may have no audio track)

@@ -13,6 +13,7 @@ class Video(Base):
     filepath: Mapped[str] = mapped_column(String, nullable=False)
     filesize: Mapped[int] = mapped_column(Integer, nullable=False)
     duration: Mapped[float | None] = mapped_column(Float, nullable=True)
+    frame_count: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
     platform: Mapped[str] = mapped_column(String, default="TikTok")
     likes: Mapped[str] = mapped_column(String, default="")
     notes: Mapped[str] = mapped_column(Text, default="")

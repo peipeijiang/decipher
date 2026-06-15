@@ -369,6 +369,8 @@ export default function AnalysisPage() {
     if (idx === 0) {
       if (progress.upload >= 100) {
         const dur = video?.duration
+        const frames = video?.frame_count
+        if (dur && frames) return `上传完成 · ${Math.round(dur)}s · ${frames}帧`
         return dur ? `上传完成 · ${Math.round(dur)}s` : '上传完成'
       }
       if (progress.upload > 0) return '上传中…'
@@ -377,10 +379,11 @@ export default function AnalysisPage() {
     // Step 1: 智能解析
     if (idx === 1) {
       if (progress.parse >= 100) {
-        return '关键帧 + 语音识别完成'
+        const fc = video?.frame_count
+        return fc ? `${fc}帧提取 + 语音识别完成` : '关键帧 + 语音识别完成'
       }
       if (progress.parse > 0) {
-        if (progress.parse < 40) return '提取关键帧…'
+        if (progress.parse < 40) return '自适应场景检测…'
         if (progress.parse < 70) return 'Whisper 转文字…'
         return '智能解析中…'
       }
@@ -388,13 +391,13 @@ export default function AnalysisPage() {
     }
     // Step 2: 策略拆解
     if (idx === 2) {
-      if (progress.strategy >= 100) return '策略报告已生成'
+      if (progress.strategy >= 100) return '策略·分镜·提示词报告已生成'
       if (progress.strategy > 0) return 'AI 深度分析中…'
       return ''
     }
     // Step 3: 提示词生成
     if (idx === 3) {
-      if (progress.prompt >= 100) return '提示词已生成'
+      if (progress.prompt >= 100) return '复制清单·优化建议已生成'
       if (progress.prompt > 0) return '逆向生成中…'
       return ''
     }
@@ -610,13 +613,11 @@ export default function AnalysisPage() {
                         {step.label}
                       </span>
                     </div>
-                    {detail && status !== 'pending' && (
-                      <span className={`text-[10px] mt-0.5 ml-9 truncate ${
-                        status === 'completed' ? 'text-green-600/60' :
-                        status === 'active' ? 'text-amber-600/60' :
-                        'text-gray-400'
-                      }`}>{detail}</span>
-                    )}
+                    <span className={`text-[10px] mt-1 ml-9 truncate px-1.5 py-0.5 rounded-md font-medium ${
+                      status === 'completed' ? 'text-green-600 bg-green-50' :
+                      status === 'active' ? 'text-amber-600 bg-amber-50' :
+                      'text-gray-400 bg-gray-50'
+                    }`}>{detail || '等待中'}</span>
                   </div>
                   {!isLast && (
                     <div className={`w-6 h-0.5 flex-shrink-0 self-center ${
