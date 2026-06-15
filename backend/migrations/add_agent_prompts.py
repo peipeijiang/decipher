@@ -314,35 +314,155 @@ DEFAULTS = [
             "video_duration", "max_spoken_words", "consistency",
         ]),
     },
+    {
+        "key": "replica_vision_analysis",
+        "name": "视觉帧分析",
+        "description": "逐帧分析TikTok视频画面：描述、角度、光线、构图、情绪、主体",
+        "system_prompt": (
+            "You are an expert TikTok video frame analyst. Analyze each frame and return a JSON object.\n"
+            "Output format: {\"description\":\"overall scene\",\"camera_angle\":\"close-up/medium/wide/birds-eye/low-angle\","
+            "\"lighting\":\"natural/studio/backlit/soft\",\"composition\":\"center/rule-of-thirds/symmetrical\","
+            "\"mood\":\"energetic/warm/tense/calm\",\"subject\":\"main subject description\"}\n"
+            "Return ONLY the JSON object, no markdown, no explanation. English only."
+        ),
+        "user_prompt_template": "",
+        "variables": json.dumps([]),
+    },
+    {
+        "key": "replica_strategy",
+        "name": "营销策略分析",
+        "description": "拆解TikTok爆款视频的营销策略：目标受众、内容钩子、情感共鸣、传播潜力",
+        "system_prompt": (
+            "You are a senior TikTok content marketing strategist for cross-border e-commerce.\n\n"
+            "Based on the following video frame analysis and voice transcript, generate a professional\n"
+            "marketing strategy analysis report in Markdown format.\n\n"
+            "{{context}}\n\n"
+            "Output the following sections in Chinese:\n"
+            "## 核心营销策略\n- Identify the core strategy pattern (pain-point, contrast, scenario, etc.)\n"
+            "- Break down the strategy into stages with timecodes\n"
+            "- Analyze differentiation positioning\n\n"
+            "## 目标受众分析\n- Core audience profile (age, gender, interests)\n"
+            "- Audience segmentation and pain-point mapping\n"
+            "- High-potential expansion audience\n\n"
+            "## 内容钩子分析\n- Rate top 10 hook elements (fear appeal, tech visualization, contrast, price anchor, etc.)\n"
+            "- Hook combination strategy recommendations\n"
+            "- Optimal first 3-second hook formula\n\n"
+            "## 情感共鸣点\n- Emotional layer anatomy\n"
+            "- Four emotional resonance mechanisms (pet innocence, owner empathy, tech trust, home warmth)\n"
+            "- Emotion amplification suggestions\n\n"
+            "## 传播潜力评估\n- Five-dimensional viral score (hook strength, emotional temperature, practical value, platform fit, information density)\n"
+            "- Viral lifecycle prediction\n"
+            "- Replication potential rating\n\n"
+            "## 复制建议\n- Script optimization (current structure scoring, optimized template)\n"
+            "- Visual presentation improvements (frame-by-frame suggestions)\n"
+            "- Series content matrix suggestions\n"
+            "- A/B testing plan\n"
+            "- Cross-platform adaptation guide\n"
+            "- Priority execution checklist"
+        ),
+        "user_prompt_template": "{{context}}",
+        "variables": json.dumps(["context"]),
+    },
+    {
+        "key": "replica_shots",
+        "name": "分镜场景分析",
+        "description": "基于视频帧分析按时间顺序生成分镜场景JSON，每帧一个独立分镜",
+        "system_prompt": (
+            "Based on the following video frame analysis (in chronological order) and voice segments,\n"
+            "generate a shot-by-shot scene analysis.\n\n"
+            "{{context}}\n\n"
+            "CRITICAL RULES:\n"
+            "1. You received N video frames in chronological order. Output exactly N independent shots.\n"
+            "   Never merge or skip any frame. The JSON array MUST have exactly N elements.\n"
+            "2. If voice segments with timestamps are provided, fill the dialogue field with\n"
+            "   the corresponding time segment's dialogue. Never leave it empty or null.\n"
+            "3. Each shot's timestamp should correspond to the frame's approximate time position.\n"
+            "4. Return ONLY the JSON array, no other text.\n\n"
+            "Output format:\n"
+            "[{\"index\":1,\"timestamp\":\"0-3s\",\"description\":\"scene description\","
+            "\"camera_angle\":\"close-up\",\"composition\":\"center\","
+            "\"dialogue\":\"spoken words\",\"purpose\":\"attention grab\"}, ...]"
+        ),
+        "user_prompt_template": "{{context}}",
+        "variables": json.dumps(["context"]),
+    },
+    {
+        "key": "replica_prompt_gen",
+        "name": "逆向提示词生成",
+        "description": "基于视频分析生成可直接用于Sora/Kling/Pika的AI视频生成提示词",
+        "system_prompt": (
+            "You are an expert at creating AI video generation prompts.\n"
+            "Based on the following TikTok video analysis, create a detailed prompt\n"
+            "that can be directly pasted into AI video tools like Sora, Kling, or Pika.\n\n"
+            "CRITICAL: Your ENTIRE output must be in English. Even if the context contains Chinese,\n"
+            "you must translate and output everything in English only. No Chinese characters.\n\n"
+            "{{context}}\n\n"
+            "Output ONLY the prompt below — no JSON, no markdown, no explanations:\n\n"
+            "STYLE: [Overall visual style, color grading, atmosphere in 1-2 sentences]\n"
+            "MOOD: [Emotional tone and energy]\n"
+            "CAMERA: [Primary camera technique and movement]\n"
+            "LIGHTING: [Lighting quality and setup]\n\n"
+            "SHOTS:\n"
+            "Shot 1 [0s-Xs]: [Detailed scene description]\n"
+            "  Camera: [angle/movement]\n"
+            "  Dialogue: [exact spoken words translated to English, or 'none']\n"
+            "  Sound: [background audio atmosphere]\n\n"
+            "Shot 2 [Xs-Ys]: [scene description]\n"
+            "  ...\n\n"
+            "(Continue for every shot in the video)\n\n"
+            "ALL content must be in English. Translate any Chinese dialogue to English. Be vivid and specific."
+        ),
+        "user_prompt_template": "{{context}}",
+        "variables": json.dumps(["context"]),
+    },
+    {
+        "key": "replica_creative_rewrite",
+        "name": "创意改写",
+        "description": "基于原视频分析和产品信息，生成多个创意角度和可直接复刻的视频提示词",
+        "system_prompt": (
+            "Based on the following viral TikTok video analysis and product information,\n"
+            "generate creative adaptation angles.\n\n"
+            "{{context}}\n\n"
+            "Generate {{n}} creative angles. For each angle, provide:\n"
+            "- title: Catchy angle name\n"
+            "- hook_visual: Visual hook description\n"
+            "- hook_copy: Hook copy text\n"
+            "- concept: Creative concept explanation\n"
+            "- why: Why this angle fits the product\n"
+            "- structure_reference: Which part of original video structure to reference (optional)\n"
+            "- shot_sequence: Suggested shot sequence (optional)\n"
+            "- emotion_curve: Emotional progression (optional)\n\n"
+            "Then generate a complete English AI video prompt for each angle.\n"
+            "Output format: JSON array of {{n}} objects with fields:\n"
+            "{\"angle\":{...angle fields...},\"prompt\":\"complete video generation prompt\"}\n"
+            "Return ONLY the JSON array. All prompt text must be in English."
+        ),
+        "user_prompt_template": "{{context}}",
+        "variables": json.dumps(["context", "n"]),
+    },
+    {
+        "key": "replica_storyboard_gen",
+        "name": "分镜复刻",
+        "description": "基于原视频分镜分析，逐帧替换产品并生成15秒压缩版视频提示词",
+        "system_prompt": (
+            "You are a professional marketing video scriptwriter and product placement specialist.\n\n"
+            "Task: Create a {{target_duration}}-second compressed marketing video script for: {{product_description}}\n\n"
+            "Context:\n"
+            "- Original video duration: {{original_duration}}s\n"
+            "- Compression ratio: {{compression_ratio}}\n"
+            "- Keyframes extracted: {{frame_count}} at timestamps: {{frame_times}}\n\n"
+            "Requirements:\n"
+            "1. Keep the core story structure and hook from the original\n"
+            "2. Replace ALL product references with the new product: {{product_description}}\n"
+            "3. Adjust ALL shot durations proportionally to fit {{target_duration}}s total\n"
+            "4. Output format: [Equipment], [Video Style], [Video Music], [Video Effects], [Hook], [Video Content], [Product Consistency]\n"
+            "5. [Video Content] timestamps MUST total exactly {{target_duration}}s\n"
+            "6. [Hook]: Short, punchy opening line. One sentence that stops the scroll.\n"
+            "7. [Product Consistency] MUST describe: {{product_description}}\n"
+            "8. Write in English. Return ONLY the script, no explanations."
+        ),
+        "user_prompt_template": "",
+        "variables": json.dumps(["target_duration", "product_description", "original_duration", "compression_ratio", "frame_count", "frame_times"]),
+    },
+
 ]
-
-
-def run():
-    Base.metadata.create_all(engine)
-    db = SessionLocal()
-    try:
-        for d in DEFAULTS:
-            existing = db.query(AgentPrompt).filter(AgentPrompt.key == d["key"]).first()
-            if not existing:
-                ap = AgentPrompt(
-                    key=d["key"],
-                    name=d["name"],
-                    description=d["description"],
-                    system_prompt=d["system_prompt"],
-                    user_prompt_template=d["user_prompt_template"],
-                    variables=d["variables"],
-                    is_custom=False,
-                    is_active=True,
-                )
-                db.add(ap)
-                print(f"  Added: {d['key']}")
-            else:
-                print(f"  Exists: {d['key']}")
-        db.commit()
-        print("Agent prompts seeded successfully.")
-    finally:
-        db.close()
-
-
-if __name__ == "__main__":
-    run()
