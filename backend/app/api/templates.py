@@ -199,12 +199,14 @@ def update_image_layout_template(template_id: str, body: ImageLayoutTemplateUpda
     if not template:
         raise HTTPException(404, "Template not found")
 
-    # Built-in templates can only toggle is_active
+    # Built-in templates: allow editing prompt_template + name + is_active
     if not template.is_custom:
+        if body.prompt_template is not None:
+            template.prompt_template = body.prompt_template
+        if body.name is not None:
+            template.name = body.name
         if body.is_active is not None:
             template.is_active = body.is_active
-        else:
-            raise HTTPException(400, "Built-in templates can only be enabled/disabled")
     else:
         # Custom templates can be fully edited
         if body.name is not None:
@@ -311,12 +313,14 @@ def update_hook_template(template_id: str, body: HookTemplateUpdate, db: Session
     if not template:
         raise HTTPException(404, "Template not found")
 
-    # Built-in templates can only toggle is_active
+    # Built-in templates: allow editing prompt_template + name + is_active
     if not template.is_custom:
+        if body.prompt_template is not None:
+            template.prompt_template = body.prompt_template
+        if body.name is not None:
+            template.name = body.name
         if body.is_active is not None:
             template.is_active = body.is_active
-        else:
-            raise HTTPException(400, "Built-in templates can only be enabled/disabled")
     else:
         if body.name is not None:
             template.name = body.name

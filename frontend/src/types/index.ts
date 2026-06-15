@@ -4,6 +4,7 @@ export interface Video {
   filepath: string
   filesize: number
   duration?: number
+  frame_count?: number
   platform?: string
   likes?: string
   notes?: string

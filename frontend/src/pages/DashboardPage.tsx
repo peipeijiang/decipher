@@ -4,7 +4,7 @@ import axios from 'axios'
 import {
   Film, Sparkles, Package, Video, Clock,
   TrendingUp, ArrowRight, Upload, PenTool, Clapperboard, Play,
-  CheckCircle2, AlertCircle, Hourglass, Loader2,
+  CheckCircle2, AlertCircle, Hourglass,
 } from 'lucide-react'
 import { MainLayout } from '../components/layout/MainLayout'
 import { CountUp } from '../components/ui/CountUp'

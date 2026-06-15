@@ -333,14 +333,12 @@ export default function ProductPage() {
                           'text-gray-400'
                         }`}>{step.label}</span>
                       </div>
-                      {detail && status !== 'pending' && (
-                        <span className={`text-[10px] mt-0.5 ml-7 truncate ${
-                          status === 'completed' ? 'text-green-600/70' :
-                          status === 'active' ? 'text-blue-600/70' :
-                          status === 'failed' ? 'text-red-600/70' :
-                          'text-gray-400'
-                        }`}>{detail}</span>
-                      )}
+                      <span className={`text-[10px] mt-1 ml-7 truncate px-1.5 py-0.5 rounded-md font-medium ${
+                        status === 'completed' ? 'text-green-600 bg-green-50' :
+                        status === 'active' ? 'text-blue-600 bg-blue-50' :
+                        status === 'failed' ? 'text-red-600 bg-red-50' :
+                        'text-gray-400 bg-gray-50'
+                      }`}>{detail || '等待中'}</span>
                     </div>
                     {!isLast && (
                       <div className={`w-4 h-0.5 flex-shrink-0 self-center ${

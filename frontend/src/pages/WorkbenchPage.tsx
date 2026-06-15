@@ -97,7 +97,7 @@ function ItemRow({ item, onDel }: { item: WorkbenchItem; onDel: (e:React.MouseEv
       <div className="flex items-center gap-2 flex-shrink-0">
         {'status' in item && <StatusBadge status={ms(item.status)} />}
         {ip && <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />}
-        <button onClick={onDel} className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer ml-1" aria-label="删除"><Trash2 className="w-3.5 h-3.5" /></button>
+        <button onClick={onDel} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer ml-1" aria-label="删除"><Trash2 className="w-3.5 h-3.5" /></button>
       </div>
     </div>
   )

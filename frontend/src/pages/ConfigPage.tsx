@@ -55,15 +55,6 @@ function RoleCard({ label, sub, value, options, onChange, onDirty }: RoleCardPro
   )
 }
 
-// ── Toggle switch ──────────────────────────────────────────
-function Toggle({ checked, onChange }: { checked: boolean; onChange: () => void }) {
-  return (
-    <button type="button" onClick={onChange}
-      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-300 cursor-pointer ${checked ? 'bg-amber-500' : 'bg-gray-300'}`}>
-      <span className={`inline-block h-3.5 w-3.5 rounded-full bg-white shadow transition-transform duration-300 ${checked ? 'translate-x-5' : 'translate-x-1'}`} />
-    </button>
-  )
-}
 
 // ── Main page ──────────────────────────────────────────────
 export default function ConfigPage() {
@@ -150,9 +141,20 @@ export default function ConfigPage() {
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto px-6 pt-12 pb-12 space-y-8">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900 tracking-tight">模型配置</h1>
-          <p className="text-sm text-gray-500 mt-1">分配模型角色，管理各提供商的 API Key 和端点</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-gray-900 tracking-tight">模型配置</h1>
+            <p className="text-sm text-gray-500 mt-1">分配模型角色，管理各提供商的 API Key 和端点</p>
+          </div>
+          <button onClick={handleSave} disabled={saving || !dirty}
+            className="px-6 py-2.5 rounded-full text-sm font-semibold text-white transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 flex-shrink-0"
+            style={{ background: saving ? '#92400e' : '#d97706', boxShadow: '0 2px 8px rgba(217,119,6,0.25)' }}>
+            {saving ? <><Loader2 className="w-4 h-4 animate-spin" />保存中…</> : <><Check className="w-4 h-4" />保存配置</>}
+          </button>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0 ml-4">
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            {saved && <p className="text-sm text-emerald-600 flex items-center gap-1"><Check className="w-3.5 h-3.5" />已保存</p>}
+          </div>
         </div>
 
 

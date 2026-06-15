@@ -24,6 +24,7 @@ class VideoOut(VideoBase):
     id: str
     filesize: int
     duration: float | None
+    frame_count: int | None = None
     status: str
     error: str | None = None
     created_at: datetime

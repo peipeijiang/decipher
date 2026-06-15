@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { X, Sparkles, Copy, Check, ChevronDown, ChevronUp, Loader2, ImageIcon, Minus, Plus, Wand2 } from 'lucide-react'
+import { X, Copy, Check, ChevronDown, ChevronUp, Loader2, ImageIcon, Minus, Plus, Wand2 } from 'lucide-react'
 import api from '../api/client'
 import { MainLayout } from '../components/layout/MainLayout'
 
