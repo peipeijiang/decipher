@@ -242,8 +242,12 @@ def build_generation_prompt(
     if hook_templates:
         hook_lines = []
         for ht in hook_templates:
-            example_str = " | ".join(ht["examples"][:1])
-            hook_lines.append(f"- {ht['name']}: {ht['description']} (e.g. {example_str})")
+            examples = ht.get("examples", [])
+            example_str = examples[0] if examples else ht["description"]
+            hook_lines.append(
+                f"- {ht['key']} ({ht['name']}): {ht['description']}\n"
+                f"  Example: {example_str}"
+            )
         hook_strategies = "\n".join(hook_lines)
     else:
         hook_strategies = (
