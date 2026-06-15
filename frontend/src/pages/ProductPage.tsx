@@ -49,6 +49,9 @@ export default function ProductPage() {
   const [hookTemplates, setHookTemplates] = useState<{ id: string; key: string; name: string }[]>([])
   const [imageLayoutTemplates, setImageLayoutTemplates] = useState<{ id: string; key: string; name: string }[]>([])
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const promptPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const promptPollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [manualPromptGenerating, setManualPromptGenerating] = useState(false)
   const [batchGenerating, setBatchGenerating] = useState(false)
   const [taskQueueOpen, setTaskQueueOpen] = useState(false)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
@@ -62,6 +65,55 @@ export default function ProductPage() {
     getHookTemplates().then(setHookTemplates).catch(console.error)
     getImageLayoutTemplates().then(setImageLayoutTemplates).catch(console.error)
   }, [])
+
+  const stopPromptPolling = useCallback(() => {
+    if (promptPollRef.current) {
+      clearInterval(promptPollRef.current)
+      promptPollRef.current = null
+    }
+    if (promptPollTimeoutRef.current) {
+      clearTimeout(promptPollTimeoutRef.current)
+      promptPollTimeoutRef.current = null
+    }
+    setManualPromptGenerating(false)
+  }, [])
+
+  const startPromptPolling = useCallback(() => {
+    if (!id) return
+    stopPromptPolling()
+    setManualPromptGenerating(true)
+
+    const poll = async () => {
+      let latestProgress = progress?.prompts ?? 0
+      let latestPromptCount = prompts.length
+
+      try {
+        const [progressResult, promptResult] = await Promise.allSettled([
+          getProductProgress(id),
+          getProductPrompts(id),
+        ])
+
+        if (progressResult.status === 'fulfilled') {
+          setProgress(progressResult.value)
+          latestProgress = progressResult.value.prompts
+        }
+        if (promptResult.status === 'fulfilled') {
+          setPrompts(promptResult.value)
+          latestPromptCount = promptResult.value.length
+        }
+
+        if ((latestProgress >= 100 && latestPromptCount > 0) || latestPromptCount >= 10) {
+          stopPromptPolling()
+        }
+      } catch {
+        // Transient failures can happen while the backend task is starting.
+      }
+    }
+
+    void poll()
+    promptPollRef.current = setInterval(poll, 1500)
+    promptPollTimeoutRef.current = setTimeout(stopPromptPolling, 120000)
+  }, [id, progress?.prompts, prompts.length, stopPromptPolling])
 
   const fetchProduct = useCallback(async (isInitial = false) => {
     if (!id) return
@@ -110,8 +162,9 @@ export default function ProductPage() {
         clearInterval(pollRef.current)
         pollRef.current = null
       }
+      stopPromptPolling()
     }
-  }, [id, fetchProduct])
+  }, [id, fetchProduct, stopPromptPolling])
 
   const handleCreate = async () => {
     if (!url.trim()) return
@@ -351,35 +404,15 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          {product && (product.status === 'completed' || product.status === 'failed') && (
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={async () => {
-                  await rerunProduct(product.id)
-                  window.location.reload()
-                }}
-                className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-xs font-medium hover:bg-blue-600 transition-colors"
-              >
-                重新运行
-              </button>
-              {product.status === 'failed' && (
-                <button
-                  onClick={async () => {
-                    await resumeProduct(product.id)
-                    window.location.reload()
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-green-500 text-white text-xs font-medium hover:bg-green-600 transition-colors"
-                >
-                  继续运行
-                </button>
-              )}
-            </div>
-          )}
-
           {/* Product Info Section */}
-          {doc && progress && progress.scrape >= 100 && (
-          <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {doc && progress && progress.doc >= 100 && (
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <h2 className="text-sm font-semibold text-gray-800">产品文档</h2>
+              <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">识别完成</span>
+              <span className="text-xs text-gray-500">已汇总图片与页面文字</span>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left: Product Images */}
             <div>
               <div className="flex items-center gap-2 mb-3">
@@ -405,7 +438,7 @@ export default function ProductPage() {
 
             {/* Right: Product Doc */}
             <div>
-              <h2 className="text-sm font-semibold text-gray-800 mb-3">商品文档</h2>
+              <h3 className="text-sm font-semibold text-gray-800 mb-3">文档摘要</h3>
               <div className="space-y-3 text-sm">
                 <div>
                   <div className="text-xs font-semibold text-gray-500 mb-1">标题</div>
@@ -429,6 +462,33 @@ export default function ProductPage() {
                 </div>
               </div>
             </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        {product && (product.status === 'completed' || product.status === 'failed') && (
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={async () => {
+                await rerunProduct(product.id)
+                window.location.reload()
+              }}
+              className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-xs font-medium hover:bg-blue-600 transition-colors"
+            >
+              重新运行
+            </button>
+            {product.status === 'failed' && (
+              <button
+                onClick={async () => {
+                  await resumeProduct(product.id)
+                  window.location.reload()
+                }}
+                className="px-3 py-1.5 rounded-lg bg-green-500 text-white text-xs font-medium hover:bg-green-600 transition-colors"
+              >
+                继续运行
+              </button>
+            )}
           </div>
         )}
 
@@ -517,22 +577,10 @@ export default function ProductPage() {
               <GeneratePromptsForm
                 productId={product.id}
                 templates={templates}
-                onGenerated={async () => {
-                  // Poll for prompts
-                  const pollInterval = setInterval(async () => {
-                    try {
-                      const newPrompts = await getProductPrompts(product.id)
-                      if (newPrompts.length > 0) {
-                        setPrompts(newPrompts)
-                        clearInterval(pollInterval)
-                      }
-                    } catch (e) {
-                      // ignore
-                    }
-                  }, 2000)
-                  // Stop polling after 60 seconds
-                  setTimeout(() => clearInterval(pollInterval), 60000)
-                }}
+                progress={progress}
+                promptCount={prompts.length}
+                manualGenerating={manualPromptGenerating}
+                onGenerated={startPromptPolling}
               />
             </div>
           </div>
@@ -711,6 +759,16 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
   const [refining, setRefining] = useState(false)
   const [showRefine, setShowRefine] = useState(false)
   const [refineText, setRefineText] = useState('')
+
+  useEffect(() => {
+    setGridLayout(prompt.grid_layout || 'single_keyframe')
+    setAspectRatio(prompt.aspect_ratio || '9:16')
+    setVideoStyle(prompt.video_style || 'grwm')
+    setHookKey(prompt.hook_key || 'auto')
+    setVideoModel(prompt.video_model || 'happyhorse-1.0')
+    setVideoDuration(prompt.video_duration || 15)
+    setEditText(prompt.prompt_text)
+  }, [prompt])
 
   // Dynamic duration options based on video model
   const VIDEO_DURATION_MAP: Record<string, number[]> = {
@@ -1074,7 +1132,9 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
           onClick={async () => {
             setRegenerating(true)
             try {
-              await regeneratePrompt(prompt.id, videoStyle, hookKey === 'none' ? undefined : hookKey)
+              const updated = await regeneratePrompt(prompt.id, videoStyle, hookKey === 'none' ? undefined : hookKey)
+              setHookKey(updated.hook_key || 'auto')
+              setVideoStyle(updated.video_style || videoStyle)
               onUpdate()
             } catch (e: any) {
               alert('重新生成失败：' + (e.response?.data?.detail || e.message))
@@ -1254,20 +1314,46 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
   )
 }
 
-function GeneratePromptsForm({ productId, templates, onGenerated }: { productId: string; templates: VideoTemplate[]; onGenerated: () => void }) {
-  const [generating, setGenerating] = useState(false)
+function GeneratePromptsForm({
+  productId,
+  templates,
+  progress,
+  promptCount,
+  manualGenerating,
+  onGenerated,
+}: {
+  productId: string
+  templates: VideoTemplate[]
+  progress: ProductProgress | null
+  promptCount: number
+  manualGenerating: boolean
+  onGenerated: () => void
+}) {
+  const [starting, setStarting] = useState(false)
+  const rawProgress = progress?.prompts ?? 0
+  const isBackendGenerating = rawProgress > 0 && rawProgress < 100
+  const isGenerating = starting || manualGenerating || isBackendGenerating
+  const progressValue = isGenerating
+    ? rawProgress > 0 && rawProgress < 100 ? rawProgress : 5
+    : promptCount > 0
+      ? 100
+      : 0
+  const statusText = isGenerating
+    ? `正在生成提示词 · ${Math.round(progressValue)}%`
+    : promptCount > 0
+      ? `已生成 ${promptCount} 个提示词`
+      : '等待生成'
 
   const handleGenerate = async () => {
-    setGenerating(true)
+    setStarting(true)
     try {
       // No template_key = round-robin across all active templates
       await generatePrompts(productId, '')
-      alert('提示词生成已启动，将使用多种风格随机分配')
       onGenerated()
     } catch (e: any) {
       alert('生成失败：' + (e.response?.data?.detail || e.message))
     } finally {
-      setGenerating(false)
+      setStarting(false)
     }
   }
 
@@ -1276,21 +1362,41 @@ function GeneratePromptsForm({ productId, templates, onGenerated }: { productId:
       <p className="text-xs text-gray-500">
         将自动使用 {templates.length} 种视频风格轮流生成 10 个提示词变体，生成后可在每个卡片上单独切换风格并重新生成
       </p>
-      <button
-        onClick={handleGenerate}
-        disabled={generating}
-        className="px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
-      >
-        {generating ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            生成中...
-          </>
-        ) : (
-          '生成提示词'
-        )}
-      </button>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <button
+          onClick={handleGenerate}
+          disabled={isGenerating}
+          className="min-h-10 px-6 py-2 bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-semibold rounded-lg hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              生成中...
+            </>
+          ) : (
+            '生成提示词'
+          )}
+        </button>
+
+        <div className="flex-1 min-w-[220px] rounded-lg border border-amber-100 bg-white/70 px-3 py-2">
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <span className="text-xs font-medium text-gray-700">{statusText}</span>
+            <span className="text-[10px] text-gray-500">{Math.min(promptCount, 10)} / 10</span>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-amber-100">
+            <div
+              className="h-full rounded-full bg-amber-500 transition-all duration-300"
+              style={{ width: `${Math.max(0, Math.min(100, progressValue))}%` }}
+            />
+          </div>
+        </div>
+      </div>
+      {progress?.error && isGenerating && (
+        <div className="flex items-center gap-2 rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-xs text-red-600">
+          <AlertCircle className="h-3.5 w-3.5 flex-shrink-0" />
+          {progress.error}
+        </div>
+      )}
     </div>
   )
 }
-

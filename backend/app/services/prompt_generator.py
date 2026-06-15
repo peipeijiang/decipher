@@ -203,7 +203,7 @@ VARIANT_PROMPT = (
     "  * Content must flow as one continuous story from hook to CTA\n"
     "- [Product Consistency] MUST describe the exact product appearance\n\n"
     "Return a JSON array of 10 objects, each with fields: "
-    '"variant_index" (1-10), "hook", "content", "full_prompt".\n'
+    '"variant_index" (1-10), "hook_key" (the exact selected hook strategy key), "hook", "content", "full_prompt".\n'
     "Return ONLY the JSON array, no other text."
 )
 
@@ -267,7 +267,7 @@ def build_generation_prompt(
             "- Doing It Wrong: imply viewer has been making a mistake"
         )
 
-    return prompt_template.format(
+    prompt = prompt_template.format(
         product_json=json.dumps(product_doc, ensure_ascii=False, indent=2),
         template_name=template["name"],
         template_structure=template["structure"].format(
@@ -281,6 +281,12 @@ def build_generation_prompt(
         layout_instruction=layout_instruction,
         hook_strategies=hook_strategies,
     )
+    if '"hook_key"' not in prompt:
+        prompt += (
+            "\n\nOutput contract: every JSON object MUST include "
+            '"hook_key" with the exact selected hook strategy key from the hook strategy templates.'
+        )
+    return prompt
 
 
 def generate_prompt_variants(

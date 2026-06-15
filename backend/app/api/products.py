@@ -14,6 +14,7 @@ from app.schemas.product import ProductCreate, ProductOut, ProductPromptOut, Pro
 from app.tasks.product_pipeline import (
     run_product_pipeline, get_product_progress,
     generate_image_for_prompt, generate_video_for_prompt,
+    _set_progress,
 )
 from app.services.prompt_generator import TEMPLATES
 
@@ -166,8 +167,27 @@ def get_product(product_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{product_id}/progress")
-def get_progress(product_id: str):
-    return get_product_progress(product_id)
+def get_progress(product_id: str, db: Session = Depends(get_db)):
+    progress = get_product_progress(product_id)
+    if any(progress.get(key, 0) > 0 for key in ("scrape", "doc", "prompts")) or progress.get("error"):
+        return progress
+
+    product = db.get(Product, product_id)
+    if not product:
+        raise HTTPException(404, "Product not found")
+
+    prompt_count = db.query(ProductPrompt).filter(ProductPrompt.product_id == product_id).count()
+    inferred = {
+        "scrape": 100 if product.images_dir or product.doc_json_path or product.status == "completed" else 0,
+        "doc": 100 if product.doc_json_path or product.status == "completed" else 0,
+        "prompts": 100 if prompt_count > 0 else 0,
+        "error": product.error_message,
+    }
+
+    if product.status == "failed":
+        inferred["error"] = product.error_message or progress.get("error")
+
+    return inferred
 
 
 @router.delete("/{product_id}")
@@ -747,6 +767,8 @@ def generate_prompts_for_product(product_id: str, body: dict, db: Session = Depe
         if not active_templates:
             active_templates = list(TEMPLATES.keys())
 
+    _set_progress(product_id, scrape=100, doc=100, prompts=1, error=None)
+
     # Generate prompts in background
     def _generate_prompts_task(product_id: str, template_keys: list, product_info: dict):
         from app.database import SessionLocal
@@ -758,8 +780,36 @@ def generate_prompts_for_product(product_id: str, body: dict, db: Session = Depe
 
         db_task: Session = SessionLocal()
         try:
+            _set_progress(product_id, scrape=100, doc=100, prompts=5, error=None)
             cfg = db_task.query(MC).first() or MC()
             analysis_model = get_model(cfg.analysis_model, cfg)
+            hook_options = []
+            try:
+                from app.models.template import HookTemplate
+                hook_options = db_task.query(HookTemplate).filter(HookTemplate.is_active == True).order_by(HookTemplate.created_at).all()
+            except Exception:
+                hook_options = []
+
+            def _resolve_generated_hook_key(variant: dict, index: int) -> str:
+                raw = (
+                    variant.get("hook_key")
+                    or variant.get("hook_strategy_key")
+                    or variant.get("hook_strategy")
+                    or ""
+                )
+                normalized = str(raw).strip().lower()
+                if hook_options:
+                    matched = next(
+                        (
+                            hook for hook in hook_options
+                            if normalized in {hook.key.lower(), hook.name.lower()}
+                        ),
+                        None,
+                    )
+                    if matched:
+                        return matched.key
+                    return hook_options[(index - 1) % len(hook_options)].key
+                return normalized or "auto"
 
             def _fallback_variant(index: int, template_key: str, error: Exception) -> dict:
                 template = get_template(template_key)
@@ -808,6 +858,7 @@ def generate_prompts_for_product(product_id: str, body: dict, db: Session = Depe
                 return {
                     "variant_index": index,
                     "template_key": template_key,
+                    "hook_key": _resolve_generated_hook_key({}, index),
                     "full_prompt": prompt_text,
                 }
 
@@ -847,7 +898,9 @@ def generate_prompts_for_product(product_id: str, body: dict, db: Session = Depe
 
                 variant["variant_index"] = i + 1
                 variant["template_key"] = assigned_template
+                variant["hook_key"] = _resolve_generated_hook_key(variant, i + 1)
                 all_variants.append(variant)
+                _set_progress(product_id, prompts=min(95, 5 + int(((i + 1) / total) * 90)))
                 _logger.info("Generated variant %d with template '%s'", i + 1, assigned_template)
 
             # Save to DB
@@ -860,15 +913,17 @@ def generate_prompts_for_product(product_id: str, body: dict, db: Session = Depe
                     prompt_text=v.get("full_prompt", ""),
                     image_prompt=v.get("image_prompt"),
                     video_style=v["template_key"],
-                    hook_key="auto",
+                    hook_key=v.get("hook_key") or "auto",
                 )
                 db_task.add(pp)
             db_task.commit()
+            _set_progress(product_id, prompts=100, error=None)
 
             _logger.info("Generated %d prompt variants for product %s", len(all_variants), product_id)
         except Exception as e:
             import traceback
             _logger.error("Prompt generation failed for product %s: %s\n%s", product_id, e, traceback.format_exc())
+            _set_progress(product_id, error=str(e))
         finally:
             db_task.close()
 
