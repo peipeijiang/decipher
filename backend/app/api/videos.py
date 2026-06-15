@@ -215,7 +215,25 @@ async def adapt_video(video_id: str, file: UploadFile = File(None), description:
         user_msg = f"产品描述：{product_part}\n\n{video_context}"
 
         # Step 1: Generate creative angles with structure-aware prompt
-        adapt_angle_prompt = """你是TikTok爆款视频复刻专家。基于爆款视频的分镜结构，为用户产品生成4个可复刻的创意角度。
+        # Load agent prompt from DB (replica_creative_rewrite), fallback to hardcoded
+        adapt_angle_prompt = None
+        try:
+            from app.models.agent_prompt import AgentPrompt
+            agent = db.query(AgentPrompt).filter(
+                AgentPrompt.key == 'replica_creative_rewrite', AgentPrompt.is_active == True
+            ).first()
+            if agent:
+                sp = agent.system_prompt
+                ut = agent.user_prompt_template or ""
+                adapt_angle_prompt = sp
+                # If agent prompt has {{n}}, replace with the number of angles to generate
+                adapt_angle_prompt = adapt_angle_prompt.replace("{{n}}", "4")
+                logger.info("Using agent_prompt 'replica_creative_rewrite' (len=%d)", len(adapt_angle_prompt))
+        except Exception as e:
+            logger.warning("Failed to load creative agent prompt: %s", e)
+
+        if not adapt_angle_prompt:
+            adapt_angle_prompt = """你是TikTok爆款视频复刻专家。基于爆款视频的分镜结构，为用户产品生成4个可复刻的创意角度。
 
 核心原则：保留爆款骨架（节奏、镜头模式、情绪曲线），替换产品内容。
 
@@ -242,7 +260,23 @@ async def adapt_video(video_id: str, file: UploadFile = File(None), description:
             raise ValueError(f"No JSON array in angles response: {angles_raw[:200]}")
 
         # Step 2: Generate video prompt per angle
-        adapt_prompt_system = """You are a TikTok video director. Generate a shooting prompt that replicates the original viral video's rhythm with the new product.
+        # Load per-angle prompt from DB, fallback to hardcoded
+        adapt_prompt_system = None
+        try:
+            from app.models.agent_prompt import AgentPrompt
+            agent = db.query(AgentPrompt).filter(
+                AgentPrompt.key == 'replica_prompt_gen', AgentPrompt.is_active == True
+            ).first()
+            if agent:
+                adapt_prompt_system = agent.system_prompt
+                # Append instruction to generate a single-angle prompt
+                adapt_prompt_system += "\n\nGenerate a SINGLE video prompt for ONLY the angle described below. Output the prompt directly. English only."
+                logger.info("Using agent_prompt 'replica_prompt_gen' for per-angle video prompt")
+        except Exception as e:
+            logger.warning("Failed to load prompt gen agent: %s", e)
+
+        if not adapt_prompt_system:
+            adapt_prompt_system = """You are a TikTok video director. Generate a shooting prompt that replicates the original viral video's rhythm with the new product.
 
 Output format (English only, no other text):
 
