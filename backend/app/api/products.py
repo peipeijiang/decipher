@@ -402,7 +402,7 @@ def regenerate_prompt(prompt_id: str, body: dict, db: Session = Depends(get_db))
             from app.api.agent_prompts import get_agent_prompt
             hooks = db.query(HookTemplate).filter(HookTemplate.is_active == True).all()
             if hooks:
-                hook_names = "\n".join(f"- {h.key}: {h.name} — {h.description}" for h in hooks)
+                hook_names = "\n".join(f"- {h.key} ({h.name}): {h.description}. Example: \"{json.loads(h.examples)[0] if h.examples else "N/A"}\"" for h in hooks)
                 _hook_picker_system, _ = get_agent_prompt(db, "hook_picker")
                 if _hook_picker_system:
                     pick_prompt = _hook_picker_system.format(
