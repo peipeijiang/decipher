@@ -35,6 +35,7 @@ def _migrate():
     """Add new columns to existing tables without a migration framework."""
     new_cols = [
         ("videos", "error", "TEXT"),
+        ("videos", "frame_count", "INTEGER"),
         ("segments", "analysis_status", "TEXT"),
         ("segments", "prompt", "TEXT"),
         ("segments", "strategy", "TEXT"),
