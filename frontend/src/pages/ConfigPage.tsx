@@ -149,23 +149,11 @@ export default function ConfigPage() {
 
   return (
     <MainLayout>
-      <div className="max-w-4xl mx-auto px-6 pb-12 space-y-8">
-
-      {/* ── Sticky Save Bar ── */}
-      <div className="sticky top-0 z-30 bg-[#faf9f7]/90 backdrop-blur-md -mx-6 px-6 py-3 mb-6 border-b border-gray-200/60">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900 tracking-tight">模型配置</h1>
-            {error && <p className="text-sm text-red-600 mt-0.5">{error}</p>}
-            {saved && <p className="text-sm text-emerald-600 mt-0.5 flex items-center gap-1.5"><Check className="w-3.5 h-3.5" />保存成功</p>}
-          </div>
-          <button onClick={handleSave} disabled={saving || !dirty}
-            className="px-7 py-2.5 rounded-full text-sm font-semibold text-white transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-            style={{ background: saving ? '#92400e' : '#d97706', boxShadow: '0 2px 8px rgba(217,119,6,0.25)' }}>
-            {saving ? <><Loader2 className="w-4 h-4 animate-spin" />保存中…</> : <><Check className="w-4 h-4" />保存配置</>}
-          </button>
+      <div className="max-w-4xl mx-auto px-6 pt-12 pb-12 space-y-8">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 tracking-tight">模型配置</h1>
+          <p className="text-sm text-gray-500 mt-1">分配模型角色，管理各提供商的 API Key 和端点</p>
         </div>
-      </div>
 
 
 
@@ -190,8 +178,21 @@ export default function ConfigPage() {
 
         {/* ── Section 2: API Key Configuration ── */}
         <section>
-          <h2 className="text-lg font-bold text-gray-900 mb-1">模型提供商</h2>
-          <p className="text-sm text-gray-500 mb-5">配置各模型提供商的 API Key 和端点参数</p>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">模型提供商</h2>
+              <div className="flex items-center gap-3 mt-1">
+                <p className="text-sm text-gray-500">配置各模型提供商的 API Key 和端点参数</p>
+                {error && <p className="text-sm text-red-600">{error}</p>}
+                {saved && <p className="text-sm text-emerald-600 flex items-center gap-1"><Check className="w-3.5 h-3.5" />已保存</p>}
+              </div>
+            </div>
+            <button onClick={handleSave} disabled={saving || !dirty}
+              className="px-6 py-2.5 rounded-full text-sm font-semibold text-white transition-all duration-300 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2 flex-shrink-0"
+              style={{ background: saving ? '#92400e' : '#d97706', boxShadow: '0 2px 8px rgba(217,119,6,0.25)' }}>
+              {saving ? <><Loader2 className="w-4 h-4 animate-spin" />保存中…</> : <><Check className="w-4 h-4" />保存配置</>}
+            </button>
+          </div>
 
           {/* Sub: 文本/视觉模型 */}
           <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wider mb-3">文本 & 视觉分析模型</h3>
