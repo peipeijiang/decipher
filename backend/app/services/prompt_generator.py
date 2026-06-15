@@ -232,10 +232,14 @@ def build_generation_prompt(
         f"Preserve the exact design, color, and appearance of {product_doc.get('title', 'the product')}: "
         f"{product_doc.get('appearance', 'as shown in reference images')}"
     )
-    layout_instruction = (
-        "Generate a single keyframe image" if grid_layout == "single"
-        else f"Generate a {grid_layout} 6-grid storyboard with consistent product appearance"
-    )
+    # Generate layout instruction based on template key
+    if not grid_layout or grid_layout == "single" or grid_layout == "single_keyframe":
+        layout_instruction = "Generate a single keyframe image"
+    else:
+        layout_instruction = "Generate a storyboard image grid using the template structure"
+
+    # Clean layout instruction (was a bug — "Generate a 3x2 6-grid" is redundant)
+    layout_instruction = layout_instruction
 
     # Load hook templates from DB; fall back to generic list if none available
     hook_templates = get_hook_templates_from_db()
