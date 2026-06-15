@@ -267,9 +267,17 @@ def generate_image_for_prompt(prompt_id: str):
         image_prompt = pp.image_prompt
         grid = pp.grid_layout or "single"
 
-        # For storyboard templates, always regenerate image_prompt to ensure correct format
-        if grid in ["story_flow_5", "industrial_macro_5"]:
-            image_prompt = None
+        # Map grid values to ImageLayoutTemplate keys
+        GRID_TO_TEMPLATE = {
+            "single": "single_keyframe", "story_flow_5": "story_flow_5", "industrial_macro_5": "industrial_macro_5",
+            "3x2": "storyboard_6panel", "2x3": "storyboard_6panel",
+            "3x3": "storyboard_9panel", "3x4": "storyboard_12panel_3x4",
+            "4x3": "storyboard_12panel_4x3", "4x4": "storyboard_16panel",
+        }
+        template_key = GRID_TO_TEMPLATE.get(grid, grid)
+
+        # All grids now go through ImageLayoutTemplate lookup
+        image_prompt = None
 
         if not image_prompt:
             try:
@@ -277,13 +285,14 @@ def generate_image_for_prompt(prompt_id: str):
                 from app.api.agent_prompts import get_agent_prompt
                 analysis_model = get_model(cfg.analysis_model, cfg) if cfg else None
                 if analysis_model and hasattr(analysis_model, 'chat'):
-                    if grid in ["story_flow_5", "industrial_macro_5"]:
+                    # Unified: load the ImageLayoutTemplate for ALL grid types
+                    if True:
                         # Special layout templates: LLM applies the template to the video script,
                         # generating a filled-in continuous descriptive prompt for GPT Image 2.
                         from app.models.template import ImageLayoutTemplate
                         db_inner = SessionLocal()
                         try:
-                            layout_tmpl = db_inner.query(ImageLayoutTemplate).filter(ImageLayoutTemplate.key == grid).first()
+                            layout_tmpl = db_inner.query(ImageLayoutTemplate).filter(ImageLayoutTemplate.key == template_key).first()
                             base_prompt = layout_tmpl.prompt_template if layout_tmpl else ""
                         finally:
                             db_inner.close()
@@ -331,28 +340,48 @@ def generate_image_for_prompt(prompt_id: str):
                                     logger.info("Zhipu fallback succeeded")
                             except Exception as e:
                                 logger.warning("Zhipu fallback also failed: %s", e)
-                    elif grid in ("3x2", "2x3", "3x3", "3x4", "4x3", "4x4"):
-                        # Multi-panel storyboard - read from DB
-                        panel_count = {"3x2": 6, "2x3": 6, "3x3": 9, "3x4": 12, "4x3": 12, "4x4": 16}[grid]
-                        _sys, _usr_tmpl = get_agent_prompt(db, "multi_panel_storyboard")
-                        _multi_system = (_sys or (
-                            "You are a professional storyboard artist. Given a TikTok video script, create a {panel_count}-panel storyboard image prompt."
-                        )).format(panel_count=panel_count, grid=grid)
-                        _multi_user = (_usr_tmpl or "Convert this video script into a {panel_count}-panel storyboard prompt:\n\n{prompt_text}").format(
-                            panel_count=panel_count, grid=grid, prompt_text=pp.prompt_text
+                        # All standard grids: use storyboard_filler with ImageLayoutTemplate
+                        _sys, _usr_tmpl = get_agent_prompt(db, "storyboard_filler")
+                        _storyboard_system = _sys or (
+                            "Fill in the {placeholders} in the template below using content from the video script. "
+                            "Output ONLY the filled template — same structure, same sentence flow, placeholders replaced with real content. "
+                            "Do NOT explain, do NOT add commentary, do NOT output your reasoning. "
+                            "Just output the single filled paragraph directly. English only."
                         )
-                        image_prompt = analysis_model.chat(_multi_system, _multi_user, max_tokens=4096).strip()
-                    else:
-                        # Single image - read from DB
-                        _sys, _usr_tmpl = get_agent_prompt(db, "single_image_prompt")
-                        _single_system = _sys or (
-                            "You are an expert at converting video scripts into image generation prompts that preserve product appearance. "
-                            "Write a single English paragraph under 500 characters optimized for AI image generation with reference image. No explanations."
+                        _storyboard_user = (_usr_tmpl or "TEMPLATE:\n{base_prompt}\n\nVIDEO SCRIPT:\n{prompt_text}").format(
+                            base_prompt=base_prompt, prompt_text=pp.prompt_text
                         )
-                        _single_user = (_usr_tmpl or "Convert this video script to an image generation prompt:\n\n{prompt_text}").format(
-                            prompt_text=pp.prompt_text
-                        )
-                        image_prompt = analysis_model.chat(_single_system, _single_user, max_tokens=600).strip()
+
+                        # Retry up to 3 times
+                        image_prompt = None
+                        for _attempt in range(3):
+                            raw = analysis_model.chat(_storyboard_system, _storyboard_user, max_tokens=4096).strip()
+                            if not raw:
+                                logger.warning("Storyboard LLM returned empty (attempt %d/3)", _attempt + 1)
+                                continue
+                            bad_prefixes = ("The user", "I need to", "Let me", "Here's", "Based on", "I'll", "I will", "We need", "We must", "First,", "So we", "The template")
+                            if any(raw.startswith(p) for p in bad_prefixes):
+                                marker = "Generate a single"
+                                idx = raw.find(marker)
+                                if idx > 0:
+                                    raw = raw[idx:].strip()
+                                else:
+                                    logger.warning("Storyboard LLM output reasoning (attempt %d/3)", _attempt + 1)
+                                    continue
+                            image_prompt = raw
+                            break
+
+                        if not image_prompt and cfg.analysis_model != "zhipu":
+                            logger.warning("Primary model failed, trying zhipu fallback")
+                            try:
+                                fallback_model = get_model("zhipu", cfg)
+                                raw = fallback_model.chat(_storyboard_system, _storyboard_user, max_tokens=4096).strip()
+                                if raw and not any(raw.startswith(p) for p in ("The user", "I need to", "Let me", "We need", "We must", "First,", "So we", "The template")):
+                                    image_prompt = raw
+                                    logger.info("Zhipu fallback succeeded")
+                            except Exception as e:
+                                logger.warning("Zhipu fallback also failed: %s", e)
+
                     pp.image_prompt = image_prompt
                     db.commit()
             except Exception as e:

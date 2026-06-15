@@ -645,7 +645,7 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
   const [showImagePrompt, setShowImagePrompt] = useState(false)
 
   // Local state for grid layout, aspect ratio, video style, video model, and video duration
-  const [gridLayout, setGridLayout] = useState<'single' | '2x3' | '3x2' | '3x3' | '3x4' | '4x3' | '4x4'>(prompt.grid_layout as any || 'single')
+  const [gridLayout, setGridLayout] = useState<string>(prompt.grid_layout || 'single_keyframe')
   const [aspectRatio, setAspectRatio] = useState(prompt.aspect_ratio || '9:16')
   const [videoStyle, setVideoStyle] = useState(prompt.video_style || 'grwm')
   const [hookKey, setHookKey] = useState<string>(prompt.hook_key || 'auto')
@@ -882,7 +882,7 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
             <select
               value={gridLayout}
               onChange={async (e) => {
-                const newLayout = e.target.value as 'single' | '2x3' | '3x2'
+                const newLayout = e.target.value
                 setGridLayout(newLayout)
                 try {
                   await updatePrompt(prompt.id, prompt.prompt_text, { grid_layout: newLayout })
@@ -893,13 +893,17 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
               }}
               className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs"
             >
-              <option value="single">单图</option>
-              <option value="3x2">6宫格 (3x2)</option>
-              <option value="3x3">9宫格 (3x3)</option>
-              <option value="3x4">12宫格 (3x4)</option>
-              <option value="4x3">12宫格 (4x3)</option>
-              <option value="4x4">16宫格 (4x4)</option>
-              {imageLayoutTemplates.map(t => (
+              {[
+                { key: "single_keyframe", label: "单图" },
+                { key: "storyboard_6panel", label: "6宫格 (3×2)" },
+                { key: "storyboard_9panel", label: "9宫格 (3×3)" },
+                { key: "storyboard_12panel_3x4", label: "12宫格 (3×4)" },
+                { key: "storyboard_12panel_4x3", label: "12宫格 (4×3)" },
+                { key: "storyboard_16panel", label: "16宫格 (4×4)" },
+              ].map(o => (
+                <option key={o.key} value={o.key}>{o.label}</option>
+              ))}
+              {imageLayoutTemplates.filter(t => !["single_keyframe","storyboard_6panel","storyboard_9panel","storyboard_12panel_3x4","storyboard_12panel_4x3","storyboard_16panel"].includes(t.key)).map(t => (
                 <option key={t.key} value={t.key}>{t.name}</option>
               ))}
             </select>
