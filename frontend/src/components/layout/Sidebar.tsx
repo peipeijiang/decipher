@@ -38,9 +38,8 @@ export function Sidebar() {
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-5 mb-3 cursor-pointer group" onClick={() => n('/')}>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden transition-transform duration-500 group-hover:scale-105"
-          style={{ boxShadow: '0 3px 12px rgba(15,23,42,0.16)' }}>
-          <img src="/logo/decipher-mark.png" alt="Decipher" className="w-full h-full object-cover" />
+        <div className="w-9 h-9 flex items-center justify-center flex-shrink-0 transition-transform duration-500 group-hover:scale-105">
+          <img src="/logo/decipher-mark.svg" alt="Decipher" className="w-full h-full object-contain" />
         </div>
         <span className="text-base font-bold text-gray-900 tracking-tight">Decipher</span>
       </div>
