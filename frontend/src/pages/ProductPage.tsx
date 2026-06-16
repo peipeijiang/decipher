@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MainLayout } from '../components/layout/MainLayout'
 import { TaskQueueSidebar } from '../components/TaskQueueSidebar'
-import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X, FileText, Layers, Target, Lightbulb } from 'lucide-react'
+import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X, FileText, Layers, Lightbulb, Zap, ListChecks, Wrench, ShieldAlert, Info } from 'lucide-react'
 import {
   createProduct,
   getProduct,
@@ -705,30 +705,12 @@ function compactText(value?: string | null, fallback = '待补充'): string {
   return text || fallback
 }
 
-function takeInsightSnippets(doc: ProductDoc, field: 'basic_recognition' | 'product_understanding' | 'creative_usage', limit = 3): string[] {
-  const seen = new Set<string>()
-  return (doc.images || [])
-    .map(img => compactText(img[field], ''))
-    .filter(Boolean)
-    .map(text => text.split(/(?<=[.!?。！？])\s+/)[0] || text)
-    .map(text => text.length > 170 ? `${text.slice(0, 170)}...` : text)
-    .filter(text => {
-      const key = text.toLowerCase()
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
-    .slice(0, limit)
-}
 
 function normalizeList(value?: string[] | null): string[] {
   return (value || []).map(item => compactText(item, '')).filter(Boolean)
 }
 
 function ProductDocSummary({ doc }: { doc: ProductDoc }) {
-  const appearanceSnippets = takeInsightSnippets(doc, 'basic_recognition')
-  const usageSnippets = takeInsightSnippets(doc, 'creative_usage')
-  const sellingSnippets = takeInsightSnippets(doc, 'product_understanding')
   const sourceTitle = compactText(doc.source_content?.web_title, compactText(doc.title, '未识别到商品标题'))
   const sourceDescription = compactText(
     doc.source_content?.web_description,
@@ -736,37 +718,22 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
   )
   const keyParts = normalizeList(doc.key_parts)
   const usageSteps = normalizeList(doc.usage_steps)
+  const tips = normalizeList(doc.tips)
+  const warnings = normalizeList(doc.warnings)
   const evidence = normalizeList(doc.image_evidence)
-  const summaryBlocks = [
-    {
-      label: '外观识别',
-      icon: Layers,
-      value: compactText(doc.appearance, appearanceSnippets[0] || '图片里暂未形成稳定外观结论'),
-      evidence: appearanceSnippets.slice(1),
-    },
-    {
-      label: '使用场景',
-      icon: Target,
-      value: compactText(doc.usage, usageSnippets[0] || '图片里暂未识别到明确使用场景'),
-      evidence: usageSnippets.slice(1),
-    },
-    {
-      label: '卖点线索',
-      icon: Lightbulb,
-      value: compactText(doc.selling_points, sellingSnippets[0] || '图片里暂未提炼出明确卖点'),
-      evidence: sellingSnippets.slice(1),
-    },
-  ]
+
+  const hasContent = (v?: string | null) => v && v.trim().length > 0
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      {/* Header */}
       <div className="mb-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <div className="mb-1 flex items-center gap-2">
             <FileText className="h-4 w-4 text-blue-500" />
-            <h3 className="text-sm font-semibold text-gray-900">文档摘要</h3>
+            <h3 className="text-sm font-semibold text-gray-900">产品文档</h3>
           </div>
-          <p className="text-sm font-medium leading-snug text-gray-800">{compactText(doc.title, sourceTitle)}</p>
+          <p className="text-sm font-semibold leading-snug text-gray-800">{compactText(doc.title, sourceTitle)}</p>
         </div>
         <div className="flex flex-shrink-0 flex-col items-end gap-1">
           <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
@@ -780,70 +747,108 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
         </div>
       </div>
 
-      <div className="mb-4 rounded-lg bg-gray-50 px-3 py-2.5">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">网页来源</div>
-        <p className="mb-1 text-xs font-medium leading-relaxed text-gray-800">{sourceTitle}</p>
-        <p className="text-xs leading-relaxed text-gray-700">{sourceDescription}</p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3">
-        {summaryBlocks.map(block => {
-          const Icon = block.icon
-          return (
-            <div key={block.label} className="rounded-lg border border-gray-100 bg-white px-3 py-3">
-              <div className="mb-2 flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-600">
-                  <Icon className="h-3.5 w-3.5" />
-                </span>
-                <div className="text-xs font-semibold text-gray-800">{block.label}</div>
-              </div>
-              <p className="text-xs leading-relaxed text-gray-700">{block.value}</p>
-              {block.evidence.length > 0 && (
-                <div className="mt-2 space-y-1.5 border-t border-gray-100 pt-2">
-                  {block.evidence.map((item, idx) => (
-                    <p key={idx} className="text-[11px] leading-relaxed text-gray-500">
-                      {item}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-
-      {(keyParts.length > 0 || usageSteps.length > 0 || evidence.length > 0) && (
-        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-          {keyParts.length > 0 && (
-            <DocMiniList title="关键部件" items={keyParts.slice(0, 4)} />
-          )}
-          {usageSteps.length > 0 && (
-            <DocMiniList title="使用步骤" items={usageSteps.slice(0, 4)} />
-          )}
-          {evidence.length > 0 && (
-            <DocMiniList title="图片证据" items={evidence.slice(0, 4)} />
-          )}
+      {/* Source */}
+      <SectionBlock icon={Info} label="网页来源" className="mb-4">
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-gray-800">{sourceTitle}</p>
+          <p className="text-xs leading-relaxed text-gray-600">{sourceDescription}</p>
         </div>
+      </SectionBlock>
+
+      {/* Description + Appearance */}
+      {(hasContent(doc.description) || hasContent(doc.appearance)) && (
+        <SectionBlock icon={FileText} label="产品描述" className="mb-4">
+          <p className="text-xs leading-relaxed text-gray-700">
+            {hasContent(doc.description) ? doc.description : doc.appearance}
+          </p>
+          {hasContent(doc.description) && hasContent(doc.appearance) && (
+            <p className="mt-2 text-xs leading-relaxed text-gray-600">{doc.appearance}</p>
+          )}
+        </SectionBlock>
+      )}
+
+      {/* Key Parts */}
+      {keyParts.length > 0 && (
+        <SectionBlock icon={Wrench} label="关键部件" className="mb-4">
+          <MiniList items={keyParts} max={8} />
+        </SectionBlock>
+      )}
+
+      {/* Usage Steps */}
+      {usageSteps.length > 0 && (
+        <SectionBlock icon={ListChecks} label="使用步骤" className="mb-4">
+          <ol className="space-y-1">
+            {usageSteps.slice(0, 8).map((step, idx) => (
+              <li key={idx} className="flex gap-2 text-[11px] leading-relaxed text-gray-700">
+                <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-[9px] font-semibold text-blue-600">{idx + 1}</span>
+                <span>{step}</span>
+              </li>
+            ))}
+          </ol>
+        </SectionBlock>
+      )}
+
+      {/* Selling Points */}
+      {hasContent(doc.selling_points) && (
+        <SectionBlock icon={Zap} label="核心卖点" className="mb-4">
+          <p className="text-xs leading-relaxed text-gray-700">{doc.selling_points}</p>
+        </SectionBlock>
+      )}
+
+      {/* Tips */}
+      {tips.length > 0 && (
+        <SectionBlock icon={Lightbulb} label="使用技巧" className="mb-4">
+          <MiniList items={tips} max={6} />
+        </SectionBlock>
+      )}
+
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <SectionBlock icon={ShieldAlert} label="注意事项" className="mb-4">
+          <MiniList items={warnings} max={6} />
+        </SectionBlock>
+      )}
+
+      {/* Image Evidence */}
+      {evidence.length > 0 && (
+        <SectionBlock icon={Layers} label="图片证据">
+          <MiniList items={evidence} max={6} />
+        </SectionBlock>
       )}
     </div>
   )
 }
 
-function DocMiniList({ title, items }: { title: string; items: string[] }) {
+function SectionBlock({ icon: Icon, label, children, className = '' }: {
+  icon: any
+  label: string
+  children: ReactNode
+  className?: string
+}) {
   return (
-    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
-      <div className="mb-2 text-[10px] font-semibold text-gray-500">{title}</div>
-      <div className="space-y-1.5">
-        {items.map((item, idx) => (
-          <div key={idx} className="flex gap-1.5 text-[11px] leading-relaxed text-gray-600">
-            <span className="mt-1 h-1 w-1 flex-shrink-0 rounded-full bg-gray-300" />
-            <span>{item}</span>
-          </div>
-        ))}
+    <div className={className}>
+      <div className="mb-2 flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5 text-gray-400" />
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</span>
       </div>
+      <div className="rounded-lg bg-gray-50 px-3 py-2.5">{children}</div>
     </div>
   )
 }
+
+function MiniList({ items, max }: { items: string[]; max: number }) {
+  return (
+    <div className="space-y-1">
+      {items.slice(0, max).map((item, idx) => (
+        <div key={idx} className="flex gap-1.5 text-[11px] leading-relaxed text-gray-600">
+          <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-gray-300" />
+          <span>{item}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 
 function ImageAnalysisCard({ img, productId, onPreview }: { img: any; productId: string; onPreview: (url: string) => void }) {
   const [expanded, setExpanded] = useState(false)
