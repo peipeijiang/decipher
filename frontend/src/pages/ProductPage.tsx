@@ -860,91 +860,93 @@ function ImageAnalysisCard({ img, productId, onPreview }: { img: any; productId:
 
   return (
     <div className="group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_1px_3px_rgba(0,0,0,0.05),0_6px_20px_rgba(0,0,0,0.06)] transition-shadow duration-300">
-      {/* Thumbnail + core info */}
       <div className="flex gap-4 p-4">
+        {/* Thumbnail */}
         <div
           className="relative w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 border border-gray-100 cursor-pointer hover:ring-2 hover:ring-blue-200 transition-all"
           onClick={() => onPreview(getProductImageUrl(productId, img.filename))}
         >
-          <img
-            src={getProductImageUrl(productId, img.filename)}
-            alt={`Image ${img.index}`}
-            className="w-full h-full object-cover"
-          />
+          <img src={getProductImageUrl(productId, img.filename)} alt={`Image ${img.index}`}
+            className="w-full h-full object-cover" />
           <div className="absolute top-1.5 left-1.5 w-5 h-5 rounded-lg bg-black/40 backdrop-blur-sm flex items-center justify-center text-[10px] font-bold text-white">
             {img.index}
           </div>
         </div>
-        <div className="flex-1 min-w-0 space-y-1.5">
-          <div className="flex items-center gap-2">
+
+        <div className="flex-1 min-w-0">
+          {/* Top row: label + tags + expand */}
+          <div className="flex items-center gap-2 mb-1.5">
             <span className="text-sm font-semibold text-gray-800">Image {img.index}</span>
             {hasFailed && (
-              <span className="rounded-full bg-red-50 text-red-600 px-2 py-0.5 text-[11px] font-medium border border-red-100">Recognition failed</span>
+              <span className="rounded-full bg-red-50 text-red-600 px-2 py-0.5 text-[11px] font-medium border border-red-100">Failed</span>
             )}
-            <button
-              onClick={(e) => { e.stopPropagation(); setExpanded(v => !v) }}
-              className="ml-auto text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
-            >
-              {expanded ? 'Collapse' : 'Expand'}
-              <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
-            </button>
+            {/* Tags — always visible */}
+            <div className="flex flex-wrap gap-1">
+              {img.focus_subject && (
+                <span className="rounded-md bg-gray-50 border border-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">{img.focus_subject}</span>
+              )}
+              {img.relevance && (
+                <span className={[
+                  "rounded-md px-2 py-0.5 text-[11px] font-medium border",
+                  img.relevance === 'primary_product' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                  img.relevance === 'packaging_or_infographic' ? 'bg-violet-50 text-violet-700 border-violet-100' :
+                  img.relevance === 'usage_scene' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                  img.relevance === 'comparison' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                  img.relevance === 'unrelated_or_ambiguous' ? 'bg-red-50 text-red-600 border-red-100' :
+                  'bg-gray-50 text-gray-600 border-gray-100'
+                ].join(' ')}>
+                  {img.relevance.replace(/_/g, ' ')}
+                </span>
+              )}
+            </div>
+            {!hasFailed && (
+              <button
+                onClick={(e) => { e.stopPropagation(); setExpanded(v => !v) }}
+                className="ml-auto flex-shrink-0 text-[11px] font-medium text-gray-400 hover:text-gray-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                {expanded ? 'Collapse' : 'Expand'}
+                <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
+              </button>
+            )}
           </div>
 
-          {hasFailed ? (
-            <p className="text-sm text-gray-500 italic">Image recognition failed — re-run the analysis pipeline</p>
-          ) : (
-            <>
-              {/* Tags row */}
-              <div className="flex flex-wrap gap-1.5">
-                {img.focus_subject && (
-                  <span className="rounded-md bg-gray-50 border border-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">
-                    {img.focus_subject}
-                  </span>
-                )}
-                {img.relevance && (
-                  <span className={[
-                    "rounded-md px-2 py-0.5 text-[11px] font-medium border",
-                    img.relevance === 'primary_product' ? 'bg-blue-50 text-blue-700 border-blue-100' :
-                    img.relevance === 'packaging_or_infographic' ? 'bg-violet-50 text-violet-700 border-violet-100' :
-                    img.relevance === 'usage_scene' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-                    img.relevance === 'comparison' ? 'bg-amber-50 text-amber-700 border-amber-100' :
-                    img.relevance === 'unrelated_or_ambiguous' ? 'bg-red-50 text-red-600 border-red-100' :
-                    'bg-gray-50 text-gray-600 border-gray-100'
-                  ].join(' ')}>
-                    {img.relevance.replace(/_/g, ' ')}
-                  </span>
-                )}
-              </div>
+          {/* Collapsed: one-line recognition preview */}
+          {!hasFailed && !expanded && img.basic_recognition && (
+            <p className="text-xs leading-relaxed text-gray-500 line-clamp-1">{img.basic_recognition}</p>
+          )}
 
-              {/* 3 analysis layers */}
-              <div className="space-y-1">
-                {img.basic_recognition && (
-                  <div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Recognition</span>
-                    <p className="text-xs leading-relaxed text-gray-600 mt-0.5 line-clamp-2">{img.basic_recognition}</p>
-                  </div>
-                )}
-                {img.product_understanding && (
-                  <div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Understanding</span>
-                    <p className="text-xs leading-relaxed text-gray-600 mt-0.5 line-clamp-2">{img.product_understanding}</p>
-                  </div>
-                )}
-                {img.creative_usage && (
-                  <div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Creative</span>
-                    <p className="text-xs leading-relaxed text-gray-600 mt-0.5">{img.creative_usage}</p>
-                  </div>
-                )}
-              </div>
+          {hasFailed && !expanded && (
+            <p className="text-xs text-gray-500 italic">Recognition failed — re-run analysis</p>
+          )}
 
-              {expanded && img.context_alignment && (
-                <div className="mt-2 pt-2 border-t border-gray-100">
+          {/* Expanded: full content */}
+          {expanded && !hasFailed && (
+            <div className="space-y-3 mt-2">
+              {img.basic_recognition && (
+                <div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Recognition</span>
+                  <p className="text-xs leading-relaxed text-gray-600 mt-0.5">{img.basic_recognition}</p>
+                </div>
+              )}
+              {img.product_understanding && (
+                <div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Understanding</span>
+                  <p className="text-xs leading-relaxed text-gray-600 mt-0.5">{img.product_understanding}</p>
+                </div>
+              )}
+              {img.creative_usage && (
+                <div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Creative</span>
+                  <p className="text-xs leading-relaxed text-gray-600 mt-0.5">{img.creative_usage}</p>
+                </div>
+              )}
+              {img.context_alignment && (
+                <div className="pt-2 border-t border-gray-100">
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-600">Context Alignment</span>
                   <p className="text-xs leading-relaxed text-amber-700 mt-1">{img.context_alignment}</p>
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
       </div>
