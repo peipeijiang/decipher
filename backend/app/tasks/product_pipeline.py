@@ -707,6 +707,7 @@ def generate_image_for_prompt(prompt_id: str):
         saved = service.download_image(result["image_url"], str(output_path))
         pp.image_path = saved
         pp.image_url = result["image_url"]
+        pp.image_prompt = final_prompt  # Save the full prompt for inspection
         pp.image_status = "completed"
         pp.error_message = None
         db.commit()
