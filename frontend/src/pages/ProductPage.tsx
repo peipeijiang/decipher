@@ -1083,7 +1083,7 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden h-full flex flex-col">
       {/* ── Card Header ── */}
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-50">
         <div className="flex items-center gap-3">
@@ -1112,7 +1112,7 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
       </div>
 
       {/* ── Card Body ── */}
-      <div className="px-5 py-4 space-y-4">
+      <div className="flex-1 px-5 py-4 space-y-4 overflow-y-auto">
         {/* Image prompt expandable */}
         {showImagePrompt && prompt.image_prompt && (
           <div className="px-3 py-2.5 bg-violet-50/60 border border-violet-100 rounded-xl">
@@ -1179,7 +1179,10 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
           </SelectField>
         </div>
 
-        {/* Action buttons */}
+      </div>
+
+      {/* ── Card Footer: Action buttons pinned to bottom ── */}
+      <div className="flex-shrink-0 px-5 pb-4 space-y-4">
         <div className="flex gap-2">
           <button onClick={async () => {
             setRegenerating(true)
