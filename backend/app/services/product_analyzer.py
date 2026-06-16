@@ -102,12 +102,16 @@ def analyze_product_images(
     product_title: str = "",
     product_description: str = "",
     db=None,
+    progress_callback=None,
 ) -> list[dict]:
     """Run 3-layer AI recognition on each product image."""
     import time
 
     image_prompt = _get_product_image_prompt(db)
     product_context = _format_product_context(product_title, product_description)
+    total_images = len(image_paths)
+    if progress_callback:
+        progress_callback(0, total_images, "准备识别图片")
 
     results = []
     for path in image_paths:
@@ -139,6 +143,8 @@ def analyze_product_images(
                 "relevance": parsed.get("relevance", ""),
                 "context_alignment": parsed.get("context_alignment", ""),
             })
+            if progress_callback:
+                progress_callback(len(results), total_images, "识别图片")
             # Rate limit: wait 5s before next image
             time.sleep(5)
         except Exception as e:
@@ -154,8 +160,12 @@ def analyze_product_images(
                 "relevance": "unrelated_or_ambiguous",
                 "context_alignment": "",
             })
+            if progress_callback:
+                progress_callback(len(results), total_images, "识别图片")
 
     # Filter out irrelevant images based on AI analysis
+    if progress_callback:
+        progress_callback(len(results), total_images, "筛选有效图片")
     filtered = _filter_relevant_images(results, vision_model, product_title, product_description)
     logger.info("Filtered %d/%d images as product-relevant", len(filtered), len(results))
     return filtered

@@ -42,6 +42,9 @@ export interface ProductProgress {
   doc: number
   prompts: number
   error: string | null
+  doc_current?: number
+  doc_total?: number
+  doc_stage?: string
 }
 
 export interface ProductDoc {

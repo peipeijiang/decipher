@@ -11,20 +11,53 @@ from app.models.config import ModelConfig
 
 logger = logging.getLogger(__name__)
 
-# In-memory progress: product_id → {scrape, doc, prompts, error}
+# In-memory progress: product_id → {scrape, doc, prompts, error, doc_current, doc_total, doc_stage}
 _progress: dict[str, dict] = {}
 
 
 def get_product_progress(product_id: str) -> dict:
-    return _progress.get(product_id, {"scrape": 0, "doc": 0, "prompts": 0, "error": None})
+    return _progress.get(product_id, {
+        "scrape": 0,
+        "doc": 0,
+        "prompts": 0,
+        "error": None,
+        "doc_current": 0,
+        "doc_total": 0,
+        "doc_stage": "",
+    })
 
 
-def _set_progress(product_id: str, error: str | None = None, **kwargs: int) -> None:
+def _set_progress(product_id: str, error: str | None = None, **kwargs) -> None:
     if product_id not in _progress:
-        _progress[product_id] = {"scrape": 0, "doc": 0, "prompts": 0, "error": None}
+        _progress[product_id] = {
+            "scrape": 0,
+            "doc": 0,
+            "prompts": 0,
+            "error": None,
+            "doc_current": 0,
+            "doc_total": 0,
+            "doc_stage": "",
+        }
     _progress[product_id].update(kwargs)
     if error is not None:
         _progress[product_id]["error"] = error
+
+
+def _make_doc_progress_callback(product_id: str, base: int = 10, span: int = 50):
+    def _callback(current: int, total: int, stage: str = "识别图片") -> None:
+        if total <= 0:
+            _set_progress(product_id, doc=base, doc_current=0, doc_total=0, doc_stage=stage)
+            return
+        doc_progress = min(base + span, base + int((current / total) * span))
+        _set_progress(
+            product_id,
+            doc=doc_progress,
+            doc_current=current,
+            doc_total=total,
+            doc_stage=stage,
+        )
+
+    return _callback
 
 
 def resume_product_pipeline(product_id: str, start_from: str = "scrape"):
@@ -68,15 +101,16 @@ def resume_product_pipeline(product_id: str, start_from: str = "scrape"):
                 product_title=product.title,
                 product_description=product.description,
                 db=db,
+                progress_callback=_make_doc_progress_callback(product_id),
             )
-            _set_progress(product_id, doc=60)
+            _set_progress(product_id, doc=65, doc_stage="生成文档摘要")
 
             product_info = generate_product_doc(product.title, product.description, image_results, analysis_model)
             md_path, json_path = write_product_docs(str(product_dir), product_info, image_results)
             product.doc_path = md_path
             product.doc_json_path = json_path
             db.commit()
-            _set_progress(product_id, doc=100)
+            _set_progress(product_id, doc=100, doc_stage="文档已生成")
 
             # Continue to prompts
             _set_progress(product_id, prompts=10)
@@ -197,8 +231,9 @@ def run_product_pipeline(product_id: str):
             product_title=product.title,
             product_description=product.description,
             db=db,
+            progress_callback=_make_doc_progress_callback(product_id),
         )
-        _set_progress(product_id, doc=60)
+        _set_progress(product_id, doc=65, doc_stage="生成文档摘要")
 
         # Step 3: Generate product document
         product_info = generate_product_doc(
@@ -208,7 +243,7 @@ def run_product_pipeline(product_id: str):
         product.doc_path = md_path
         product.doc_json_path = json_path
         db.commit()
-        _set_progress(product_id, doc=100)
+        _set_progress(product_id, doc=100, doc_stage="文档已生成")
 
         # Step 4: Generate instruction board (auto-trigger)
         logger.info("Auto-triggering instruction board generation for product %s", product_id)
