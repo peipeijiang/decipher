@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MainLayout } from '../components/layout/MainLayout'
 import { TaskQueueSidebar } from '../components/TaskQueueSidebar'
-import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X, FileText, Lightbulb, ListChecks, Wrench, ShieldAlert } from 'lucide-react'
+import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X, FileText, Lightbulb, ShieldAlert } from 'lucide-react'
 import {
   createProduct,
   getProduct,
@@ -698,157 +698,168 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
   const warnings = normalizeList(doc.warnings)
   const evidence = normalizeList(doc.image_evidence)
   const hasContent = (v?: string | null) => v && v.trim().length > 0
-  const descText = hasContent(doc.description) ? doc.description : doc.appearance
 
-  // Split selling points into tags
+  // Selling points as cleaned tags
   const sellingTags = (doc.selling_points || '')
     .split(/[,，;；、]/)
     .map(s => s.trim())
     .filter(Boolean)
-    .slice(0, 8)
+    .slice(0, 10)
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      {/* Compact header row */}
-      <div className="mb-3 flex items-center gap-3">
-        <FileText className="h-4 w-4 flex-shrink-0 text-blue-500" />
-        <h3 className="flex-1 min-w-0 truncate text-sm font-semibold text-gray-800">{compactText(doc.title, sourceTitle)}</h3>
-        <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">{doc.images?.length || 0} 张图</span>
-        {doc.category && (
-          <span className="flex-shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">{doc.category}</span>
-        )}
-      </div>
-
-      {/* Source + overview in a compact 2-col row */}
-      <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div className="rounded-lg bg-gray-50 px-3 py-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">网页来源</span>
-          <p className="mt-0.5 text-[11px] leading-snug text-gray-700 line-clamp-2">{sourceDescription}</p>
-        </div>
-        <div className="rounded-lg bg-gray-50 px-3 py-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">概览</span>
-          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-700">
-            {keyParts.length > 0 && <span>{keyParts.length} 部件</span>}
-            {usageSteps.length > 0 && <span>{usageSteps.length} 步骤</span>}
-            {tips.length > 0 && <span>{tips.length} 技巧</span>}
-            {warnings.length > 0 && <span>{warnings.length} 注意</span>}
-            {sellingTags.length > 0 && <span>{sellingTags.length} 卖点</span>}
+    <div className="rounded-2xl border border-gray-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.03)]">
+      {/* ── Header ── */}
+      <div className="flex items-center gap-4 px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100">
+            <FileText className="h-4 w-4 text-blue-600" />
           </div>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-gray-900 truncate">{compactText(doc.title, sourceTitle)}</h3>
+            <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">{sourceDescription}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-500">
+            {doc.images?.length || 0} images
+          </span>
+          {doc.category && (
+            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-600 capitalize">
+              {doc.category}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Selling points as compact tags */}
-      {sellingTags.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-1">
-          {sellingTags.map((tag, i) => (
-            <span key={i} className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">{tag}</span>
-          ))}
-        </div>
-      )}
+      {/* ── Body ── */}
+      <div className="px-5 py-4 space-y-4">
 
-      {/* Two-column grid: key parts + steps */}
-      <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-        {keyParts.length > 0 && (
-          <div>
-            <div className="mb-1.5 flex items-center gap-1">
-              <Wrench className="h-3 w-3 text-gray-400" />
-              <span className="text-[10px] font-semibold text-gray-500">关键部件</span>
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {keyParts.slice(0, 6).map((p, i) => (
-                <span key={i} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">{p}</span>
-              ))}
-            </div>
+        {/* Selling points */}
+        {sellingTags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {sellingTags.map((tag, i) => (
+              <span key={i} className="rounded-md bg-gray-50 border border-gray-100 px-2.5 py-1 text-xs text-gray-600 font-medium">
+                {tag}
+              </span>
+            ))}
           </div>
         )}
-        {usageSteps.length > 0 && (
-          <div>
-            <div className="mb-1.5 flex items-center gap-1">
-              <ListChecks className="h-3 w-3 text-gray-400" />
-              <span className="text-[10px] font-semibold text-gray-500">使用步骤</span>
-            </div>
-            <ol className="space-y-0.5">
-              {usageSteps.slice(0, 4).map((step, idx) => (
-                <li key={idx} className="flex gap-1.5 text-[10px] text-gray-600">
-                  <span className="flex-shrink-0 w-3.5 h-3.5 flex items-center justify-center rounded-full bg-blue-100 text-[8px] font-semibold text-blue-600">{idx + 1}</span>
-                  <span className="leading-snug">{step}</span>
-                </li>
-              ))}
-              {usageSteps.length > 4 && (
-                <li className="text-[10px] text-gray-400 pl-5">+{usageSteps.length - 4} 步</li>
-              )}
-            </ol>
-          </div>
-        )}
-      </div>
 
-      {/* Tips + Warnings in a row */}
-      {(tips.length > 0 || warnings.length > 0) && (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {tips.length > 0 && (
+        {/* Key parts + usage steps — side by side on desktop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {keyParts.length > 0 && (
             <div>
-              <div className="mb-1 flex items-center gap-1">
-                <Lightbulb className="h-3 w-3 text-amber-500" />
-                <span className="text-[10px] font-semibold text-gray-500">使用技巧</span>
-              </div>
-              <ul className="space-y-0.5">
-                {tips.slice(0, 3).map((t, i) => (
-                  <li key={i} className="text-[10px] text-gray-600">· {t}</li>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Key Components</h4>
+              <ul className="space-y-1.5">
+                {keyParts.map((part, i) => (
+                  <li key={i} className="flex gap-2 text-xs text-gray-700 leading-relaxed">
+                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-blue-400" />
+                    <span>{part}</span>
+                  </li>
                 ))}
-                {tips.length > 3 && (<li className="text-[10px] text-gray-400">+{tips.length - 3} 条</li>)}
               </ul>
             </div>
           )}
-          {warnings.length > 0 && (
+          {usageSteps.length > 0 && (
             <div>
-              <div className="mb-1 flex items-center gap-1">
-                <ShieldAlert className="h-3 w-3 text-red-400" />
-                <span className="text-[10px] font-semibold text-gray-500">注意事项</span>
-              </div>
-              <ul className="space-y-0.5">
-                {warnings.slice(0, 3).map((w, i) => (
-                  <li key={i} className="text-[10px] text-gray-600">· {w}</li>
+              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">How to Use</h4>
+              <ol className="space-y-1.5">
+                {usageSteps.map((step, idx) => (
+                  <li key={idx} className="flex gap-2 text-xs text-gray-700 leading-relaxed">
+                    <span className="flex-shrink-0 w-4 h-4 mt-0.5 flex items-center justify-center rounded-full bg-blue-50 text-[10px] font-bold text-blue-600">
+                      {idx + 1}
+                    </span>
+                    <span>{step}</span>
+                  </li>
                 ))}
-                {warnings.length > 3 && (<li className="text-[10px] text-gray-400">+{warnings.length - 3} 条</li>)}
-              </ul>
+              </ol>
             </div>
           )}
         </div>
-      )}
 
-      {/* Expandable full description + evidence */}
-      {hasContent(descText) && (
-        <>
-          <button
-            onClick={() => setShowFull(!showFull)}
-            className="mt-3 flex items-center gap-1 text-[10px] text-blue-500 hover:text-blue-600 transition-colors"
-          >
-            {showFull ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {showFull ? '收起详情' : '展开完整描述与证据'}
-          </button>
-          {showFull && (
-            <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2.5">
-              <p className="text-[11px] leading-relaxed text-gray-700">{descText}</p>
-              {hasContent(doc.description) && hasContent(doc.appearance) && (
-                <p className="mt-2 text-[11px] leading-relaxed text-gray-600">{doc.appearance}</p>
-              )}
-              {evidence.length > 0 && (
-                <div className="mt-2 border-t border-gray-200 pt-2">
-                  <span className="text-[10px] font-semibold text-gray-400">图片证据</span>
-                  <ul className="mt-1 space-y-0.5">
-                    {evidence.map((e, i) => (
-                      <li key={i} className="text-[10px] text-gray-500">· {e}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
+        {/* Tips + warnings — side by side on desktop */}
+        {(tips.length > 0 || warnings.length > 0) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            {tips.length > 0 && (
+              <div>
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-amber-600/70 mb-2 flex items-center gap-1.5">
+                  <Lightbulb className="h-3 w-3" />
+                  Tips
+                </h4>
+                <ul className="space-y-1">
+                  {tips.map((t, i) => (
+                    <li key={i} className="text-xs text-gray-600 leading-relaxed flex gap-1.5">
+                      <span className="text-amber-400 flex-shrink-0">-</span>
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {warnings.length > 0 && (
+              <div>
+                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-red-500/70 mb-2 flex items-center gap-1.5">
+                  <ShieldAlert className="h-3 w-3" />
+                  Warnings
+                </h4>
+                <ul className="space-y-1">
+                  {warnings.map((w, i) => (
+                    <li key={i} className="text-xs text-gray-600 leading-relaxed flex gap-1.5">
+                      <span className="text-red-300 flex-shrink-0">-</span>
+                      <span>{w}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Expand: full description + evidence */}
+        {(hasContent(doc.description) || hasContent(doc.appearance) || evidence.length > 0) && (
+          <div>
+            <button
+              onClick={() => setShowFull(!showFull)}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <span className={`transition-transform duration-200 ${showFull ? 'rotate-180' : ''}`}>
+                <ChevronDown className="h-3.5 w-3.5" />
+              </span>
+              {showFull ? 'Hide details' : 'Full description & evidence'}
+            </button>
+            {showFull && (
+              <div className="mt-3 rounded-xl bg-gray-50/80 px-4 py-3.5 space-y-3">
+                {hasContent(doc.description) && (
+                  <p className="text-xs leading-relaxed text-gray-700">{doc.description}</p>
+                )}
+                {hasContent(doc.appearance) && doc.appearance !== doc.description && (
+                  <div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Appearance</span>
+                    <p className="mt-1 text-xs leading-relaxed text-gray-600">{doc.appearance}</p>
+                  </div>
+                )}
+                {evidence.length > 0 && (
+                  <div className="pt-2 border-t border-gray-200/80">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Image Evidence</span>
+                    <ul className="mt-1.5 space-y-1">
+                      {evidence.map((e, i) => (
+                        <li key={i} className="text-xs text-gray-500 flex gap-1.5">
+                          <span className="text-gray-300 flex-shrink-0">-</span>
+                          <span>{e}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
+
 
 function ImageAnalysisCard({ img, productId, onPreview }: { img: any; productId: string; onPreview: (url: string) => void }) {
   const [expanded, setExpanded] = useState(false)
