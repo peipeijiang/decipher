@@ -66,6 +66,37 @@ def _format_product_context(title: str = "", description: str = "") -> str:
         "- For infographic or usage images, describe the product information shown and keep the target product as the focus.\n"
     )
 
+
+def _looks_like_non_product_asset(path: str) -> bool:
+    """Deterministic guard for site assets that should not be sent to vision models."""
+    try:
+        import os
+        from PIL import Image
+
+        filename = Path(path).name.lower()
+        if any(term in filename for term in ("logo", "favicon", "sprite", "icon")):
+            return True
+
+        file_size = os.path.getsize(path)
+        with Image.open(path) as img:
+            width, height = img.size
+            if width <= 0 or height <= 0:
+                return True
+            aspect = width / height
+
+            if "A" in img.getbands():
+                alpha = img.convert("RGBA").getchannel("A")
+                opaque = sum(1 for value in alpha.getdata() if value > 8)
+                transparent_ratio = 1 - (opaque / (width * height))
+                if file_size < 150_000 and aspect > 1.35 and transparent_ratio > 0.55:
+                    return True
+
+            if file_size < 8_000 and (aspect > 2.4 or aspect < 0.42):
+                return True
+    except Exception:
+        return False
+    return False
+
 PRODUCT_DOC_PROMPT = (
     "Based on the following product information and image analysis results, "
     "generate a structured product document in JSON format with these exact fields:\n"
@@ -114,8 +145,14 @@ def analyze_product_images(
         progress_callback(0, total_images, "准备识别图片")
 
     results = []
-    for path in image_paths:
+    for processed_index, path in enumerate(image_paths, 1):
         try:
+            if _looks_like_non_product_asset(path):
+                logger.info("Skipping likely site asset during product image analysis: %s", path)
+                if progress_callback:
+                    progress_callback(processed_index, total_images, "排除站点素材")
+                continue
+
             if vision_model.SUPPORTS_VISION:
                 # Use vision model with retry on 429
                 frame_results = _call_with_retry(
@@ -144,7 +181,7 @@ def analyze_product_images(
                 "context_alignment": parsed.get("context_alignment", ""),
             })
             if progress_callback:
-                progress_callback(len(results), total_images, "识别图片")
+                progress_callback(processed_index, total_images, "识别图片")
             # Rate limit: wait 5s before next image
             time.sleep(5)
         except Exception as e:
@@ -161,7 +198,7 @@ def analyze_product_images(
                 "context_alignment": "",
             })
             if progress_callback:
-                progress_callback(len(results), total_images, "识别图片")
+                progress_callback(processed_index, total_images, "识别图片")
 
     # Filter out irrelevant images based on AI analysis
     if progress_callback:
