@@ -337,6 +337,9 @@ class ImageGeneratorService:
                     pass
             content.append({"text": final_prompt})
 
+            import logging as _logging
+            _logging.getLogger(__name__).info("ALIYUN FINAL PROMPT (%d chars): %s", len(final_prompt), final_prompt)
+
             response = MultiModalConversation.call(
                 api_key=self.api_key,
                 model=model,
