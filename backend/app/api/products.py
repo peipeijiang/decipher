@@ -286,6 +286,9 @@ def trigger_image_generation(prompt_id: str, body: dict = {}, db: Session = Depe
     if body.get("aspect_ratio"):
         pp.aspect_ratio = body["aspect_ratio"]
     pp.image_status = "generating"
+    pp.error_message = None
+    pp.image_url = None
+    pp.image_path = None
     db.commit()
     threading.Thread(target=generate_image_for_prompt, args=(prompt_id,), daemon=True).start()
     return {"ok": True, "prompt_id": prompt_id}
@@ -331,11 +334,14 @@ def update_prompt(prompt_id: str, body: dict, db: Session = Depends(get_db)):
         raise HTTPException(404, "Prompt not found")
     if "prompt_text" in body:
         pp.prompt_text = body["prompt_text"]
+        pp.error_message = None
     if "grid_layout" in body:
         pp.grid_layout = body["grid_layout"]
         pp.image_prompt = None  # Reset so it regenerates with correct format
+        pp.error_message = None
     if "aspect_ratio" in body:
         pp.aspect_ratio = body["aspect_ratio"]
+        pp.error_message = None
     if "video_style" in body:
         pp.video_style = body["video_style"]
     if "video_model" in body:
@@ -394,6 +400,7 @@ def refine_prompt(prompt_id: str, body: dict, db: Session = Depends(get_db)):
     pp.image_status = "pending"
     pp.image_path = None
     pp.image_url = None
+    pp.error_message = None
     db.commit()
     db.refresh(pp)
     return ProductPromptOut.model_validate(pp)
@@ -544,6 +551,7 @@ def regenerate_prompt(prompt_id: str, body: dict, db: Session = Depends(get_db))
     pp.image_status = "pending"
     pp.image_path = None
     pp.image_url = None
+    pp.error_message = None
     db.commit()
     db.refresh(pp)
     return ProductPromptOut.model_validate(pp)
@@ -755,9 +763,6 @@ def generate_prompts_for_product(product_id: str, body: dict, db: Session = Depe
     if not product:
         raise HTTPException(404, "Product not found")
 
-    if product.status != "completed":
-        raise HTTPException(400, "Product must be completed before generating prompts")
-
     if not product.doc_json_path:
         raise HTTPException(400, "Product document not available")
 
@@ -788,6 +793,9 @@ def generate_prompts_for_product(product_id: str, body: dict, db: Session = Depe
             active_templates = list(TEMPLATES.keys())
 
     _set_progress(product_id, scrape=100, doc=100, prompts=1, error=None)
+    product.status = "analyzing"
+    product.error_message = None
+    db.commit()
 
     # Generate prompts in background
     def _generate_prompts_task(product_id: str, template_keys: list, product_info: dict):
@@ -938,12 +946,22 @@ def generate_prompts_for_product(product_id: str, body: dict, db: Session = Depe
                 db_task.add(pp)
             db_task.commit()
             _set_progress(product_id, prompts=100, error=None)
+            product = db_task.get(Product, product_id)
+            if product:
+                product.status = "completed"
+                product.error_message = None
+                db_task.commit()
 
             _logger.info("Generated %d prompt variants for product %s", len(all_variants), product_id)
         except Exception as e:
             import traceback
             _logger.error("Prompt generation failed for product %s: %s\n%s", product_id, e, traceback.format_exc())
             _set_progress(product_id, error=str(e))
+            product = db_task.get(Product, product_id)
+            if product:
+                product.status = "completed" if product.doc_json_path else "failed"
+                product.error_message = str(e)
+                db_task.commit()
         finally:
             db_task.close()
 

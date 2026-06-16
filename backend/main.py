@@ -75,6 +75,7 @@ def _migrate():
         ("model_configs", "video_gen_model", "TEXT DEFAULT 'seedance-2.0'"),
         ("products", "archive_status", "TEXT DEFAULT 'active'"),
         ("products", "archived_at", "DATETIME"),
+        ("product_prompts", "error_message", "TEXT"),
     ]
     with engine.connect() as conn:
         for table, col, col_type in new_cols:

@@ -267,6 +267,89 @@ class ImageGeneratorService:
         except Exception as e:
             raise Exception(f"Image generation with reference failed: {str(e)}")
 
+    def generate_aliyun_image_with_reference(
+        self,
+        prompt: str,
+        reference_image_path: str,
+        model: str = "qwen-image-2.0-pro",
+        grid_layout: str = "single",
+        aspect_ratio: str = "1:1",
+        additional_references: list = None,
+    ) -> dict:
+        """Generate image via Aliyun DashScope using one or more reference images."""
+        try:
+            import base64
+            import mimetypes
+            from dashscope import MultiModalConversation
+            import dashscope
+
+            dashscope.base_http_api_url = 'https://dashscope.aliyuncs.com/api/v1'
+
+            def _image_part(path: str) -> dict:
+                with open(path, "rb") as f:
+                    data = f.read()
+                mime, _ = mimetypes.guess_type(path)
+                mime = mime or "image/jpeg"
+                return {"image": f"data:{mime};base64,{base64.b64encode(data).decode()}"}
+
+            size_map = {
+                "16:9": "1792*1024",
+                "9:16": "1024*1792",
+                "1:1": "1024*1024",
+            }
+            size = size_map.get(aspect_ratio, "1024*1024")
+            if grid_layout in ["3x2", "4x3"]:
+                size = "1792*1024"
+            elif grid_layout in ["2x3", "3x4"]:
+                size = "1024*1792"
+
+            final_prompt = prompt
+            if grid_layout in ["2x3", "3x2", "3x3", "3x4", "4x3", "4x4"]:
+                panel_count = {"3x2": 6, "2x3": 6, "3x3": 9, "3x4": 12, "4x3": 12, "4x4": 16}[grid_layout]
+                final_prompt = (
+                    f"Create a {grid_layout} storyboard grid layout with exactly {panel_count} panels. "
+                    f"Keep every panel readable and separated by clean gutters. {final_prompt}"
+                )
+
+            final_prompt = (
+                "Use the first reference image as the exact product identity reference. Preserve product shape, "
+                "color, material, logo/markings, proportions, and distinctive details. "
+                "Create a polished commercial social-media image. "
+                f"{final_prompt}"
+            )
+
+            content = [_image_part(reference_image_path)]
+            for ref_path in additional_references or []:
+                try:
+                    content.append(_image_part(ref_path))
+                except Exception:
+                    pass
+            content.append({"text": final_prompt})
+
+            response = MultiModalConversation.call(
+                api_key=self.api_key,
+                model=model,
+                messages=[{"role": "user", "content": content}],
+                stream=False,
+                n=1,
+                size=size,
+            )
+
+            if response.status_code != 200:
+                raise RuntimeError(f"{getattr(response, 'code', 'Error')} - {getattr(response, 'message', '')}")
+
+            image_url = None
+            for item in response.output.choices[0].message.content:
+                if "image" in item:
+                    image_url = item["image"]
+                    break
+            if not image_url:
+                raise RuntimeError("Aliyun returned no image output")
+
+            return {"status": "completed", "image_url": image_url, "task_id": None}
+        except Exception as e:
+            raise Exception(f"Aliyun image generation failed: {str(e)}")
+
     def download_image(self, image_url: str, save_path: str) -> str:
         """Download generated image to local path"""
         try:

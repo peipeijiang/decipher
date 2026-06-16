@@ -266,7 +266,11 @@ def generate_image_for_prompt(prompt_id: str):
         image_model = cfg.image_model if cfg else "laozhang-image-2-vip"
 
         # Determine API key based on image model
-        if image_model == "updrama-image-2":
+        if image_model == "qwen-image-2.0-pro":
+            api_key = providers.get("_aliyun_api_key") or providers.get("aliyun", {}).get("api_key", "")
+            if not api_key:
+                raise RuntimeError("aliyun_api_key not configured")
+        elif image_model == "updrama-image-2":
             api_key = providers.get("_updrama_api_key") or ""
             if not api_key:
                 raise RuntimeError("updrama_api_key not configured")
@@ -287,6 +291,14 @@ def generate_image_for_prompt(prompt_id: str):
             "4x3": "storyboard_12panel_4x3", "4x4": "storyboard_16panel",
         }
         template_key = GRID_TO_TEMPLATE.get(grid, grid)
+        GRID_TO_GENERATOR = {
+            "single_keyframe": "single", "single": "single",
+            "storyboard_6panel": "3x2", "storyboard_9panel": "3x3",
+            "storyboard_12panel_3x4": "3x4", "storyboard_12panel_4x3": "4x3",
+            "storyboard_16panel": "4x4", "story_flow_5": "story_flow_5",
+            "industrial_macro_5": "industrial_macro_5",
+        }
+        generation_grid = GRID_TO_GENERATOR.get(grid, grid)
 
         # All grids now go through ImageLayoutTemplate lookup
         image_prompt = None
@@ -618,19 +630,29 @@ def generate_image_for_prompt(prompt_id: str):
                 additional_refs.append(product.instruction_board_path)
                 logger.info("Adding instruction board as additional reference: %s", product.instruction_board_path)
 
-            result = service.generate_image_with_reference(
-                prompt=final_prompt,
-                reference_image_path=reference_image,
-                model=image_model,
-                grid_layout=pp.grid_layout or "single",
-                aspect_ratio=pp.aspect_ratio or "1:1",
-                additional_references=additional_refs,  # Pass instruction board as additional reference
-            )
+            if image_model == "qwen-image-2.0-pro":
+                result = service.generate_aliyun_image_with_reference(
+                    prompt=final_prompt,
+                    reference_image_path=reference_image,
+                    model=image_model,
+                    grid_layout=generation_grid,
+                    aspect_ratio=pp.aspect_ratio or "1:1",
+                    additional_references=additional_refs,
+                )
+            else:
+                result = service.generate_image_with_reference(
+                    prompt=final_prompt,
+                    reference_image_path=reference_image,
+                    model=image_model,
+                    grid_layout=generation_grid,
+                    aspect_ratio=pp.aspect_ratio or "1:1",
+                    additional_references=additional_refs,  # Pass instruction board as additional reference
+                )
         else:
             result = service.generate_image(
                 prompt=final_prompt,
                 model=image_model,
-                grid_layout=pp.grid_layout or "single",
+                grid_layout=generation_grid,
                 aspect_ratio=pp.aspect_ratio or "1:1",
             )
 
@@ -644,6 +666,7 @@ def generate_image_for_prompt(prompt_id: str):
         pp.image_path = saved
         pp.image_url = result["image_url"]
         pp.image_status = "completed"
+        pp.error_message = None
         db.commit()
 
     except Exception as e:
@@ -652,6 +675,7 @@ def generate_image_for_prompt(prompt_id: str):
             pp = db.get(ProductPrompt, prompt_id)
             if pp:
                 pp.image_status = "failed"
+                pp.error_message = str(e)[:1000]
                 db.commit()
         except Exception:
             pass
