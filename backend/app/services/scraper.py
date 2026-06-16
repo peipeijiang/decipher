@@ -28,8 +28,9 @@ class ScraperService:
             os.makedirs(images_dir, exist_ok=True)
 
             downloaded_images = []
-            for idx, img_url in enumerate(images[:30]):
+            for idx, img in enumerate(images[:30]):
                 try:
+                    img_url = img["url"] if isinstance(img, dict) else img
                     img_path = self._download_image(img_url, images_dir, idx)
                     if img_path:
                         downloaded_images.append({
@@ -87,22 +88,54 @@ class ScraperService:
 
         return ""
 
-    def _extract_images(self, soup: BeautifulSoup, base_url: str) -> list[str]:
+    def _extract_images(self, soup: BeautifulSoup, base_url: str) -> list[dict]:
         """Extract all product images."""
         images = []
+        seen = set()
 
         og_image = soup.find("meta", {"property": "og:image"})
         if og_image and og_image.get("content"):
-            images.append(urljoin(base_url, og_image["content"]))
+            url = urljoin(base_url, og_image["content"])
+            if self._is_valid_image_url(url):
+                images.append({"url": url, "source": "og:image", "alt": "", "classes": ""})
+                seen.add(url)
 
         for img in soup.find_all("img"):
             src = img.get("src") or img.get("data-src")
             if src:
                 full_url = urljoin(base_url, src)
-                if self._is_valid_image_url(full_url) and full_url not in images:
-                    images.append(full_url)
+                alt = img.get("alt") or ""
+                classes = " ".join(img.get("class") or [])
+                element_id = img.get("id") or ""
+                if (
+                    self._is_valid_image_url(full_url)
+                    and full_url not in seen
+                    and not self._is_non_product_asset(full_url, alt, classes, element_id)
+                ):
+                    images.append({
+                        "url": full_url,
+                        "source": "img",
+                        "alt": alt,
+                        "classes": classes,
+                        "id": element_id,
+                    })
+                    seen.add(full_url)
 
         return images
+
+    def _is_non_product_asset(self, url: str, alt: str = "", classes: str = "", element_id: str = "") -> bool:
+        """Reject obvious site assets before they reach the vision pipeline."""
+        parsed = urlparse(url)
+        haystack = " ".join([parsed.path, alt, classes, element_id]).lower()
+        blocked_terms = [
+            "logo", "favicon", "icon", "sprite", "avatar", "placeholder",
+            "brand-logo", "/brands/", "/brand/", "site-logo", "nav-logo",
+        ]
+        if any(term in haystack for term in blocked_terms):
+            return True
+        if alt.strip().lower() in {"wibly", "logo", "brand"}:
+            return True
+        return False
 
     def _is_valid_image_url(self, url: str) -> bool:
         """Check if URL is a valid image."""
@@ -141,7 +174,40 @@ class ScraperService:
             with open(filepath, "wb") as f:
                 f.write(response.content)
 
+            if self._looks_like_logo_file(filepath):
+                try:
+                    os.remove(filepath)
+                except OSError:
+                    pass
+                return ""
+
             return filepath
 
         except requests.RequestException as e:
             raise Exception(f"Download failed: {str(e)}")
+
+    def _looks_like_logo_file(self, filepath: str) -> bool:
+        """Content-level guard for transparent wordmarks that passed HTML filtering."""
+        try:
+            from PIL import Image
+
+            file_size = os.path.getsize(filepath)
+            with Image.open(filepath) as img:
+                width, height = img.size
+                if width <= 0 or height <= 0:
+                    return True
+                aspect = width / height
+
+                if "A" in img.getbands():
+                    alpha = img.convert("RGBA").getchannel("A")
+                    opaque = sum(1 for value in alpha.getdata() if value > 8)
+                    opaque_ratio = opaque / (width * height)
+                    transparent_ratio = 1 - opaque_ratio
+                    if file_size < 150_000 and aspect > 1.35 and transparent_ratio > 0.55:
+                        return True
+
+                if file_size < 8_000 and (aspect > 2.4 or aspect < 0.42):
+                    return True
+        except Exception:
+            return False
+        return False
