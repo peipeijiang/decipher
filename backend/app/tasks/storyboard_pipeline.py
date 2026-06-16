@@ -414,7 +414,7 @@ def replace_product_in_storyboard(
 
     cfg = db.query(ModelConfig).first()
     providers = cfg.get_providers() if cfg else {}
-    image_model = image_model_override or (cfg.image_model if cfg else "laozhang-image-2-vip")
+    image_model = image_model_override or (cfg.image_model if cfg else "gpt-image-2-vip")
 
     orig_img = Image.open(storyboard_path)
     orig_ratio = orig_img.width / orig_img.height
