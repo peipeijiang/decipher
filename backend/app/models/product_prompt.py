@@ -25,6 +25,7 @@ class ProductPrompt(Base):
     image_url: Mapped[str | None] = mapped_column(String, nullable=True)
     image_path: Mapped[str | None] = mapped_column(String, nullable=True)
     image_status: Mapped[str] = mapped_column(String, default="pending")
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     video_url: Mapped[str | None] = mapped_column(String, nullable=True)
     video_path: Mapped[str | None] = mapped_column(String, nullable=True)
     video_status: Mapped[str] = mapped_column(String, default="pending")

@@ -903,6 +903,25 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
   const [refining, setRefining] = useState(false)
   const [showRefine, setShowRefine] = useState(false)
   const [refineText, setRefineText] = useState('')
+  const mediaPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const stopMediaPolling = useCallback(() => {
+    if (mediaPollRef.current) {
+      clearInterval(mediaPollRef.current)
+      mediaPollRef.current = null
+    }
+  }, [])
+
+  const startMediaPolling = useCallback(() => {
+    stopMediaPolling()
+    const startedAt = Date.now()
+    mediaPollRef.current = setInterval(() => {
+      onUpdate()
+      if (Date.now() - startedAt > 180000) {
+        stopMediaPolling()
+      }
+    }, 2000)
+  }, [onUpdate, stopMediaPolling])
 
   useEffect(() => {
     setGridLayout(prompt.grid_layout || 'single_keyframe')
@@ -912,7 +931,12 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
     setVideoModel(prompt.video_model || 'happyhorse-1.0')
     setVideoDuration(prompt.video_duration || 15)
     setEditText(prompt.prompt_text)
+    if (prompt.image_status !== 'generating' && prompt.video_status !== 'generating') {
+      stopMediaPolling()
+    }
   }, [prompt])
+
+  useEffect(() => () => stopMediaPolling(), [stopMediaPolling])
 
   // Dynamic duration options based on video model
   const VIDEO_DURATION_MAP: Record<string, number[]> = {
@@ -964,6 +988,7 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
         aspect_ratio: aspectRatio,
       })
       onUpdate()
+      startMediaPolling()
     } catch (e: any) {
       alert('启动失败：' + (e.response?.data?.detail || e.message))
     } finally {
@@ -979,6 +1004,7 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
     try {
       await triggerVideoGeneration(prompt.id)
       onUpdate()
+      startMediaPolling()
     } catch (e: any) {
       alert('启动失败：' + (e.response?.data?.detail || e.message))
     } finally {
@@ -1388,8 +1414,11 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
 
       {/* Image failed */}
       {prompt.image_status === 'failed' && (
-        <div className="mt-3 flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-lg">
-          <span className="text-xs text-red-600">图片生成失败，请重试</span>
+        <div className="mt-3 flex items-start gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-lg">
+          <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-red-500" />
+          <span className="text-xs leading-relaxed text-red-600">
+            图片生成失败{prompt.error_message ? `：${prompt.error_message}` : '，请重试'}
+          </span>
         </div>
       )}
 

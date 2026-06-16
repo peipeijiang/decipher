@@ -22,6 +22,7 @@ export interface ProductPrompt {
   image_prompt: string | null
   image_url: string | null
   image_status: 'pending' | 'generating' | 'completed' | 'failed'
+  error_message: string | null
   video_url: string | null
   video_status: 'pending' | 'generating' | 'completed' | 'failed'
   grid_layout: 'single' | '2x3' | '3x2'

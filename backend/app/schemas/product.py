@@ -32,6 +32,7 @@ class ProductPromptOut(BaseModel):
     image_prompt: str | None = None
     image_url: str | None = None
     image_status: str
+    error_message: str | None = None
     video_url: str | None = None
     video_status: str
     grid_layout: str = "single"
