@@ -49,12 +49,28 @@ export interface ProductDoc {
   appearance: string
   usage: string
   selling_points: string
+  source_content?: {
+    web_title?: string
+    web_description?: string
+  } | null
+  category?: string | null
+  target_users?: string | null
+  usage_scenarios?: string | null
+  usage_steps?: string[] | null
+  preparation?: string[] | null
+  tips?: string[] | null
+  warnings?: string[] | null
+  key_parts?: string[] | null
+  image_evidence?: string[] | null
   images: Array<{
     index: number
     filename: string
     basic_recognition: string
     product_understanding: string
     creative_usage: string
+    focus_subject?: string
+    relevance?: string
+    context_alignment?: string
   }>
 }
 

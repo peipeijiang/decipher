@@ -120,6 +120,26 @@ def resume_product(product_id: str, db: Session = Depends(get_db)):
     return product
 
 
+@router.post("/{product_id}/reanalyze-doc", response_model=ProductOut)
+def reanalyze_product_doc(product_id: str, db: Session = Depends(get_db)):
+    product = db.get(Product, product_id)
+    if not product:
+        raise HTTPException(404, "Product not found")
+    if product.status in ("pending", "scraping", "analyzing"):
+        raise HTTPException(400, "Product is already running")
+    if not product.images_dir:
+        raise HTTPException(400, "Product images are not available")
+
+    product.status = "pending"
+    product.error_message = None
+    db.commit()
+    db.refresh(product)
+
+    from app.tasks.product_pipeline import resume_product_pipeline
+    threading.Thread(target=resume_product_pipeline, args=(product.id, "doc"), daemon=True).start()
+    return product
+
+
 @router.get("", response_model=list[ProductOut])
 def list_products(status: str | None = None, archive_status: str = "active", db: Session = Depends(get_db)):
     q = db.query(Product)

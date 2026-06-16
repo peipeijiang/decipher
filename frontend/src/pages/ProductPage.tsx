@@ -19,6 +19,7 @@ import {
   archiveProduct,
   rerunProduct,
   resumeProduct,
+  reanalyzeProductDoc,
   getVideoTemplates,
   getHookTemplates,
   getImageLayoutTemplates,
@@ -477,8 +478,12 @@ export default function ProductPage() {
                 <button
                   onClick={async () => {
                     try {
-                      await resumeProduct(product.id)
-                      alert('重新识别已启动')
+                      await reanalyzeProductDoc(product.id)
+                      setDoc(null)
+                      setProgress({ scrape: 100, doc: 10, prompts: 0, error: null })
+                      if (!pollRef.current) {
+                        pollRef.current = setInterval(() => fetchProduct(false), 2000)
+                      }
                     } catch (e: any) {
                       alert('重试失败: ' + (e.response?.data?.detail || e.message))
                     }
@@ -669,10 +674,22 @@ function takeInsightSnippets(doc: ProductDoc, field: 'basic_recognition' | 'prod
     .slice(0, limit)
 }
 
+function normalizeList(value?: string[] | null): string[] {
+  return (value || []).map(item => compactText(item, '')).filter(Boolean)
+}
+
 function ProductDocSummary({ doc }: { doc: ProductDoc }) {
   const appearanceSnippets = takeInsightSnippets(doc, 'basic_recognition')
   const usageSnippets = takeInsightSnippets(doc, 'creative_usage')
   const sellingSnippets = takeInsightSnippets(doc, 'product_understanding')
+  const sourceTitle = compactText(doc.source_content?.web_title, compactText(doc.title, '未识别到商品标题'))
+  const sourceDescription = compactText(
+    doc.source_content?.web_description,
+    compactText(doc.description, '页面文案为空，建议重新识别或补充商品链接信息'),
+  )
+  const keyParts = normalizeList(doc.key_parts)
+  const usageSteps = normalizeList(doc.usage_steps)
+  const evidence = normalizeList(doc.image_evidence)
   const summaryBlocks = [
     {
       label: '外观识别',
@@ -702,16 +719,24 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
             <FileText className="h-4 w-4 text-blue-500" />
             <h3 className="text-sm font-semibold text-gray-900">文档摘要</h3>
           </div>
-          <p className="text-sm font-medium leading-snug text-gray-800">{compactText(doc.title, '未识别到商品标题')}</p>
+          <p className="text-sm font-medium leading-snug text-gray-800">{compactText(doc.title, sourceTitle)}</p>
         </div>
-        <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
-          {doc.images?.length || 0} 张图
-        </span>
+        <div className="flex flex-shrink-0 flex-col items-end gap-1">
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+            {doc.images?.length || 0} 张图
+          </span>
+          {doc.category && (
+            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">
+              {doc.category}
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="mb-4 rounded-lg bg-gray-50 px-3 py-2.5">
-        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">页面文案</div>
-        <p className="text-xs leading-relaxed text-gray-700">{compactText(doc.description, '页面文案为空，建议重新识别或补充商品链接信息')}</p>
+        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">网页来源</div>
+        <p className="mb-1 text-xs font-medium leading-relaxed text-gray-800">{sourceTitle}</p>
+        <p className="text-xs leading-relaxed text-gray-700">{sourceDescription}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
@@ -738,6 +763,36 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
             </div>
           )
         })}
+      </div>
+
+      {(keyParts.length > 0 || usageSteps.length > 0 || evidence.length > 0) && (
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+          {keyParts.length > 0 && (
+            <DocMiniList title="关键部件" items={keyParts.slice(0, 4)} />
+          )}
+          {usageSteps.length > 0 && (
+            <DocMiniList title="使用步骤" items={usageSteps.slice(0, 4)} />
+          )}
+          {evidence.length > 0 && (
+            <DocMiniList title="图片证据" items={evidence.slice(0, 4)} />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DocMiniList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="rounded-lg bg-gray-50 px-3 py-2.5">
+      <div className="mb-2 text-[10px] font-semibold text-gray-500">{title}</div>
+      <div className="space-y-1.5">
+        {items.map((item, idx) => (
+          <div key={idx} className="flex gap-1.5 text-[11px] leading-relaxed text-gray-600">
+            <span className="mt-1 h-1 w-1 flex-shrink-0 rounded-full bg-gray-300" />
+            <span>{item}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -778,6 +833,20 @@ function ImageAnalysisCard({ img, productId, onPreview }: { img: any; productId:
             </div>
           ) : (
             <>
+              {(img.focus_subject || img.relevance) && (
+                <div className="flex flex-wrap gap-1">
+                  {img.focus_subject && (
+                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
+                      焦点：{img.focus_subject}
+                    </span>
+                  )}
+                  {img.relevance && (
+                    <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-600">
+                      {img.relevance}
+                    </span>
+                  )}
+                </div>
+              )}
               <div className={`text-[11px] leading-relaxed text-gray-700 ${expanded ? '' : 'line-clamp-2'}`}>
                 <span className="text-blue-600 font-medium">识别：</span>{img.basic_recognition}
               </div>
@@ -789,6 +858,11 @@ function ImageAnalysisCard({ img, productId, onPreview }: { img: any; productId:
                   <div className="text-[11px] leading-relaxed text-gray-700">
                     <span className="text-purple-600 font-medium">创意建议：</span>{img.creative_usage}
                   </div>
+                  {img.context_alignment && (
+                    <div className="text-[11px] leading-relaxed text-gray-700">
+                      <span className="text-amber-600 font-medium">上下文校准：</span>{img.context_alignment}
+                    </div>
+                  )}
                 </>
               )}
             </>

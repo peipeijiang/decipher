@@ -62,7 +62,13 @@ def resume_product_pipeline(product_id: str, start_from: str = "scrape"):
             images_dir = Path(product.images_dir)
             image_paths = sorted(str(p) for p in images_dir.glob("image_*")) if images_dir.exists() else []
 
-            image_results = analyze_product_images(image_paths, vision_model, db=db)
+            image_results = analyze_product_images(
+                image_paths,
+                vision_model,
+                product_title=product.title,
+                product_description=product.description,
+                db=db,
+            )
             _set_progress(product_id, doc=60)
 
             product_info = generate_product_doc(product.title, product.description, image_results, analysis_model)
@@ -185,7 +191,13 @@ def run_product_pipeline(product_id: str):
         if len(image_paths) > 20:
             logger.info("Limiting image analysis from %d to 20 images", len(image_paths))
             image_paths = image_paths[:20]
-        image_results = analyze_product_images(image_paths, vision_model, db=db)
+        image_results = analyze_product_images(
+            image_paths,
+            vision_model,
+            product_title=product.title,
+            product_description=product.description,
+            db=db,
+        )
         _set_progress(product_id, doc=60)
 
         # Step 3: Generate product document

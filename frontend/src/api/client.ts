@@ -75,6 +75,9 @@ export const rerunProduct = (id: string) =>
 export const resumeProduct = (id: string) =>
   api.post<Product>(`/api/products/${id}/resume`).then(r => r.data)
 
+export const reanalyzeProductDoc = (id: string) =>
+  api.post<Product>(`/api/products/${id}/reanalyze-doc`).then(r => r.data)
+
 export const cancelTask = (promptId: string, type: 'image' | 'video' | 'all' = 'all') =>
   api.post(`/api/products/prompts/${promptId}/cancel`, { type }).then(r => r.data)
 
