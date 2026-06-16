@@ -452,32 +452,7 @@ export default function ProductPage() {
               <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">识别完成</span>
               <span className="text-xs text-gray-500">已汇总图片与页面文字</span>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left: Product Images */}
-            <div>
-              <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-sm font-semibold text-gray-800">商品图片</h2>
-                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">共 {doc.images.length} 张</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {doc.images.map(img => (
-                  <div
-                    key={img.index}
-                    className="aspect-square rounded-lg overflow-hidden bg-gray-100 border border-gray-200 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
-                    onClick={() => setPreviewImage(getProductImageUrl(id!, img.filename))}
-                  >
-                    <img
-                      src={getProductImageUrl(id!, img.filename)}
-                      alt={`商品图 ${img.index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
             <ProductDocSummary doc={doc} />
-            </div>
           </div>
         )}
 
