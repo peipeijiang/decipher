@@ -232,14 +232,32 @@ def build_generation_prompt(
         f"Preserve the exact design, color, and appearance of {product_doc.get('title', 'the product')}: "
         f"{product_doc.get('appearance', 'as shown in reference images')}"
     )
-    # Generate layout instruction based on template key
-    if not grid_layout or grid_layout == "single" or grid_layout == "single_keyframe":
-        layout_instruction = "Generate a single keyframe image"
-    else:
-        layout_instruction = "Generate a storyboard image grid using the template structure"
+    # Map grid_layout → ImageLayoutTemplate key (mirrors product_pipeline.py)
+    GRID_TO_TEMPLATE = {
+        "single": "single_keyframe", "single_keyframe": "single_keyframe",
+        "story_flow_5": "story_flow_5", "industrial_macro_5": "industrial_macro_5",
+        "3x2": "storyboard_6panel", "2x3": "storyboard_6panel",
+        "3x3": "storyboard_9panel", "3x4": "storyboard_12panel_3x4",
+        "4x3": "storyboard_12panel_4x3", "4x4": "storyboard_16panel",
+    }
+    template_key_lookup = GRID_TO_TEMPLATE.get(grid_layout, grid_layout)
 
-    # Clean layout instruction (was a bug — "Generate a 3x2 6-grid" is redundant)
-    layout_instruction = layout_instruction
+    # Read actual ImageLayoutTemplate from DB
+    try:
+        from app.models.template import ImageLayoutTemplate
+        db2 = SessionLocal()
+        try:
+            layout_tmpl = db2.query(ImageLayoutTemplate).filter(
+                ImageLayoutTemplate.key == template_key_lookup
+            ).first()
+            if layout_tmpl and layout_tmpl.prompt_template:
+                layout_instruction = layout_tmpl.prompt_template
+            else:
+                layout_instruction = "Generate a single keyframe image"
+        finally:
+            db2.close()
+    except Exception:
+        layout_instruction = "Generate a single keyframe image"
 
     # Load hook templates from DB; fall back to generic list if none available
     hook_templates = get_hook_templates_from_db()
@@ -295,6 +313,7 @@ def generate_prompt_variants(
     analysis_model: AIModel,
     video_duration: int = 15,
     total_variants: int = 10,
+    grid_layout: str = "single",
 ) -> list[dict]:
     """Generate prompt variants using the analysis model, in batches to avoid truncation."""
     all_variants = []
@@ -306,7 +325,7 @@ def generate_prompt_variants(
         count = min(batch_size, remaining)
         start_index = batch_idx * batch_size + 1
 
-        prompt = build_generation_prompt(product_doc, template_key, video_duration=video_duration)
+        prompt = build_generation_prompt(product_doc, template_key, video_duration=video_duration, grid_layout=grid_layout)
         # Override the "Generate exactly 10" instruction with batch-specific count
         prompt = prompt.replace(
             "Generate exactly 10 different video prompt variants",
