@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MainLayout } from '../components/layout/MainLayout'
 import { TaskQueueSidebar } from '../components/TaskQueueSidebar'
-import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X, FileText, Layers, Lightbulb, Zap, ListChecks, Wrench, ShieldAlert, Info } from 'lucide-react'
+import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X, FileText, Lightbulb, ListChecks, Wrench, ShieldAlert } from 'lucide-react'
 import {
   createProduct,
   getProduct,
@@ -711,6 +711,7 @@ function normalizeList(value?: string[] | null): string[] {
 }
 
 function ProductDocSummary({ doc }: { doc: ProductDoc }) {
+  const [showFull, setShowFull] = useState(false)
   const sourceTitle = compactText(doc.source_content?.web_title, compactText(doc.title, '未识别到商品标题'))
   const sourceDescription = compactText(
     doc.source_content?.web_description,
@@ -721,134 +722,158 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
   const tips = normalizeList(doc.tips)
   const warnings = normalizeList(doc.warnings)
   const evidence = normalizeList(doc.image_evidence)
-
   const hasContent = (v?: string | null) => v && v.trim().length > 0
+  const descText = hasContent(doc.description) ? doc.description : doc.appearance
+
+  // Split selling points into tags
+  const sellingTags = (doc.selling_points || '')
+    .split(/[,，;；、]/)
+    .map(s => s.trim())
+    .filter(Boolean)
+    .slice(0, 8)
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
-      {/* Header */}
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="mb-1 flex items-center gap-2">
-            <FileText className="h-4 w-4 text-blue-500" />
-            <h3 className="text-sm font-semibold text-gray-900">产品文档</h3>
+      {/* Compact header row */}
+      <div className="mb-3 flex items-center gap-3">
+        <FileText className="h-4 w-4 flex-shrink-0 text-blue-500" />
+        <h3 className="flex-1 min-w-0 truncate text-sm font-semibold text-gray-800">{compactText(doc.title, sourceTitle)}</h3>
+        <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">{doc.images?.length || 0} 张图</span>
+        {doc.category && (
+          <span className="flex-shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">{doc.category}</span>
+        )}
+      </div>
+
+      {/* Source + overview in a compact 2-col row */}
+      <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="rounded-lg bg-gray-50 px-3 py-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">网页来源</span>
+          <p className="mt-0.5 text-[11px] leading-snug text-gray-700 line-clamp-2">{sourceDescription}</p>
+        </div>
+        <div className="rounded-lg bg-gray-50 px-3 py-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">概览</span>
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-gray-700">
+            {keyParts.length > 0 && <span>{keyParts.length} 部件</span>}
+            {usageSteps.length > 0 && <span>{usageSteps.length} 步骤</span>}
+            {tips.length > 0 && <span>{tips.length} 技巧</span>}
+            {warnings.length > 0 && <span>{warnings.length} 注意</span>}
+            {sellingTags.length > 0 && <span>{sellingTags.length} 卖点</span>}
           </div>
-          <p className="text-sm font-semibold leading-snug text-gray-800">{compactText(doc.title, sourceTitle)}</p>
-        </div>
-        <div className="flex flex-shrink-0 flex-col items-end gap-1">
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
-            {doc.images?.length || 0} 张图
-          </span>
-          {doc.category && (
-            <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">
-              {doc.category}
-            </span>
-          )}
         </div>
       </div>
 
-      {/* Source */}
-      <SectionBlock icon={Info} label="网页来源" className="mb-4">
-        <div className="space-y-1">
-          <p className="text-xs font-medium text-gray-800">{sourceTitle}</p>
-          <p className="text-xs leading-relaxed text-gray-600">{sourceDescription}</p>
+      {/* Selling points as compact tags */}
+      {sellingTags.length > 0 && (
+        <div className="mb-3 flex flex-wrap gap-1">
+          {sellingTags.map((tag, i) => (
+            <span key={i} className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">{tag}</span>
+          ))}
         </div>
-      </SectionBlock>
-
-      {/* Description + Appearance */}
-      {(hasContent(doc.description) || hasContent(doc.appearance)) && (
-        <SectionBlock icon={FileText} label="产品描述" className="mb-4">
-          <p className="text-xs leading-relaxed text-gray-700">
-            {hasContent(doc.description) ? doc.description : doc.appearance}
-          </p>
-          {hasContent(doc.description) && hasContent(doc.appearance) && (
-            <p className="mt-2 text-xs leading-relaxed text-gray-600">{doc.appearance}</p>
-          )}
-        </SectionBlock>
       )}
 
-      {/* Key Parts */}
-      {keyParts.length > 0 && (
-        <SectionBlock icon={Wrench} label="关键部件" className="mb-4">
-          <MiniList items={keyParts} max={8} />
-        </SectionBlock>
-      )}
-
-      {/* Usage Steps */}
-      {usageSteps.length > 0 && (
-        <SectionBlock icon={ListChecks} label="使用步骤" className="mb-4">
-          <ol className="space-y-1">
-            {usageSteps.slice(0, 8).map((step, idx) => (
-              <li key={idx} className="flex gap-2 text-[11px] leading-relaxed text-gray-700">
-                <span className="mt-0.5 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-[9px] font-semibold text-blue-600">{idx + 1}</span>
-                <span>{step}</span>
-              </li>
-            ))}
-          </ol>
-        </SectionBlock>
-      )}
-
-      {/* Selling Points */}
-      {hasContent(doc.selling_points) && (
-        <SectionBlock icon={Zap} label="核心卖点" className="mb-4">
-          <p className="text-xs leading-relaxed text-gray-700">{doc.selling_points}</p>
-        </SectionBlock>
-      )}
-
-      {/* Tips */}
-      {tips.length > 0 && (
-        <SectionBlock icon={Lightbulb} label="使用技巧" className="mb-4">
-          <MiniList items={tips} max={6} />
-        </SectionBlock>
-      )}
-
-      {/* Warnings */}
-      {warnings.length > 0 && (
-        <SectionBlock icon={ShieldAlert} label="注意事项" className="mb-4">
-          <MiniList items={warnings} max={6} />
-        </SectionBlock>
-      )}
-
-      {/* Image Evidence */}
-      {evidence.length > 0 && (
-        <SectionBlock icon={Layers} label="图片证据">
-          <MiniList items={evidence} max={6} />
-        </SectionBlock>
-      )}
-    </div>
-  )
-}
-
-function SectionBlock({ icon: Icon, label, children, className = '' }: {
-  icon: any
-  label: string
-  children: ReactNode
-  className?: string
-}) {
-  return (
-    <div className={className}>
-      <div className="mb-2 flex items-center gap-1.5">
-        <Icon className="h-3.5 w-3.5 text-gray-400" />
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</span>
+      {/* Two-column grid: key parts + steps */}
+      <div className="mb-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+        {keyParts.length > 0 && (
+          <div>
+            <div className="mb-1.5 flex items-center gap-1">
+              <Wrench className="h-3 w-3 text-gray-400" />
+              <span className="text-[10px] font-semibold text-gray-500">关键部件</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {keyParts.slice(0, 6).map((p, i) => (
+                <span key={i} className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">{p}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {usageSteps.length > 0 && (
+          <div>
+            <div className="mb-1.5 flex items-center gap-1">
+              <ListChecks className="h-3 w-3 text-gray-400" />
+              <span className="text-[10px] font-semibold text-gray-500">使用步骤</span>
+            </div>
+            <ol className="space-y-0.5">
+              {usageSteps.slice(0, 4).map((step, idx) => (
+                <li key={idx} className="flex gap-1.5 text-[10px] text-gray-600">
+                  <span className="flex-shrink-0 w-3.5 h-3.5 flex items-center justify-center rounded-full bg-blue-100 text-[8px] font-semibold text-blue-600">{idx + 1}</span>
+                  <span className="leading-snug">{step}</span>
+                </li>
+              ))}
+              {usageSteps.length > 4 && (
+                <li className="text-[10px] text-gray-400 pl-5">+{usageSteps.length - 4} 步</li>
+              )}
+            </ol>
+          </div>
+        )}
       </div>
-      <div className="rounded-lg bg-gray-50 px-3 py-2.5">{children}</div>
-    </div>
-  )
-}
 
-function MiniList({ items, max }: { items: string[]; max: number }) {
-  return (
-    <div className="space-y-1">
-      {items.slice(0, max).map((item, idx) => (
-        <div key={idx} className="flex gap-1.5 text-[11px] leading-relaxed text-gray-600">
-          <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-gray-300" />
-          <span>{item}</span>
+      {/* Tips + Warnings in a row */}
+      {(tips.length > 0 || warnings.length > 0) && (
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          {tips.length > 0 && (
+            <div>
+              <div className="mb-1 flex items-center gap-1">
+                <Lightbulb className="h-3 w-3 text-amber-500" />
+                <span className="text-[10px] font-semibold text-gray-500">使用技巧</span>
+              </div>
+              <ul className="space-y-0.5">
+                {tips.slice(0, 3).map((t, i) => (
+                  <li key={i} className="text-[10px] text-gray-600">· {t}</li>
+                ))}
+                {tips.length > 3 && (<li className="text-[10px] text-gray-400">+{tips.length - 3} 条</li>)}
+              </ul>
+            </div>
+          )}
+          {warnings.length > 0 && (
+            <div>
+              <div className="mb-1 flex items-center gap-1">
+                <ShieldAlert className="h-3 w-3 text-red-400" />
+                <span className="text-[10px] font-semibold text-gray-500">注意事项</span>
+              </div>
+              <ul className="space-y-0.5">
+                {warnings.slice(0, 3).map((w, i) => (
+                  <li key={i} className="text-[10px] text-gray-600">· {w}</li>
+                ))}
+                {warnings.length > 3 && (<li className="text-[10px] text-gray-400">+{warnings.length - 3} 条</li>)}
+              </ul>
+            </div>
+          )}
         </div>
-      ))}
+      )}
+
+      {/* Expandable full description + evidence */}
+      {hasContent(descText) && (
+        <>
+          <button
+            onClick={() => setShowFull(!showFull)}
+            className="mt-3 flex items-center gap-1 text-[10px] text-blue-500 hover:text-blue-600 transition-colors"
+          >
+            {showFull ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {showFull ? '收起详情' : '展开完整描述与证据'}
+          </button>
+          {showFull && (
+            <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2.5">
+              <p className="text-[11px] leading-relaxed text-gray-700">{descText}</p>
+              {hasContent(doc.description) && hasContent(doc.appearance) && (
+                <p className="mt-2 text-[11px] leading-relaxed text-gray-600">{doc.appearance}</p>
+              )}
+              {evidence.length > 0 && (
+                <div className="mt-2 border-t border-gray-200 pt-2">
+                  <span className="text-[10px] font-semibold text-gray-400">图片证据</span>
+                  <ul className="mt-1 space-y-0.5">
+                    {evidence.map((e, i) => (
+                      <li key={i} className="text-[10px] text-gray-500">· {e}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
-
 
 function ImageAnalysisCard({ img, productId, onPreview }: { img: any; productId: string; onPreview: (url: string) => void }) {
   const [expanded, setExpanded] = useState(false)
