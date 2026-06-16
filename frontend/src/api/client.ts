@@ -51,6 +51,12 @@ export const getProductImageUrl = (productId: string, filename: string) =>
 export const getGeneratedImageUrl = (promptId: string) =>
   `${API_BASE}/api/products/prompts/${promptId}/image`
 
+export const getGeneratedVideoUrl = (promptId: string) =>
+  `${API_BASE}/api/products/prompts/${promptId}/video`
+
+export const getGeneratedVideoDownloadUrl = (promptId: string) =>
+  `${API_BASE}/api/products/prompts/${promptId}/video/download`
+
 export const updatePrompt = (promptId: string, promptText: string, extra?: { grid_layout?: string; aspect_ratio?: string; video_style?: string; video_model?: string; video_duration?: number }) =>
   api.patch(`/api/products/prompts/${promptId}`, { prompt_text: promptText, ...extra }).then(r => r.data)
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MainLayout } from '../components/layout/MainLayout'
 import { TaskQueueSidebar } from '../components/TaskQueueSidebar'
-import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X, FileText, Lightbulb, ShieldAlert } from 'lucide-react'
+import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X, FileText, Lightbulb, ShieldAlert, Clock, Download } from 'lucide-react'
 import {
   createProduct,
   getProduct,
@@ -13,6 +13,8 @@ import {
   triggerVideoGeneration,
   getProductImageUrl,
   getGeneratedImageUrl,
+  getGeneratedVideoUrl,
+  getGeneratedVideoDownloadUrl,
   updatePrompt,
   regeneratePrompt,
   triggerBatchVideoGeneration,
@@ -247,12 +249,12 @@ export default function ProductPage() {
     if (key === 'prompts') return progress.prompts >= 100 ? 'completed' : progress.prompts > 0 ? 'active' : 'pending'
     if (key === 'image') {
       const hasAny = prompts.some(p => p.image_status === 'completed')
-      const hasGenerating = prompts.some(p => p.image_status === 'generating')
+      const hasGenerating = prompts.some(p => p.image_status === 'queued' || p.image_status === 'generating')
       return hasAny ? 'completed' : hasGenerating ? 'active' : 'pending'
     }
     if (key === 'video') {
       const hasAny = prompts.some(p => p.video_status === 'completed')
-      const hasGenerating = prompts.some(p => p.video_status === 'generating')
+      const hasGenerating = prompts.some(p => p.video_status === 'queued' || p.video_status === 'generating')
       return hasAny ? 'completed' : hasGenerating ? 'active' : 'pending'
     }
     return 'pending'
@@ -267,13 +269,15 @@ export default function ProductPage() {
       if (prompts.length === 0) return 0
       const completed = prompts.filter(p => p.image_status === 'completed').length
       const generating = prompts.filter(p => p.image_status === 'generating').length
-      return Math.min(100, Math.round(((completed + generating * 0.35) / prompts.length) * 100))
+      const queued = prompts.filter(p => p.image_status === 'queued').length
+      return Math.min(100, Math.round(((completed + generating * 0.35 + queued * 0.12) / prompts.length) * 100))
     }
     if (key === 'video') {
       if (prompts.length === 0) return 0
       const completed = prompts.filter(p => p.video_status === 'completed').length
       const generating = prompts.filter(p => p.video_status === 'generating').length
-      return Math.min(100, Math.round(((completed + generating * 0.35) / prompts.length) * 100))
+      const queued = prompts.filter(p => p.video_status === 'queued').length
+      return Math.min(100, Math.round(((completed + generating * 0.35 + queued * 0.12) / prompts.length) * 100))
     }
     return 0
   }
@@ -1007,7 +1011,7 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
     const startedAt = Date.now()
     mediaPollRef.current = setInterval(() => {
       onUpdate()
-      if (Date.now() - startedAt > 180000) stopMediaPolling()
+      if (Date.now() - startedAt > 480000) stopMediaPolling()
     }, 2000)
   }, [onUpdate, stopMediaPolling])
 
@@ -1019,7 +1023,12 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
     setVideoModel(prompt.video_model || 'happyhorse-1.0')
     setVideoDuration(prompt.video_duration || 15)
     setEditText(prompt.prompt_text)
-    if (prompt.image_status !== 'generating' && prompt.video_status !== 'generating') stopMediaPolling()
+    if (
+      prompt.image_status !== 'queued' &&
+      prompt.image_status !== 'generating' &&
+      prompt.video_status !== 'queued' &&
+      prompt.video_status !== 'generating'
+    ) stopMediaPolling()
   }, [prompt])
 
   useEffect(() => () => stopMediaPolling(), [stopMediaPolling])
@@ -1060,6 +1069,7 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
 
   const getStatusBadge = (status: string) => {
     if (status === 'completed') return <span className="rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-0.5 text-[11px] font-medium border border-emerald-100">Completed</span>
+    if (status === 'queued') return <span className="rounded-full bg-amber-50 text-amber-700 px-2.5 py-0.5 text-[11px] font-medium border border-amber-100">Queued</span>
     if (status === 'generating') return <span className="rounded-full bg-blue-50 text-blue-700 px-2.5 py-0.5 text-[11px] font-medium border border-blue-100 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Generating</span>
     if (status === 'failed') return <span className="rounded-full bg-red-50 text-red-700 px-2.5 py-0.5 text-[11px] font-medium border border-red-100">Failed</span>
     return null
@@ -1233,12 +1243,12 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
         )}
 
         <div className="flex gap-2">
-          <button onClick={handleGenerateImage} disabled={generating === 'image' || prompt.image_status === 'generating'}
+          <button onClick={handleGenerateImage} disabled={generating === 'image' || prompt.image_status === 'queued' || prompt.image_status === 'generating'}
             className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-gray-900 text-white rounded-xl hover:bg-gray-800 disabled:opacity-30 transition-all">
             {generating === 'image' || prompt.image_status === 'generating' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
             Generate Image
           </button>
-          <button onClick={handleGenerateVideo} disabled={generating === 'video' || prompt.video_status === 'generating'}
+          <button onClick={handleGenerateVideo} disabled={generating === 'video' || prompt.video_status === 'queued' || prompt.video_status === 'generating'}
             className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-violet-600 text-white rounded-xl hover:bg-violet-700 disabled:opacity-30 transition-all">
             {generating === 'video' || prompt.video_status === 'generating' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Video className="w-3.5 h-3.5" />}
             Generate Video
@@ -1264,6 +1274,12 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
             <span className="text-xs text-red-700 leading-relaxed">Image generation failed{prompt.error_message ? ': ' + prompt.error_message : '. Retry?'}</span>
           </div>
         )}
+        {prompt.video_status === 'queued' && (
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50/60 border border-amber-100 rounded-xl">
+            <Clock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+            <span className="text-xs text-amber-700 font-medium">Queued. It will submit after the current video finishes.</span>
+          </div>
+        )}
         {prompt.video_status === 'generating' && (
           <div className="flex items-center gap-2 px-3 py-2.5 bg-violet-50/60 border border-violet-100 rounded-xl">
             <Loader2 className="w-4 h-4 text-violet-500 animate-spin flex-shrink-0" />
@@ -1272,7 +1288,7 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
         )}
         {prompt.video_status === 'failed' && (
           <div className="flex items-center gap-2 px-3 py-2.5 bg-red-50/60 border border-red-100 rounded-xl">
-            <span className="text-xs text-red-700">Video generation failed. Retry?</span>
+            <span className="text-xs text-red-700">Video generation failed{prompt.error_message ? ': ' + prompt.error_message : '. Retry?'}</span>
           </div>
         )}
 
@@ -1299,8 +1315,18 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
           </div>
         )}
         {mediaView === 'video' && prompt.video_status === 'completed' && (
-          <div className="rounded-xl overflow-hidden border border-gray-100 shadow-sm">
-            <video src={`/api/products/prompts/${prompt.id}/video`} controls className="w-full" />
+          <div className="rounded-xl overflow-hidden border border-gray-100 shadow-sm bg-white">
+            <video src={getGeneratedVideoUrl(prompt.id)} controls className="w-full" />
+            <div className="flex items-center justify-end border-t border-gray-100 px-3 py-2">
+              <a
+                href={getGeneratedVideoDownloadUrl(prompt.id)}
+                download={`variant_${prompt.variant_index}_${prompt.template_name}_video.mp4`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download Video
+              </a>
+            </div>
           </div>
         )}
       </div>

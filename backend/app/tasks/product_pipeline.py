@@ -343,105 +343,129 @@ def generate_image_for_prompt(prompt_id: str):
                 from app.ai_models import get_model
                 from app.api.agent_prompts import get_agent_prompt
                 analysis_model = get_model(cfg.analysis_model, cfg) if cfg else None
-                if analysis_model and hasattr(analysis_model, 'chat'):
-                    # Unified: load the ImageLayoutTemplate for ALL grid types
-                    if True:
-                        # Special layout templates: LLM applies the template to the video script,
-                        # generating a filled-in continuous descriptive prompt for GPT Image 2.
-                        from app.models.template import ImageLayoutTemplate
-                        db_inner = SessionLocal()
+
+                def _run_agent(model, system_prompt: str, user_prompt: str, max_tokens: int = 4096) -> str:
+                    if hasattr(model, "chat"):
+                        return model.chat(system_prompt, user_prompt, max_tokens=max_tokens)
+                    if hasattr(model, "analyze_text"):
+                        return model.analyze_text(
+                            f"SYSTEM PROMPT:\n{system_prompt}\n\nUSER PROMPT:\n{user_prompt}",
+                            task="direct",
+                        )
+                    raise RuntimeError(f"Model {type(model).__name__} does not support text generation")
+
+                if analysis_model and (hasattr(analysis_model, 'chat') or hasattr(analysis_model, 'analyze_text')):
+                    # Route the image prompt branch through the actual workflow agents.
+                    from app.models.template import ImageLayoutTemplate
+
+                    db_inner = SessionLocal()
+                    try:
+                        layout_tmpl = db_inner.query(ImageLayoutTemplate).filter(ImageLayoutTemplate.key == template_key).first()
+                        base_prompt = layout_tmpl.prompt_template if layout_tmpl else ""
+                    finally:
+                        db_inner.close()
+
+                    panel_count_by_grid = {
+                        "3x2": 6, "2x3": 6, "3x3": 9,
+                        "3x4": 12, "4x3": 12, "4x4": 16,
+                    }
+                    standard_grids = set(panel_count_by_grid)
+                    story_templates = {"story_flow_5", "industrial_macro_5"}
+
+                    if template_key == "single_keyframe" or generation_grid == "single":
+                        agent_key = "single_image_prompt"
+                        panel_count = 1
+                        fallback_user = "Convert this video script to an image generation prompt:\n\n{prompt_text}"
+                        fallback_system = (
+                            "Convert the video script into one rich product image prompt. "
+                            "Describe only visual scene details. Preserve the product exactly. "
+                            "No subtitles, dialogue text, captions, or speech bubbles."
+                        )
+                    elif template_key in story_templates:
+                        agent_key = "storyboard_filler"
+                        panel_count = 5
+                        fallback_user = "TEMPLATE:\n{base_prompt}\n\nVIDEO SCRIPT:\n{prompt_text}"
+                        fallback_system = (
+                            "Fill the {{placeholders}} in the template below using content from the video script. "
+                            "Each panel placeholder MUST be filled with rich visual detail. "
+                            "Output ONLY the filled template. English only."
+                        )
+                    elif generation_grid in standard_grids or template_key.startswith("storyboard_"):
+                        agent_key = "multi_panel_storyboard"
+                        panel_count = panel_count_by_grid.get(generation_grid, 9)
+                        fallback_user = (
+                            "TEMPLATE:\n{base_prompt}\n\n"
+                            "GRID: {grid}\n"
+                            "PANEL_COUNT: {panel_count}\n\n"
+                            "VIDEO SCRIPT:\n{prompt_text}"
+                        )
+                        fallback_system = (
+                            "Fill every panel placeholder in the image layout template using the video script. "
+                            "Each panel must be a rich visual description. "
+                            "Output ONLY the filled template. English only."
+                        )
+                    else:
+                        agent_key = "video_to_image_converter"
+                        panel_count = 1
+                        fallback_user = "Convert this video script to an image prompt:\n\n{prompt_text}"
+                        fallback_system = (
+                            "Convert the video script into an image generation prompt. "
+                            "Describe only visual scene details. English only."
+                        )
+
+                    _sys, _usr_tmpl = get_agent_prompt(db, agent_key)
+                    agent_system = _sys or fallback_system
+
+                    class _SafeFormatDict(dict):
+                        def __missing__(self, key):
+                            return "{" + key + "}"
+
+                    format_context = _SafeFormatDict(
+                        base_prompt=base_prompt,
+                        prompt_text=pp.prompt_text,
+                        panel_count=panel_count,
+                        grid=generation_grid,
+                    )
+                    agent_user = (_usr_tmpl or fallback_user).format_map(format_context)
+
+                    logger.info(
+                        "Image prompt agent route: grid=%s template=%s agent=%s panel_count=%s",
+                        grid, template_key, agent_key, panel_count,
+                    )
+
+                    bad_prefixes = (
+                        "The user", "I need to", "Let me", "Here's", "Based on",
+                        "I'll", "I will", "We need", "We must", "First,",
+                        "So we", "The template",
+                    )
+
+                    image_prompt = None
+                    for _attempt in range(3):
+                        raw = _run_agent(analysis_model, agent_system, agent_user, max_tokens=4096).strip()
+                        if not raw:
+                            logger.warning("%s returned empty (attempt %d/3)", agent_key, _attempt + 1)
+                            continue
+                        if any(raw.startswith(p) for p in bad_prefixes):
+                            marker = "STRICTLY"
+                            idx = raw.find(marker)
+                            if idx > 0:
+                                raw = raw[idx:].strip()
+                            else:
+                                logger.warning("%s output reasoning (attempt %d/3)", agent_key, _attempt + 1)
+                                continue
+                        image_prompt = raw
+                        break
+
+                    if not image_prompt and cfg.analysis_model != "zhipu":
+                        logger.warning("%s primary model failed, trying zhipu fallback", agent_key)
                         try:
-                            layout_tmpl = db_inner.query(ImageLayoutTemplate).filter(ImageLayoutTemplate.key == template_key).first()
-                            base_prompt = layout_tmpl.prompt_template if layout_tmpl else ""
-                        finally:
-                            db_inner.close()
-
-                        # Read agent prompt from DB (real-time, no cache)
-                        _sys, _usr_tmpl = get_agent_prompt(db, "storyboard_filler")
-                        _storyboard_system = _sys or (
-                            "Fill in the {placeholders} in the template below using content from the video script. "
-                            "Output ONLY the filled template — same structure, same sentence flow, placeholders replaced with real content. "
-                            "CRITICAL: Describe only visual scenes. Do NOT include dialogue, subtitles, speech bubbles, or on-screen text. "
-                            "Do NOT explain, do NOT add commentary, do NOT output your reasoning. "
-                            "Just output the single filled paragraph directly. English only."
-                        )
-                        _storyboard_user = (_usr_tmpl or "TEMPLATE:\n{base_prompt}\n\nVIDEO SCRIPT:\n{prompt_text}").format(
-                            base_prompt=base_prompt, prompt_text=pp.prompt_text
-                        )
-
-                        # Retry up to 3 times for empty or bad responses
-                        image_prompt = None
-                        for _attempt in range(3):
-                            raw = analysis_model.chat(_storyboard_system, _storyboard_user, max_tokens=4096).strip()
-                            if not raw:
-                                logger.warning("Storyboard LLM returned empty (attempt %d/3)", _attempt + 1)
-                                continue
-                            # Detect reasoning output
-                            bad_prefixes = ("The user", "I need to", "Let me", "Here's", "Based on", "I'll", "I will", "We need", "We must", "First,", "So we", "The template")
-                            if any(raw.startswith(p) for p in bad_prefixes):
-                                marker = "Generate a single"
-                                idx = raw.find(marker)
-                                if idx > 0:
-                                    raw = raw[idx:].strip()
-                                else:
-                                    logger.warning("Storyboard LLM output reasoning (attempt %d/3)", _attempt + 1)
-                                    continue
-                            image_prompt = raw
-                            break
-
-                        # Fallback to zhipu if primary model failed
-                        if not image_prompt and cfg.analysis_model != "zhipu":
-                            logger.warning("Primary model failed, trying zhipu fallback")
-                            try:
-                                fallback_model = get_model("zhipu", cfg)
-                                raw = fallback_model.chat(_storyboard_system, _storyboard_user, max_tokens=4096).strip()
-                                if raw and not any(raw.startswith(p) for p in ("The user", "I need to", "Let me", "We need", "We must", "First,", "So we", "The template")):
-                                    image_prompt = raw
-                                    logger.info("Zhipu fallback succeeded")
-                            except Exception as e:
-                                logger.warning("Zhipu fallback also failed: %s", e)
-                        # All standard grids: use storyboard_filler with ImageLayoutTemplate
-                        _sys, _usr_tmpl = get_agent_prompt(db, "storyboard_filler")
-                        _storyboard_system = _sys or (
-                            "Fill in the {placeholders} in the template below using content from the video script. "
-                            "Output ONLY the filled template — same structure, same sentence flow, placeholders replaced with real content. "
-                            "CRITICAL: Describe only visual scenes. Do NOT include dialogue, subtitles, speech bubbles, or on-screen text. "
-                            "Do NOT explain, do NOT add commentary, do NOT output your reasoning. "
-                            "Just output the single filled paragraph directly. English only."
-                        )
-                        _storyboard_user = (_usr_tmpl or "TEMPLATE:\n{base_prompt}\n\nVIDEO SCRIPT:\n{prompt_text}").format(
-                            base_prompt=base_prompt, prompt_text=pp.prompt_text
-                        )
-
-                        # Retry up to 3 times
-                        image_prompt = None
-                        for _attempt in range(3):
-                            raw = analysis_model.chat(_storyboard_system, _storyboard_user, max_tokens=4096).strip()
-                            if not raw:
-                                logger.warning("Storyboard LLM returned empty (attempt %d/3)", _attempt + 1)
-                                continue
-                            bad_prefixes = ("The user", "I need to", "Let me", "Here's", "Based on", "I'll", "I will", "We need", "We must", "First,", "So we", "The template")
-                            if any(raw.startswith(p) for p in bad_prefixes):
-                                marker = "Generate a single"
-                                idx = raw.find(marker)
-                                if idx > 0:
-                                    raw = raw[idx:].strip()
-                                else:
-                                    logger.warning("Storyboard LLM output reasoning (attempt %d/3)", _attempt + 1)
-                                    continue
-                            image_prompt = raw
-                            break
-
-                        if not image_prompt and cfg.analysis_model != "zhipu":
-                            logger.warning("Primary model failed, trying zhipu fallback")
-                            try:
-                                fallback_model = get_model("zhipu", cfg)
-                                raw = fallback_model.chat(_storyboard_system, _storyboard_user, max_tokens=4096).strip()
-                                if raw and not any(raw.startswith(p) for p in ("The user", "I need to", "Let me", "We need", "We must", "First,", "So we", "The template")):
-                                    image_prompt = raw
-                                    logger.info("Zhipu fallback succeeded")
-                            except Exception as e:
-                                logger.warning("Zhipu fallback also failed: %s", e)
+                            fallback_model = get_model("zhipu", cfg)
+                            raw = _run_agent(fallback_model, agent_system, agent_user, max_tokens=4096).strip()
+                            if raw and not any(raw.startswith(p) for p in bad_prefixes):
+                                image_prompt = raw
+                                logger.info("%s zhipu fallback succeeded", agent_key)
+                        except Exception as e:
+                            logger.warning("%s zhipu fallback also failed: %s", agent_key, e)
 
                     pp.image_prompt = image_prompt
                     db.commit()
@@ -455,13 +479,24 @@ def generate_image_for_prompt(prompt_id: str):
             try:
                 from app.ai_models import get_model
                 analysis_model = get_model(cfg.analysis_model, cfg) if cfg else None
-                if analysis_model and hasattr(analysis_model, 'chat'):
+                def _run_agent(model, system_prompt: str, user_prompt: str, max_tokens: int = 4096) -> str:
+                    if hasattr(model, "chat"):
+                        return model.chat(system_prompt, user_prompt, max_tokens=max_tokens)
+                    if hasattr(model, "analyze_text"):
+                        return model.analyze_text(
+                            f"SYSTEM PROMPT:\n{system_prompt}\n\nUSER PROMPT:\n{user_prompt}",
+                            task="direct",
+                        )
+                    raise RuntimeError(f"Model {type(model).__name__} does not support text generation")
+
+                if analysis_model and (hasattr(analysis_model, 'chat') or hasattr(analysis_model, 'analyze_text')):
                     logger.info("Detected video prompt format, converting to image prompt...")
 
                     if grid in ("3x2", "2x3", "3x3", "3x4", "4x3", "4x4"):
                         # Multi-panel storyboard
                         panel_count = {"3x2": 6, "2x3": 6, "3x3": 9, "3x4": 12, "4x3": 12, "4x4": 16}[grid]
-                        converted_prompt = analysis_model.chat(
+                        converted_prompt = _run_agent(
+                            analysis_model,
                             f"You are a professional storyboard artist. Given a TikTok video script, create a {panel_count}-panel storyboard image prompt. "
                             "IMPORTANT RULES:\n"
                             "1. Include the FULL original video script at the beginning for context.\n"
@@ -470,7 +505,7 @@ def generate_image_for_prompt(prompt_id: str):
                             "4. Each panel: describe only the visual scene (actor pose, camera angle, product, lighting, mood).\n"
                             "5. Preserve exact product appearance from [Product Consistency] section.\n"
                             "6. CRITICAL: Do NOT include any dialogue lines, subtitles, speech bubbles, or on-screen text in the panel descriptions. Visuals only.\n"
-                            "7. Output in English, under 1500 characters total.\n\n"
+                            "7. Write in rich, vivid cinematic English. NO word count limit.\n\n"
                             "OUTPUT FORMAT:\n"
                             "[Original Script]\n<paste the full original script here>\n\n"
                             "[Storyboard Instruction]\n"
@@ -478,7 +513,7 @@ def generate_image_for_prompt(prompt_id: str):
                             + "\n".join([f"Panel {i+1}: <describe scene>" for i in range(panel_count)]) + "\n"
                             "Keep consistent character appearance across all panels. Preserve exact product design.",
                             f"Convert this video script into a {panel_count}-panel storyboard prompt:\n\n{pp.image_prompt}",
-                            max_tokens=1200,
+                            max_tokens=4096,
                         ).strip()
                     else:
                         # Single image: extract scene elements
@@ -489,7 +524,7 @@ def generate_image_for_prompt(prompt_id: str):
                             "Preserve product details from [Product Consistency] section. "
                             "CRITICAL: Do NOT include any dialogue lines, subtitles, captions, or on-screen text. Visual scene description only. "
                             "Overlay text allowed: maximum 1-2 short keyword phrases total, no full sentences. "
-                            "Output a concise English paragraph (under 500 chars) optimized for AI image generation. "
+                            "Write in rich, vivid cinematic English optimized for AI image generation. NO word count limit. "
                             "Start with 'Keep the product exactly as shown, preserving all details. Only change the background and scene. No on-screen dialogue.' "
                             "No explanations, just the prompt."
                         )
@@ -500,11 +535,7 @@ def generate_image_for_prompt(prompt_id: str):
                         _v2i_usr_tmpl = _v2i_usr if _v2i_usr else _DEFAULT_VID2IMG_USR
                         _v2i_usr_msg = _v2i_usr_tmpl.format(prompt_text=pp.image_prompt)
 
-                        converted_prompt = analysis_model.chat(
-                            _v2i_sys,
-                            _v2i_usr_msg,
-                            max_tokens=600,
-                        ).strip()
+                        converted_prompt = _run_agent(analysis_model, _v2i_sys, _v2i_usr_msg, max_tokens=1024).strip()
 
                     pp.image_prompt = converted_prompt
                     image_prompt = converted_prompt
@@ -514,7 +545,7 @@ def generate_image_for_prompt(prompt_id: str):
                 logger.warning("Video prompt conversion failed, using original: %s", e)
 
         # Use image_prompt if available, otherwise truncate original
-        final_prompt = image_prompt if image_prompt else pp.prompt_text[:800]
+        final_prompt = image_prompt if image_prompt else pp.prompt_text[:3000]
 
         # For storyboard templates, image_prompt is required - don't fallback to raw prompt_text
         if grid in ["story_flow_5", "industrial_macro_5"] and not image_prompt:
@@ -532,75 +563,161 @@ def generate_image_for_prompt(prompt_id: str):
             images_dir = Path(product.images_dir)
             image_paths = sorted(str(p) for p in images_dir.glob("image_*")) if images_dir.exists() else []
             if image_paths:
-                # Use AI to pick the best reference image based on the prompt
+                path_by_name = {Path(p).name: p for p in image_paths}
+                doc_images: list[dict] = []
+
+                def _run_picker_agent(model, system_prompt: str, user_prompt: str) -> str:
+                    if hasattr(model, "chat"):
+                        return model.chat(system_prompt, user_prompt, max_tokens=80)
+                    if hasattr(model, "analyze_text"):
+                        return model.analyze_text(
+                            f"SYSTEM PROMPT:\n{system_prompt}\n\nUSER PROMPT:\n{user_prompt}",
+                            task="direct",
+                        )
+                    raise RuntimeError(f"Model {type(model).__name__} does not support text generation")
+
+                def _score_reference_candidate(img: dict) -> int:
+                    text = " ".join(
+                        str(img.get(k, ""))
+                        for k in (
+                            "filename", "basic_recognition", "product_understanding",
+                            "focus_subject", "relevance", "context_alignment",
+                        )
+                    ).lower()
+                    score = 0
+                    relevance = str(img.get("relevance", "")).lower()
+                    if relevance == "primary_product":
+                        score += 120
+                    elif relevance == "usage_scene":
+                        score += 55
+                    elif relevance in {"packaging_or_infographic", "comparison"}:
+                        score += 20
+                    elif relevance == "unrelated_or_ambiguous":
+                        score -= 120
+
+                    if "target product" in text or "actual product" in text:
+                        score += 35
+                    if "main subject" in text or "fully visible" in text or "complete" in text:
+                        score += 25
+                    if "clear" in text or "in focus" in text or "front" in text or "3/4" in text:
+                        score += 15
+                    if "plug" in text or "wall-plug" in text or "electricity saver" in text or "power stabilizer" in text:
+                        score += 20
+                    # Prefer clean product-reference photography when semantic labels are missing.
+                    reference_quality_terms = {
+                        "centered": 15,
+                        "isolated": 20,
+                        "studio": 15,
+                        "e-commerce": 15,
+                        "clean": 10,
+                        "neutral": 10,
+                        "seamless": 10,
+                        "uniform": 8,
+                        "without distracting": 15,
+                        "strictly on the hardware": 15,
+                    }
+                    for term, points in reference_quality_terms.items():
+                        if term in text:
+                            score += points
+
+                    # Penalize assets and context images that are poor identity references.
+                    penalties = (
+                        "logo", "favicon", "icon", "sprite", "phone screen", "mobile phone",
+                        "app ui", "screenshot", "chart", "room", "different product",
+                        "unrelated", "ambiguous", "prop", "background",
+                    )
+                    for term in penalties:
+                        if term in text:
+                            score -= 30
+                    return score
+
+                # Read product doc for image descriptions and deterministic fallback.
+                doc_path = images_dir.parent / "product_doc.json"
+                if doc_path.exists():
+                    import json
+                    doc = json.loads(doc_path.read_text())
+                    doc_images = [img for img in doc.get("images", []) if img.get("filename") in path_by_name]
+
+                # Use AI to pick the best reference image based on the image recognition results.
                 from app.ai_models import get_model
                 analysis_model = get_model(cfg.analysis_model, cfg) if cfg else None
-                if analysis_model and hasattr(analysis_model, 'chat') and len(image_paths) > 1:
-                    # Read product doc for image descriptions
-                    doc_path = images_dir.parent / "product_doc.json"
-                    if doc_path.exists():
-                        import json
-                        doc = json.loads(doc_path.read_text())
+                if analysis_model and (hasattr(analysis_model, 'chat') or hasattr(analysis_model, 'analyze_text')) and len(doc_images) > 1:
+                    img_descriptions = []
+                    for img in doc_images:
+                        desc_parts = [
+                            f"Image {img.get('index')} ({img.get('filename')}):",
+                            f"  Relevance: {img.get('relevance', '')}",
+                            f"  Focus subject: {img.get('focus_subject', '')}",
+                            f"  Recognition: {img.get('basic_recognition', '')[:500]}",
+                            f"  Understanding: {img.get('product_understanding', '')[:500]}",
+                            f"  Context alignment: {img.get('context_alignment', '')[:300]}",
+                        ]
+                        img_descriptions.append("\n".join(desc_parts))
 
-                        # Build descriptions for each image using available fields
-                        img_descriptions = []
-                        for img in doc.get("images", []):
-                            desc_parts = [
-                                f"Image {img['index']} ({img['filename']}):",
-                                f"  Recognition: {img.get('basic_recognition', '')[:200]}",
-                            ]
-                            # Add product understanding if available
-                            if 'product_understanding' in img:
-                                desc_parts.append(f"  Understanding: {img['product_understanding'][:200]}")
-                            img_descriptions.append("\n".join(desc_parts))
+                    img_descriptions_text = "\n\n".join(img_descriptions)
 
-                        img_descriptions_text = "\n\n".join(img_descriptions)
+                    _DEFAULT_PICKER_SYS = (
+                        "You are an expert at selecting the best product reference image for AI image generation. "
+                        "CRITICAL REQUIREMENTS:\n"
+                        "1. Product must be FULLY VISIBLE and COMPLETE (not cropped, not partially hidden)\n"
+                        "2. Product must be CLEAR, IN FOCUS, and occupy a significant portion of the image\n"
+                        "3. Prefer images where relevance is primary_product and focus_subject is the target product\n"
+                        "4. Prefer front-facing or 3/4 view angles that show product identity details\n"
+                        "5. Avoid logos, icons, phone screens, app UI, screenshots, charts, rooms, and lifestyle props\n"
+                        "6. Avoid unrelated_or_ambiguous images even if they look visually clean\n\n"
+                        "Analyze each image description carefully and select the ONE image that best preserves "
+                        "the product's exact external appearance for reference-image generation.\n\n"
+                        "Reply with ONLY the filename (e.g. image_0.png), nothing else."
+                    )
+                    _DEFAULT_PICKER_USR = (
+                        "Available images:\n{img_descriptions_text}\n\n"
+                        "Which filename is the best product identity reference image?"
+                    )
+                    from app.api.agent_prompts import get_agent_prompt
+                    _picker_sys, _picker_usr = get_agent_prompt(db, "reference_image_picker")
+                    _picker_sys = _picker_sys if _picker_sys else _DEFAULT_PICKER_SYS
+                    _picker_usr_tmpl = _picker_usr if _picker_usr else _DEFAULT_PICKER_USR
+                    _picker_usr_msg = _picker_usr_tmpl.format(img_descriptions_text=img_descriptions_text)
 
-                        _DEFAULT_PICKER_SYS = (
-                            "You are an expert at selecting the best product reference image for AI image generation. "
-                            "CRITICAL REQUIREMENTS:\n"
-                            "1. Product must be FULLY VISIBLE and COMPLETE (not cropped, not partially hidden)\n"
-                            "2. Product must be CLEAR, IN FOCUS, and occupy a significant portion of the image\n"
-                            "3. Prefer images where the product is the main subject\n"
-                            "4. Prefer front-facing or 3/4 view angles that show product details\n"
-                            "5. Avoid images where product is too small, blurry, obscured, or in background\n"
-                            "6. Avoid images with multiple products or cluttered backgrounds\n\n"
-                            "Analyze each image description carefully and select the ONE image that best shows "
-                            "the complete product with maximum clarity and detail.\n\n"
-                            "Reply with ONLY the filename (e.g. image_0.png), nothing else."
-                        )
-                        _DEFAULT_PICKER_USR = (
-                            "Available images:\n{img_descriptions_text}\n\n"
-                            "Which image shows the product most completely and clearly?"
-                        )
-                        from app.api.agent_prompts import get_agent_prompt
-                        _picker_sys, _picker_usr = get_agent_prompt(db, "reference_image_picker")
-                        _picker_sys = _picker_sys if _picker_sys else _DEFAULT_PICKER_SYS
-                        _picker_usr_tmpl = _picker_usr if _picker_usr else _DEFAULT_PICKER_USR
-                        _picker_usr_msg = _picker_usr_tmpl.format(img_descriptions_text=img_descriptions_text)
-
-                        pick = analysis_model.chat(
-                            _picker_sys,
-                            _picker_usr_msg,
-                            max_tokens=50,
-                        ).strip()
-                        # Find matching path
-                        for p in image_paths:
-                            if pick in p:
-                                reference_image = p
-                                logger.info(f"AI selected reference image: {pick} -> {p}")
+                    pick = _run_picker_agent(analysis_model, _picker_sys, _picker_usr_msg).strip()
+                    pick_clean = pick.strip().strip("`").strip().strip('"').strip("'")
+                    pick_clean = pick_clean.splitlines()[0].strip() if pick_clean else ""
+                    if pick_clean:
+                        for filename, path in path_by_name.items():
+                            if filename == pick_clean or filename in pick_clean:
+                                reference_image = path
+                                logger.info("AI selected reference image: %s -> %s", pick_clean, path)
                                 break
+
+                if not reference_image and doc_images:
+                    best = max(doc_images, key=_score_reference_candidate)
+                    reference_image = path_by_name.get(best.get("filename"))
+                    logger.info(
+                        "Deterministic selected reference image: %s (score=%d)",
+                        best.get("filename"),
+                        _score_reference_candidate(best),
+                    )
+
                 if not reference_image:
-                    reference_image = image_paths[0]  # Default to first image
-                    logger.info(f"Using default reference image: {reference_image}")
+                    # Last resort: avoid obvious site assets before falling back to the first image.
+                    non_asset_paths = [
+                        p for p in image_paths
+                        if not any(term in Path(p).name.lower() for term in ("logo", "favicon", "sprite", "icon"))
+                    ]
+                    reference_image = (non_asset_paths or image_paths)[0]
+                    logger.info("Using fallback reference image: %s", reference_image)
         except Exception as e:
             logger.warning("Reference image selection failed: %s", e)
             # Fallback to first image if available
             try:
                 images_dir = Path(product.images_dir)
                 paths = sorted(str(p) for p in images_dir.glob("image_*"))
+                non_asset_paths = [
+                    p for p in paths
+                    if not any(term in Path(p).name.lower() for term in ("logo", "favicon", "sprite", "icon"))
+                ]
                 if paths:
-                    reference_image = paths[0]
+                    reference_image = (non_asset_paths or paths)[0]
             except Exception:
                 pass
 
@@ -738,6 +855,7 @@ def generate_video_for_prompt(prompt_id: str):
             return
 
         pp.video_status = "generating"
+        pp.error_message = None
         db.commit()
 
         # Read from DB config_json first, fallback to .env settings
@@ -791,6 +909,7 @@ def generate_video_for_prompt(prompt_id: str):
         if result["status"] == "completed":
             pp.video_url = result.get("video_url", "")
             pp.video_status = "completed"
+            pp.error_message = None
 
             # Optionally download video
             if pp.video_url:
@@ -808,6 +927,7 @@ def generate_video_for_prompt(prompt_id: str):
                 pp.video_path = str(output_path)
         else:
             pp.video_status = "failed"
+            pp.error_message = result.get("message", "Video generation failed without a detailed error")
 
         db.commit()
 
@@ -817,6 +937,7 @@ def generate_video_for_prompt(prompt_id: str):
             pp = db.get(ProductPrompt, prompt_id)
             if pp:
                 pp.video_status = "failed"
+                pp.error_message = str(e)[:1000]
                 db.commit()
         except Exception:
             pass

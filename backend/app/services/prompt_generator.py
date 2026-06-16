@@ -179,7 +179,7 @@ VARIANT_PROMPT = (
     "You are an expert TikTok marketing video scriptwriter for cross-border e-commerce.\n\n"
     "Target aspect ratio: {aspect_ratio}\n"
     "Video duration: {video_duration} seconds\n"
-    "Image layout: {layout_instruction}\n\n"
+    ""
     "Product info:\n{product_json}\n\n"
     "Template style: {template_name}\n"
     "Template structure:\n{template_structure}\n\n"
@@ -212,7 +212,6 @@ def build_generation_prompt(
     product_doc: dict,
     template_key: str,
     aspect_ratio: str = "16:9",
-    grid_layout: str = "single",
     video_duration: int = 15,
 ) -> str:
     """Build the prompt that asks the AI to generate 10 variants.
@@ -232,32 +231,7 @@ def build_generation_prompt(
         f"Preserve the exact design, color, and appearance of {product_doc.get('title', 'the product')}: "
         f"{product_doc.get('appearance', 'as shown in reference images')}"
     )
-    # Map grid_layout → ImageLayoutTemplate key (mirrors product_pipeline.py)
-    GRID_TO_TEMPLATE = {
-        "single": "single_keyframe", "single_keyframe": "single_keyframe",
-        "story_flow_5": "story_flow_5", "industrial_macro_5": "industrial_macro_5",
-        "3x2": "storyboard_6panel", "2x3": "storyboard_6panel",
-        "3x3": "storyboard_9panel", "3x4": "storyboard_12panel_3x4",
-        "4x3": "storyboard_12panel_4x3", "4x4": "storyboard_16panel",
-    }
-    template_key_lookup = GRID_TO_TEMPLATE.get(grid_layout, grid_layout)
-
-    # Read actual ImageLayoutTemplate from DB
-    try:
-        from app.models.template import ImageLayoutTemplate
-        db2 = SessionLocal()
-        try:
-            layout_tmpl = db2.query(ImageLayoutTemplate).filter(
-                ImageLayoutTemplate.key == template_key_lookup
-            ).first()
-            if layout_tmpl and layout_tmpl.prompt_template:
-                layout_instruction = layout_tmpl.prompt_template
-            else:
-                layout_instruction = "Generate a single keyframe image"
-        finally:
-            db2.close()
-    except Exception:
-        layout_instruction = "Generate a single keyframe image"
+    # layout_instruction removed — image layout belongs in image generation, not video scriptwriting
 
     # Load hook templates from DB; fall back to generic list if none available
     hook_templates = get_hook_templates_from_db()
@@ -296,7 +270,6 @@ def build_generation_prompt(
         aspect_ratio=aspect_ratio,
         video_duration=video_duration,
         max_spoken_words=int(video_duration * 2.5),
-        layout_instruction=layout_instruction,
         hook_strategies=hook_strategies,
     )
     if '"hook_key"' not in prompt:
@@ -313,7 +286,6 @@ def generate_prompt_variants(
     analysis_model: AIModel,
     video_duration: int = 15,
     total_variants: int = 10,
-    grid_layout: str = "single",
 ) -> list[dict]:
     """Generate prompt variants using the analysis model, in batches to avoid truncation."""
     all_variants = []
@@ -325,7 +297,7 @@ def generate_prompt_variants(
         count = min(batch_size, remaining)
         start_index = batch_idx * batch_size + 1
 
-        prompt = build_generation_prompt(product_doc, template_key, video_duration=video_duration, grid_layout=grid_layout)
+        prompt = build_generation_prompt(product_doc, template_key, video_duration=video_duration)
         # Override the "Generate exactly 10" instruction with batch-specific count
         prompt = prompt.replace(
             "Generate exactly 10 different video prompt variants",

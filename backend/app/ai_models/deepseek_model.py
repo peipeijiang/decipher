@@ -38,3 +38,19 @@ class DeepSeekModel(AIModel):
         except Exception as e:
             logger.error("DeepSeek text analysis failed: %s", e)
             raise
+
+    def chat(self, system_prompt: str, user_msg: str, max_tokens: int = 2048) -> str:
+        """Run a system/user chat completion for agent prompts."""
+        try:
+            resp = self._client.chat.completions.create(
+                model=self._text_model,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_msg},
+                ],
+                max_tokens=max_tokens,
+            )
+            return resp.choices[0].message.content or ""
+        except Exception as e:
+            logger.error("DeepSeek chat failed: %s", e)
+            raise
