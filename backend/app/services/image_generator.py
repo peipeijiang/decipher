@@ -53,11 +53,13 @@ class ImageGeneratorService:
                 }
                 size = GRID_SIZE_MAP.get(aspect_ratio, "1536x1024")
 
-            # Modify prompt for grid layouts
+            # Modify prompt for grid layouts — strict grid enforcement
             final_prompt = prompt
             if grid_layout in ["2x3", "3x2", "3x3", "3x4", "4x3", "4x4"]:
-                panel_count = {"3x2": 6, "2x3": 6, "3x3": 9, "3x4": 12, "4x3": 12, "4x4": 16}[grid_layout]
-                final_prompt = f"Create a {grid_layout} storyboard grid layout with {panel_count} panels. {prompt}"
+                panel_rows = int(grid_layout[0])
+                panel_cols = int(grid_layout[2])
+                panel_count = panel_rows * panel_cols
+                final_prompt = f"STRICTLY a {panel_rows}-column by {panel_cols}-row grid = EXACTLY {panel_count} equal panels. DO NOT output any other grid arrangement. No text captions, no labels on any panel. Clean gutters. {prompt}"
 
             # Submit generation request
             response = self._request(
@@ -184,10 +186,12 @@ class ImageGeneratorService:
             # For images/edits with reference image, use the full prompt as-is
             final_prompt = prompt
 
-            # Add grid layout instruction if needed (story_flow_5 and industrial_macro_5 already have their own structure in the prompt)
+            # Add grid layout instruction — strict grid enforcement
             if grid_layout in ["2x3", "3x2", "3x3", "3x4", "4x3", "4x4"]:
-                panel_count = {"3x2": 6, "2x3": 6, "3x3": 9, "3x4": 12, "4x3": 12, "4x4": 16}[grid_layout]
-                final_prompt = f"Create a {grid_layout} storyboard grid layout with exactly {panel_count} panels. Each panel shows a different scene. {final_prompt}"
+                panel_rows = int(grid_layout[0])
+                panel_cols = int(grid_layout[2])
+                panel_count = panel_rows * panel_cols
+                final_prompt = f"STRICTLY a {panel_rows}-column by {panel_cols}-row grid = EXACTLY {panel_count} equal panels. DO NOT output any other grid arrangement. No text captions, no labels on any panel. Clean gutters. {final_prompt}"
 
             # Prepend reference image instruction
             final_prompt = f"Photorealistic style, real photography, not illustration, not cartoon, not anime. The product in this reference image must appear EXACTLY as-is in every panel - same shape, color, texture. Do not alter the product. Stylish overlay text in Instagram/TikTok aesthetic is OK (short keywords, emojis, decorative labels). Do NOT add subtitles, captions, paragraphs, or watermarks. {final_prompt}"
@@ -305,10 +309,14 @@ class ImageGeneratorService:
 
             final_prompt = prompt
             if grid_layout in ["2x3", "3x2", "3x3", "3x4", "4x3", "4x4"]:
-                panel_count = {"3x2": 6, "2x3": 6, "3x3": 9, "3x4": 12, "4x3": 12, "4x4": 16}[grid_layout]
+                panel_rows = int(grid_layout[0])
+                panel_cols = int(grid_layout[2])
+                panel_count = panel_rows * panel_cols
                 final_prompt = (
-                    f"Create a {grid_layout} storyboard grid layout with exactly {panel_count} panels. "
-                    f"Keep every panel readable and separated by clean gutters. {final_prompt}"
+                    f"STRICTLY a {panel_rows}-column by {panel_cols}-row grid = EXACTLY {panel_count} equal panels. "
+                    f"DO NOT output any other grid arrangement. "
+                    f"No text captions, no labels on any panel. Clean gutters. "
+                    f"{final_prompt}"
                 )
 
             final_prompt = (
