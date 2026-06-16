@@ -661,6 +661,8 @@ def generate_image_for_prompt(prompt_id: str):
                 logger.warning(f"Product understanding extraction failed: {e}")
 
         # Generate image: use reference mode if we have a reference image
+        logger.info("FINAL IMAGE PROMPT (length=%d): %s", len(final_prompt) if final_prompt else 0,
+                    final_prompt[:300] if final_prompt else "EMPTY")
         if reference_image:
             logger.info("Using reference image: %s", reference_image)
 
