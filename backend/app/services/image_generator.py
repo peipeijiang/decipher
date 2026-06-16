@@ -37,21 +37,36 @@ class ImageGeneratorService:
         """Generate image from text prompt"""
         try:
             # Calculate size based on aspect_ratio
-            SIZE_MAP = {
-                "16:9": "1792x1024",
-                "9:16": "1024x1792",
-                "1:1": "1024x1024",
-            }
-            size = SIZE_MAP.get(aspect_ratio, "1024x1024")
-
-            # Adjust size for grid layouts
-            if grid_layout in ["2x3", "3x2", "3x3", "3x4", "4x3", "4x4"]:
-                GRID_SIZE_MAP = {
+            # Per Laozhang docs: gpt-image-2-vip requires explicit pixel sizes (no "auto").
+            # Common sizes: 2048x2048, 2048x1152, 1152x2048, 3840x2160 (4K)
+            if "vip" in model.lower():
+                SIZE_MAP = {
+                    "16:9": "2048x1152",
+                    "9:16": "1152x2048",
+                    "1:1": "2048x2048",
+                }
+                size = SIZE_MAP.get(aspect_ratio, "2048x2048")
+                if grid_layout in ["2x3", "3x2", "3x3", "3x4", "4x3", "4x4"]:
+                    GRID_SIZE_MAP = {
+                        "16:9": "2048x1152",
+                        "9:16": "1152x2048",
+                        "1:1": "2048x2048",
+                    }
+                    size = GRID_SIZE_MAP.get(aspect_ratio, "2048x2048")
+            else:
+                SIZE_MAP = {
                     "16:9": "1792x1024",
                     "9:16": "1024x1792",
-                    "1:1": "1536x1536",
+                    "1:1": "1024x1024",
                 }
-                size = GRID_SIZE_MAP.get(aspect_ratio, "1536x1024")
+                size = SIZE_MAP.get(aspect_ratio, "1024x1024")
+                if grid_layout in ["2x3", "3x2", "3x3", "3x4", "4x3", "4x4"]:
+                    GRID_SIZE_MAP = {
+                        "16:9": "1792x1024",
+                        "9:16": "1024x1792",
+                        "1:1": "1536x1536",
+                    }
+                    size = GRID_SIZE_MAP.get(aspect_ratio, "1536x1024")
 
             # Modify prompt for grid layouts — strict grid enforcement
             final_prompt = prompt
@@ -173,15 +188,22 @@ class ImageGeneratorService:
     ) -> dict:
         """Generate image using reference image(s) via images/edits endpoint (multipart upload)."""
         try:
-            SIZE_MAP = {"16:9": "1792x1024", "9:16": "auto", "1:1": "1024x1024"}
-            size = SIZE_MAP.get(aspect_ratio, "auto")
+            # Per Laozhang docs: /images/edits only supports gpt-image-2 (not -vip).
+            # gpt-image-2-vip only works with /images/generations + explicit pixel size.
+            if "-vip" in model:
+                model = "gpt-image-2"
+                import logging as _logging
+                _logging.getLogger(__name__).info("Auto-switched model to gpt-image-2 for /images/edits (vip doesn't support edits)")
+            # gpt-image-2 (non-vip) for /images/edits — sizes from docs
+            SIZE_MAP = {"16:9": "1792x1024", "9:16": "1024x1792", "1:1": "1024x1024"}
+            size = SIZE_MAP.get(aspect_ratio, "1024x1024")
             if grid_layout in ["2x3", "3x2", "3x3", "3x4", "4x3", "4x4"]:
-                GRID_SIZE_MAP = {"16:9": "1792x1024", "9:16": "auto", "1:1": "1536x1536"}
+                GRID_SIZE_MAP = {"16:9": "1792x1024", "9:16": "1024x1792", "1:1": "1536x1536"}
                 size = GRID_SIZE_MAP.get(aspect_ratio, "1536x1024")
             elif grid_layout == "story_flow_5":
-                size = "1792x1024"  # 16:9 horizontal
+                size = "1792x1024"
             elif grid_layout == "industrial_macro_5":
-                size = "1024x1792"  # 9:16 vertical
+                size = "1024x1792"
 
             # For images/edits with reference image, use the full prompt as-is
             final_prompt = prompt
