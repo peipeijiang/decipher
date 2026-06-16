@@ -29,7 +29,7 @@ class ImageGeneratorService:
     def generate_image(
         self,
         prompt: str,
-        model: str = "laozhang-image-2-vip",
+        model: str = "gpt-image-2-vip",
         size: str = "1024x1024",
         grid_layout: str = "single",
         aspect_ratio: str = "1:1",

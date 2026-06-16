@@ -26,7 +26,7 @@ const GEN_PROVIDERS = [
 ]
 
 const IMAGE_MODELS = [
-  { value: 'laozhang-image-2-vip', label: '老张图片 2.0 VIP (推荐)' },
+  { value: 'gpt-image-2-vip', label: '老张图片 2.0 VIP (推荐)' },
   { value: 'updrama-image-2', label: 'Updrama Image 2' },
   { value: 'qwen-image-2.0-pro', label: 'Qwen Image 2.0 Pro' },
 ]
@@ -62,7 +62,7 @@ export default function ConfigPage() {
   const [presets, setPresets] = useState<ProviderPreset[]>([])
   const [visionModel, setVisionModel] = useState('openai')
   const [analysisModel, setAnalysisModel] = useState('openai')
-  const [imageModel, setImageModel] = useState('laozhang-image-2-vip')
+  const [imageModel, setImageModel] = useState('gpt-image-2-vip')
   const [videoModel, setVideoModel] = useState('seedance-2.0')
   const [temperature, setTemperature] = useState(0.7)
   const [maxTokens, setMaxTokens] = useState(4096)

@@ -209,7 +209,7 @@ async def generate_storyboard_replacement(
     replication_id: str,
     file: UploadFile = File(...),
     description: str = Form(""),
-    image_model: str = Form("laozhang-image-2-vip"),
+    image_model: str = Form("gpt-image-2-vip"),
     db: Session = Depends(get_db),
 ):
     """提交产品图并启动产品替换 + 提示词压缩。
@@ -218,7 +218,7 @@ async def generate_storyboard_replacement(
         replication_id: 任务ID（必须处于 ready 状态）
         file: 产品图文件
         description: 产品文字描述（可选）
-        image_model: 图片生成模型（laozhang-image-2-vip 或 updrama-image-2）
+        image_model: 图片生成模型（gpt-image-2-vip 或 updrama-image-2）
 
     Returns:
         启动状态

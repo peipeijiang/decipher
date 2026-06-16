@@ -298,7 +298,7 @@ def generate_image_for_prompt(prompt_id: str):
         providers = cfg.get_providers() if cfg else {}
 
         # Get selected image model from config
-        image_model = cfg.image_model if cfg else "laozhang-image-2-vip"
+        image_model = cfg.image_model if cfg else "gpt-image-2-vip"
 
         # Determine API key based on image model
         if image_model == "qwen-image-2.0-pro":

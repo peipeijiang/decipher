@@ -315,7 +315,7 @@ export default function AnalysisPage() {
   } | null>(null)
   const [productFile, setProductFile] = useState<File | null>(null)
   const [productDesc, setProductDesc] = useState('')
-  const [selectedImageModel, setSelectedImageModel] = useState('laozhang-image-2-vip')
+  const [selectedImageModel, setSelectedImageModel] = useState('gpt-image-2-vip')
   const [generating, setGenerating] = useState(false)
   const storyboardPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -925,7 +925,7 @@ export default function AnalysisPage() {
                                 onChange={(e) => setSelectedImageModel(e.target.value)}
                                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
                               >
-                                <option value="laozhang-image-2-vip">老张 GPT Image 2 VIP</option>
+                                <option value="gpt-image-2-vip">老张 GPT Image 2 VIP</option>
                                 <option value="qwen-image-2.0-pro">阿里云 Qwen Image 2.0 Pro</option>
                               </select>
                             </div>
