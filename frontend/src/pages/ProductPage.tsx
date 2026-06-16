@@ -197,7 +197,13 @@ export default function ProductPage() {
     // Doc
     if (key === 'doc') {
       if (doc?.appearance) return '文档已生成'
-      if (progress?.doc && progress.doc > 0) return 'AI 分析中…'
+      if (progress?.doc && progress.doc > 0) {
+        const current = progress.doc_current || 0
+        const total = progress.doc_total || 0
+        const stage = progress.doc_stage || 'AI 分析中'
+        if (total > 0) return `${stage} ${current}/${total} 张 · ${progress.doc}%`
+        return `${stage} · ${progress.doc}%`
+      }
       return ''
     }
     // Prompts
@@ -250,6 +256,26 @@ export default function ProductPage() {
       return hasAny ? 'completed' : hasGenerating ? 'active' : 'pending'
     }
     return 'pending'
+  }
+
+  const getStepPercent = (key: string): number => {
+    if (!progress) return 0
+    if (key === 'scrape') return progress.scrape
+    if (key === 'doc') return progress.doc
+    if (key === 'prompts') return progress.prompts
+    if (key === 'image') {
+      if (prompts.length === 0) return 0
+      const completed = prompts.filter(p => p.image_status === 'completed').length
+      const generating = prompts.filter(p => p.image_status === 'generating').length
+      return Math.min(100, Math.round(((completed + generating * 0.35) / prompts.length) * 100))
+    }
+    if (key === 'video') {
+      if (prompts.length === 0) return 0
+      const completed = prompts.filter(p => p.video_status === 'completed').length
+      const generating = prompts.filter(p => p.video_status === 'generating').length
+      return Math.min(100, Math.round(((completed + generating * 0.35) / prompts.length) * 100))
+    }
+    return 0
   }
 
 
@@ -359,6 +385,7 @@ export default function ProductPage() {
               {PIPELINE_STEPS.map((step, idx) => {
                 const status = getStepProgress(step.key)
                 const detail = getStepDetail(step.key)
+                const percent = getStepPercent(step.key)
                 const isLast = idx === PIPELINE_STEPS.length - 1
                 return (
                   <div key={step.key} className="flex items-center flex-1 min-w-0" title={step.desc}>
@@ -393,6 +420,18 @@ export default function ProductPage() {
                         status === 'failed' ? 'text-red-600 bg-red-50' :
                         'text-gray-400 bg-gray-50'
                       }`}>{detail || '等待中'}</span>
+                      <div className="mt-1.5 ml-7 h-1 rounded-full bg-white/70 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            status === 'completed' ? 'bg-green-500' :
+                            status === 'active' ? 'bg-blue-500' :
+                            status === 'failed' ? 'bg-red-500' :
+                            'bg-gray-300'
+                          }`}
+                          style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
+                          aria-label={`${step.label}进度 ${percent}%`}
+                        />
+                      </div>
                     </div>
                     {!isLast && (
                       <div className={`w-4 h-0.5 flex-shrink-0 self-center ${
@@ -480,7 +519,15 @@ export default function ProductPage() {
                     try {
                       await reanalyzeProductDoc(product.id)
                       setDoc(null)
-                      setProgress({ scrape: 100, doc: 10, prompts: 0, error: null })
+                      setProgress({
+                        scrape: 100,
+                        doc: 10,
+                        prompts: 0,
+                        error: null,
+                        doc_current: 0,
+                        doc_total: doc.images.length,
+                        doc_stage: '准备识别图片',
+                      })
                       if (!pollRef.current) {
                         pollRef.current = setInterval(() => fetchProduct(false), 2000)
                       }

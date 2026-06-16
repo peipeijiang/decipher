@@ -202,6 +202,9 @@ def get_progress(product_id: str, db: Session = Depends(get_db)):
         "doc": 100 if product.doc_json_path or product.status == "completed" else 0,
         "prompts": 100 if prompt_count > 0 else 0,
         "error": product.error_message,
+        "doc_current": 0,
+        "doc_total": 0,
+        "doc_stage": "文档已生成" if product.doc_json_path else "",
     }
 
     if product.status == "failed":
