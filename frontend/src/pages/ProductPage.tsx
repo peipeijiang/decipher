@@ -347,27 +347,30 @@ export default function ProductPage() {
         {id && !loadingProduct && !loadError && product && (
           <>
             {/* Header */}
-            <div className="mb-6">
-              <div className="flex items-start justify-between gap-4">
+            <div className="mb-8">
+              <div className="flex items-start justify-between gap-6">
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl font-bold text-gray-900 leading-tight mb-1">{product.title || '产品详情'}</h1>
-                  <p className="text-xs text-gray-400 truncate">{product.url}</p>
+                  <h1 className="text-2xl font-bold text-gray-900 leading-tight tracking-tight">{product.title || 'Product'}</h1>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="rounded-full bg-gray-50 border border-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-500 font-mono truncate">{product.url}</span>
+                    {product.status === 'completed' && (
+                      <span className="rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-1 text-[11px] font-medium border border-emerald-100">Ready</span>
+                    )}
+                    {(product.status === 'scraping' || product.status === 'analyzing') && (
+                      <span className="rounded-full bg-blue-50 text-blue-700 px-2.5 py-1 text-[11px] font-medium border border-blue-100 flex items-center gap-1">
+                        <Loader2 className="w-3 h-3 animate-spin" />Processing
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => setTaskQueueOpen(v => !v)}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
-                  >
-                    任务队列
+                  <button onClick={() => setTaskQueueOpen(v => !v)}
+                    className="px-4 py-2 rounded-xl border border-gray-100 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-200 transition-all shadow-sm">
+                    Queue
                   </button>
-                  <button
-                    onClick={async () => {
-                      await archiveProduct(product.id)
-                      navigate('/product/history')
-                    }}
-                    className="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50 transition-colors"
-                  >
-                    归档
+                  <button onClick={async () => { await archiveProduct(product.id); navigate('/product/history') }}
+                    className="px-4 py-2 rounded-xl border border-gray-100 text-xs font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 hover:border-gray-200 transition-all shadow-sm">
+                    Archive
                   </button>
                 </div>
               </div>
@@ -376,7 +379,7 @@ export default function ProductPage() {
             {/* Pipeline Progress */}
             <div className="mb-6">
             {product.status === 'failed' && progress?.error && (
-              <div className="mb-3 flex items-center gap-2 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+              <div className="mb-3 flex items-center gap-2 text-xs text-red-700 bg-red-50/70 border border-red-100 rounded-xl px-4 py-2.5">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
                 {progress.error}
               </div>
@@ -389,44 +392,44 @@ export default function ProductPage() {
                 const isLast = idx === PIPELINE_STEPS.length - 1
                 return (
                   <div key={step.key} className="flex items-center flex-1 min-w-0" title={step.desc}>
-                    <div className={`flex flex-col justify-center px-3 py-2 rounded-lg flex-1 min-w-0 transition-all ${
-                      status === 'completed' ? 'bg-green-100' :
-                      status === 'active' ? 'bg-blue-100' :
-                      status === 'failed' ? 'bg-red-100' :
+                    <div className={`flex flex-col justify-center px-3 py-2.5 rounded-xl flex-1 min-w-0 transition-all duration-300 ${
+                      status === 'completed' ? 'bg-emerald-50 border border-emerald-100' :
+                      status === 'active' ? 'bg-blue-50 border border-blue-100' :
+                      status === 'failed' ? 'bg-red-50 border border-red-100' :
                       'bg-transparent'
                     }`}>
                       <div className="flex items-center gap-2">
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
-                          status === 'completed' ? 'bg-green-500 text-white' :
+                        <div className={`w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${
+                          status === 'completed' ? 'bg-emerald-500 text-white' :
                           status === 'active' ? 'bg-blue-500 text-white animate-pulse' :
                           status === 'failed' ? 'bg-red-500 text-white' :
-                          'bg-gray-300 text-white'
+                          'bg-gray-200 text-gray-500'
                         }`}>
                           {status === 'completed' ? <Check className="w-3 h-3" /> :
                            status === 'active' ? <Loader2 className="w-3 h-3 animate-spin" /> :
                            status === 'failed' ? <X className="w-3 h-3" /> :
                            idx + 1}
                         </div>
-                        <span className={`text-xs font-semibold truncate ${
-                          status === 'completed' ? 'text-green-700' :
+                        <span className={`text-[11px] font-semibold truncate ${
+                          status === 'completed' ? 'text-emerald-700' :
                           status === 'active' ? 'text-blue-700' :
                           status === 'failed' ? 'text-red-700' :
                           'text-gray-400'
                         }`}>{step.label}</span>
                       </div>
                       <span className={`text-[10px] mt-1 ml-7 truncate px-1.5 py-0.5 rounded-md font-medium ${
-                        status === 'completed' ? 'text-green-600 bg-green-50' :
-                        status === 'active' ? 'text-blue-600 bg-blue-50' :
-                        status === 'failed' ? 'text-red-600 bg-red-50' :
+                        status === 'completed' ? 'text-emerald-600 bg-emerald-50/50' :
+                        status === 'active' ? 'text-blue-600 bg-blue-50/50' :
+                        status === 'failed' ? 'text-red-600 bg-red-50/50' :
                         'text-gray-400 bg-gray-50'
                       }`}>{detail || '等待中'}</span>
                       <div className="mt-1.5 ml-7 h-1 rounded-full bg-white/70 overflow-hidden">
                         <div
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            status === 'completed' ? 'bg-green-500' :
-                            status === 'active' ? 'bg-blue-500' :
-                            status === 'failed' ? 'bg-red-500' :
-                            'bg-gray-300'
+                          className={`h-full rounded-full transition-all duration-500 ease-out ${
+                            status === 'completed' ? 'bg-emerald-400' :
+                            status === 'active' ? 'bg-blue-400' :
+                            status === 'failed' ? 'bg-red-400' :
+                            'bg-gray-200'
                           }`}
                           style={{ width: `${Math.max(0, Math.min(100, percent))}%` }}
                           aria-label={`${step.label}进度 ${percent}%`}
@@ -434,8 +437,8 @@ export default function ProductPage() {
                       </div>
                     </div>
                     {!isLast && (
-                      <div className={`w-4 h-0.5 flex-shrink-0 self-center ${
-                        status === 'completed' ? 'bg-green-300' : 'bg-gray-200'
+                      <div className={`w-4 h-0.5 flex-shrink-0 self-center rounded-full ${
+                        status === 'completed' ? 'bg-emerald-300' : 'bg-gray-200'
                       }`} />
                     )}
                   </div>
@@ -447,10 +450,10 @@ export default function ProductPage() {
           {/* Product Info Section */}
           {doc && progress && progress.doc >= 100 && (
           <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-sm font-semibold text-gray-800">产品文档</h2>
-              <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">识别完成</span>
-              <span className="text-xs text-gray-500">已汇总图片与页面文字</span>
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-base font-bold text-gray-900">Product Document</h2>
+              <span className="rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-1 text-[11px] font-medium border border-emerald-100">Ready</span>
+              <span className="text-xs text-gray-400">Images + page content analyzed</span>
             </div>
             <ProductDocSummary doc={doc} />
           </div>
@@ -459,24 +462,14 @@ export default function ProductPage() {
         {/* Action Buttons */}
         {product && (product.status === 'completed' || product.status === 'failed') && (
           <div className="flex gap-2 mb-6">
-            <button
-              onClick={async () => {
-                await rerunProduct(product.id)
-                window.location.reload()
-              }}
-              className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-xs font-medium hover:bg-blue-600 transition-colors"
-            >
-              重新运行
+            <button onClick={async () => { await rerunProduct(product.id); window.location.reload() }}
+              className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-semibold hover:bg-gray-800 transition-all shadow-sm">
+              Re-run Pipeline
             </button>
             {product.status === 'failed' && (
-              <button
-                onClick={async () => {
-                  await resumeProduct(product.id)
-                  window.location.reload()
-                }}
-                className="px-3 py-1.5 rounded-lg bg-green-500 text-white text-xs font-medium hover:bg-green-600 transition-colors"
-              >
-                继续运行
+              <button onClick={async () => { await resumeProduct(product.id); window.location.reload() }}
+                className="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-all shadow-sm">
+                Resume
               </button>
             )}
           </div>
@@ -485,9 +478,9 @@ export default function ProductPage() {
         {/* Image Analysis & Instruction Board */}
         {doc && doc.images && doc.images.length > 0 && (
           <div className="mb-8">
-            <div className="flex items-center gap-2 mb-3">
-              <h2 className="text-sm font-semibold text-gray-800">图片识别结果</h2>
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{doc.images.length} 张</span>
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-base font-bold text-gray-900">Image Analysis</h2>
+              <span className="rounded-full bg-gray-100 border border-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-500">{doc.images.length} images</span>
               {product && (
                 <button
                   onClick={async () => {
@@ -516,7 +509,7 @@ export default function ProductPage() {
                 </button>
               )}
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {doc.images.map(img => (
                 <ImageAnalysisCard key={img.index} img={img} productId={id!} onPreview={setPreviewImage} />
               ))}
@@ -527,13 +520,13 @@ export default function ProductPage() {
         {/* Instruction Board Section */}
         {product && product.status === 'completed' && (
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-3">
-              <h2 className="text-sm font-semibold text-gray-800">产品使用说明</h2>
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-base font-bold text-gray-900">Instruction Board</h2>
               {product.instruction_board_status === 'completed' && (
-                <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">已生成</span>
+                <span className="rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-1 text-[11px] font-medium border border-emerald-100">Ready</span>
               )}
               {product.instruction_board_status === 'generating' && (
-                <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full animate-pulse">生成中...</span>
+                <span className="rounded-full bg-blue-50 text-blue-700 border border-blue-100 px-2.5 py-1 text-[11px] font-medium animate-pulse flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Generating</span>
               )}
               {(product.instruction_board_status === 'none' || product.instruction_board_status === 'failed') && (
                 <button
@@ -550,7 +543,7 @@ export default function ProductPage() {
                 </button>
               )}
               {product.instruction_board_status === 'failed' && (
-                <span className="text-[10px] text-red-500">生成失败，可重试</span>
+                <span className="rounded-full bg-red-50 text-red-600 border border-red-100 px-2.5 py-1 text-[11px] font-medium">Failed</span>
               )}
             </div>
 
@@ -864,69 +857,92 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
 function ImageAnalysisCard({ img, productId, onPreview }: { img: any; productId: string; onPreview: (url: string) => void }) {
   const [expanded, setExpanded] = useState(false)
   const hasFailed = !img.basic_recognition && !img.product_understanding
+
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-sm transition-shadow">
-      <div className="flex items-start gap-3 p-3">
+    <div className="group bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_1px_3px_rgba(0,0,0,0.05),0_6px_20px_rgba(0,0,0,0.06)] transition-shadow duration-300">
+      {/* Thumbnail + core info */}
+      <div className="flex gap-4 p-4">
         <div
-          className="w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 border border-gray-100 cursor-pointer hover:ring-2 hover:ring-blue-400 transition-all"
+          className="relative w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 border border-gray-100 cursor-pointer hover:ring-2 hover:ring-blue-200 transition-all"
           onClick={() => onPreview(getProductImageUrl(productId, img.filename))}
         >
           <img
             src={getProductImageUrl(productId, img.filename)}
-            alt={`图片 ${img.index}`}
+            alt={`Image ${img.index}`}
             className="w-full h-full object-cover"
           />
+          <div className="absolute top-1.5 left-1.5 w-5 h-5 rounded-lg bg-black/40 backdrop-blur-sm flex items-center justify-center text-[10px] font-bold text-white">
+            {img.index}
+          </div>
         </div>
         <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-gray-800">图片 {img.index}</span>
+            <span className="text-sm font-semibold text-gray-800">Image {img.index}</span>
             {hasFailed && (
-              <span className="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded">识别失败</span>
+              <span className="rounded-full bg-red-50 text-red-600 px-2 py-0.5 text-[11px] font-medium border border-red-100">Recognition failed</span>
             )}
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(v => !v) }}
-              className="text-[10px] text-blue-500 hover:text-blue-600"
+              className="ml-auto text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
             >
-              {expanded ? '收起' : '展开'}
+              {expanded ? 'Collapse' : 'Expand'}
+              <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} />
             </button>
           </div>
+
           {hasFailed ? (
-            <div className="text-[11px] text-gray-500">
-              图片识别失败，请重新运行分析
-            </div>
+            <p className="text-sm text-gray-500 italic">Image recognition failed — re-run the analysis pipeline</p>
           ) : (
             <>
-              {(img.focus_subject || img.relevance) && (
-                <div className="flex flex-wrap gap-1">
-                  {img.focus_subject && (
-                    <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">
-                      焦点：{img.focus_subject}
-                    </span>
-                  )}
-                  {img.relevance && (
-                    <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-600">
-                      {img.relevance}
-                    </span>
-                  )}
-                </div>
-              )}
-              <div className={`text-[11px] leading-relaxed text-gray-700 ${expanded ? '' : 'line-clamp-2'}`}>
-                <span className="text-blue-600 font-medium">识别：</span>{img.basic_recognition}
+              {/* Tags row */}
+              <div className="flex flex-wrap gap-1.5">
+                {img.focus_subject && (
+                  <span className="rounded-md bg-gray-50 border border-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-600">
+                    {img.focus_subject}
+                  </span>
+                )}
+                {img.relevance && (
+                  <span className={[
+                    "rounded-md px-2 py-0.5 text-[11px] font-medium border",
+                    img.relevance === 'primary_product' ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                    img.relevance === 'packaging_or_infographic' ? 'bg-violet-50 text-violet-700 border-violet-100' :
+                    img.relevance === 'usage_scene' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
+                    img.relevance === 'comparison' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                    img.relevance === 'unrelated_or_ambiguous' ? 'bg-red-50 text-red-600 border-red-100' :
+                    'bg-gray-50 text-gray-600 border-gray-100'
+                  ].join(' ')}>
+                    {img.relevance.replace(/_/g, ' ')}
+                  </span>
+                )}
               </div>
-              {expanded && (
-                <>
-                  <div className="text-[11px] leading-relaxed text-gray-700">
-                    <span className="text-green-600 font-medium">产品理解：</span>{img.product_understanding}
+
+              {/* 3 analysis layers */}
+              <div className="space-y-1">
+                {img.basic_recognition && (
+                  <div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Recognition</span>
+                    <p className="text-xs leading-relaxed text-gray-600 mt-0.5 line-clamp-2">{img.basic_recognition}</p>
                   </div>
-                  <div className="text-[11px] leading-relaxed text-gray-700">
-                    <span className="text-purple-600 font-medium">创意建议：</span>{img.creative_usage}
+                )}
+                {img.product_understanding && (
+                  <div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Understanding</span>
+                    <p className="text-xs leading-relaxed text-gray-600 mt-0.5 line-clamp-2">{img.product_understanding}</p>
                   </div>
-                  {img.context_alignment && (
-                    <div className="text-[11px] leading-relaxed text-gray-700">
-                      <span className="text-amber-600 font-medium">上下文校准：</span>{img.context_alignment}
-                    </div>
-                  )}
-                </>
+                )}
+                {img.creative_usage && (
+                  <div>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Creative</span>
+                    <p className="text-xs leading-relaxed text-gray-600 mt-0.5">{img.creative_usage}</p>
+                  </div>
+                )}
+              </div>
+
+              {expanded && img.context_alignment && (
+                <div className="mt-2 pt-2 border-t border-gray-100">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-600">Context Alignment</span>
+                  <p className="text-xs leading-relaxed text-amber-700 mt-1">{img.context_alignment}</p>
+                </div>
               )}
             </>
           )}
@@ -935,6 +951,7 @@ function ImageAnalysisCard({ img, productId, onPreview }: { img: any; productId:
     </div>
   )
 }
+
 
 function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTemplates, onPreviewImage }: {
   prompt: ProductPrompt
@@ -952,7 +969,6 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
   const [saving, setSaving] = useState(false)
   const [showImagePrompt, setShowImagePrompt] = useState(false)
 
-  // Local state for grid layout, aspect ratio, video style, video model, and video duration
   const [gridLayout, setGridLayout] = useState<string>(prompt.grid_layout || 'single_keyframe')
   const [aspectRatio, setAspectRatio] = useState(prompt.aspect_ratio || '9:16')
   const [videoStyle, setVideoStyle] = useState(prompt.video_style || 'grwm')
@@ -960,7 +976,6 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
   const [videoModel, setVideoModel] = useState(prompt.video_model || 'happyhorse-1.0')
   const [videoDuration, setVideoDuration] = useState(prompt.video_duration || 15)
 
-  // Media display toggle: 'image' or 'video'
   const [mediaView, setMediaView] = useState<'image' | 'video'>('image')
   const [regenerating, setRegenerating] = useState(false)
   const [refining, setRefining] = useState(false)
@@ -969,10 +984,7 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
   const mediaPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const stopMediaPolling = useCallback(() => {
-    if (mediaPollRef.current) {
-      clearInterval(mediaPollRef.current)
-      mediaPollRef.current = null
-    }
+    if (mediaPollRef.current) { clearInterval(mediaPollRef.current); mediaPollRef.current = null }
   }, [])
 
   const startMediaPolling = useCallback(() => {
@@ -980,9 +992,7 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
     const startedAt = Date.now()
     mediaPollRef.current = setInterval(() => {
       onUpdate()
-      if (Date.now() - startedAt > 180000) {
-        stopMediaPolling()
-      }
+      if (Date.now() - startedAt > 180000) stopMediaPolling()
     }, 2000)
   }, [onUpdate, stopMediaPolling])
 
@@ -994,14 +1004,11 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
     setVideoModel(prompt.video_model || 'happyhorse-1.0')
     setVideoDuration(prompt.video_duration || 15)
     setEditText(prompt.prompt_text)
-    if (prompt.image_status !== 'generating' && prompt.video_status !== 'generating') {
-      stopMediaPolling()
-    }
+    if (prompt.image_status !== 'generating' && prompt.video_status !== 'generating') stopMediaPolling()
   }, [prompt])
 
   useEffect(() => () => stopMediaPolling(), [stopMediaPolling])
 
-  // Dynamic duration options based on video model
   const VIDEO_DURATION_MAP: Record<string, number[]> = {
     'seedance-2.0': [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
     'happyhorse-1.0': [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
@@ -1010,82 +1017,42 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
   }
   const durationOptions = VIDEO_DURATION_MAP[videoModel] || [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(prompt.prompt_text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
-  const handleEdit = () => {
-    setEditText(prompt.prompt_text)
-    setEditing(true)
-    setExpanded(true)
-  }
-
+  const handleCopy = () => { navigator.clipboard.writeText(prompt.prompt_text); setCopied(true); setTimeout(() => setCopied(false), 2000) }
+  const handleEdit = () => { setEditText(prompt.prompt_text); setEditing(true); setExpanded(true) }
   const handleSave = async () => {
     setSaving(true)
-    try {
-      await updatePrompt(prompt.id, editText)
-      setEditing(false)
-      onUpdate()
-    } catch (e: any) {
-      alert('保存失败：' + (e.response?.data?.detail || e.message))
-    } finally {
-      setSaving(false)
-    }
+    try { await updatePrompt(prompt.id, editText); setEditing(false); onUpdate() }
+    catch (e: any) { alert('Save failed: ' + (e.response?.data?.detail || e.message)) }
+    finally { setSaving(false) }
   }
-
-  const handleCancel = () => {
-    setEditText(prompt.prompt_text)
-    setEditing(false)
-  }
+  const handleCancel = () => { setEditText(prompt.prompt_text); setEditing(false) }
 
   const handleGenerateImage = async () => {
-    if (prompt.image_status === 'completed') {
-      if (!confirm('图片已生成，确定要重新生成吗？')) return
-    }
+    if (prompt.image_status === 'completed' && !confirm('Regenerate image?')) return
     setGenerating('image')
-    try {
-      await triggerImageGeneration(prompt.id, {
-        grid_layout: gridLayout,
-        aspect_ratio: aspectRatio,
-      })
-      onUpdate()
-      startMediaPolling()
-    } catch (e: any) {
-      alert('启动失败：' + (e.response?.data?.detail || e.message))
-    } finally {
-      setGenerating(null)
-    }
+    try { await triggerImageGeneration(prompt.id, { grid_layout: gridLayout, aspect_ratio: aspectRatio }); onUpdate(); startMediaPolling() }
+    catch (e: any) { alert('Failed: ' + (e.response?.data?.detail || e.message)) }
+    finally { setGenerating(null) }
   }
 
   const handleGenerateVideo = async () => {
-    if (prompt.video_status === 'completed') {
-      if (!confirm('视频已生成，确定要重新生成吗？')) return
-    }
+    if (prompt.video_status === 'completed' && !confirm('Regenerate video?')) return
     setGenerating('video')
-    try {
-      await triggerVideoGeneration(prompt.id)
-      onUpdate()
-      startMediaPolling()
-    } catch (e: any) {
-      alert('启动失败：' + (e.response?.data?.detail || e.message))
-    } finally {
-      setGenerating(null)
-    }
+    try { await triggerVideoGeneration(prompt.id); onUpdate(); startMediaPolling() }
+    catch (e: any) { alert('Failed: ' + (e.response?.data?.detail || e.message)) }
+    finally { setGenerating(null) }
   }
 
   const getStatusBadge = (status: string) => {
-    if (status === 'completed') return <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">已完成</span>
-    if (status === 'generating') return <span className="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full flex items-center gap-1"><Loader2 className="w-2.5 h-2.5 animate-spin" />生成中</span>
-    if (status === 'failed') return <span className="text-[10px] bg-red-100 text-red-700 px-2 py-0.5 rounded-full">失败</span>
+    if (status === 'completed') return <span className="rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-0.5 text-[11px] font-medium border border-emerald-100">Completed</span>
+    if (status === 'generating') return <span className="rounded-full bg-blue-50 text-blue-700 px-2.5 py-0.5 text-[11px] font-medium border border-blue-100 flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Generating</span>
+    if (status === 'failed') return <span className="rounded-full bg-red-50 text-red-700 px-2.5 py-0.5 text-[11px] font-medium border border-red-100">Failed</span>
     return null
   }
 
   const shouldTruncate = prompt.prompt_text.length > 150
   const displayText = expanded || !shouldTruncate ? prompt.prompt_text : prompt.prompt_text.slice(0, 150) + '...'
 
-  // Format prompt text with highlighted section tags
   const formatPromptText = (text: string) => {
     const lines = text.split('\n')
     return lines.map((line, i) => {
@@ -1093,462 +1060,251 @@ function PromptCard({ prompt, onUpdate, templates, hookTemplates, imageLayoutTem
       if (tagMatch) {
         return (
           <div key={i} className="mt-2 first:mt-0">
-            <span className="inline-block text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded mr-1">{tagMatch[1]}</span>
-            <span className="text-xs text-gray-700">{tagMatch[2]}</span>
+            <span className="inline-block text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded mr-1.5">{tagMatch[1]}</span>
+            <span className="text-sm text-gray-700">{tagMatch[2]}</span>
           </div>
         )
       }
-      // Match timestamp patterns: "0-2s:", "- 0-2s:", "0:00-0:03 |", "- 0:00-0:02 [..."
-      // Also: "0s-2s:", "(0-2s)", "  0-2s:", "0-2 seconds:", "**0-2s:**"
       const cleanLine = line.replace(/^\s*[-–•*]*\s*\**/, '').trim()
-      const timeMatch = cleanLine.match(/^(\d+s?\s*[-–]\s*\d+s?(?:\s*(?:seconds?|sec))?)\s*[:||\[]\s*(.*)/) ||
-                         cleanLine.match(/^\((\d+s?\s*[-–]\s*\d+s?)\)\s*[:||\[]\s*(.*)/) ||
-                         cleanLine.match(/^(\d+:\d+\s*[-–]\s*\d+:\d+)\s*[:||\[]\s*(.*)/)
+      const timeMatch = cleanLine.match(/^(\d+s?\s*[-–]\s*\d+s?(?:\s*(?:seconds?|sec))?)\s*[:||\[]\s*(.*)/) || cleanLine.match(/^\((\d+s?\s*[-–]\s*\d+s?)\)\s*[:||\[]\s*(.*)/) || cleanLine.match(/^(\d+:\d+\s*[-–]\s*\d+:\d+)\s*[:||\[]\s*(.*)/)
       if (timeMatch) {
         return (
           <div key={i} className="mt-1 pl-2">
-            <span className="inline-block text-[10px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded mr-1">{timeMatch[1]}</span>
-            <span className="text-xs text-gray-700">{timeMatch[2]}</span>
+            <span className="inline-block text-[11px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded mr-1.5">{timeMatch[1]}</span>
+            <span className="text-sm text-gray-700">{timeMatch[2]}</span>
           </div>
         )
       }
-      if (line.trim() === '') return <div key={i} className="h-1" />
-      return <div key={i} className="text-xs text-gray-600 leading-relaxed pl-1">{line}</div>
+      if (line.trim() === '') return <div key={i} className="h-2" />
+      return <div key={i} className="text-sm text-gray-600 leading-relaxed pl-1">{line}</div>
     })
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-4">
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-gray-800">变体 {prompt.variant_index}</span>
-          <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{prompt.template_name}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {prompt.image_prompt && (
-            <button
-              onClick={() => setShowImagePrompt(v => !v)}
-              className="text-[10px] text-gray-400 hover:text-purple-500 flex items-center gap-0.5 transition-colors"
-            >
-              <ImageIcon className="w-3 h-3" />
-              图片提示词
-            </button>
-          )}
-          <button
-            onClick={handleEdit}
-            disabled={editing}
-            className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1 transition-colors disabled:opacity-40"
-          >
-            <Edit className="w-3 h-3" />
-            编辑
-          </button>
-          <button
-            onClick={handleCopy}
-            className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 transition-colors"
-          >
-            {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-            {copied ? '已复制' : '复制'}
-          </button>
-        </div>
-      </div>
-
-      {/* Image prompt expandable */}
-      {showImagePrompt && prompt.image_prompt && (
-        <div className="mb-2 px-2 py-1.5 bg-purple-50 border border-purple-100 rounded-lg">
-          <p className="text-[10px] text-purple-600 leading-relaxed">{prompt.image_prompt}</p>
-        </div>
-      )}
-
-      {editing ? (
-        <div className="mb-3">
-          <textarea
-            value={editText}
-            onChange={(e) => setEditText(e.target.value)}
-            className="w-full text-xs text-gray-700 leading-relaxed border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            rows={4}
-            style={{ minHeight: '100px' }}
-          />
-          <div className="flex gap-2 mt-2">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            >
-              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-              保存
-            </button>
-            <button
-              onClick={handleCancel}
-              disabled={saving}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-            >
-              <X className="w-3 h-3" />
-              取消
-            </button>
-          </div>
-        </div>
-      ) : (
-        <>
-          {expanded ? (
-            <div className="mb-2 bg-gray-50 rounded-lg p-3 max-h-96 overflow-y-auto">
-              {formatPromptText(prompt.prompt_text)}
-            </div>
-          ) : (
-            <p className="text-xs text-gray-600 leading-relaxed mb-2 line-clamp-3">{displayText}</p>
-          )}
-          {shouldTruncate && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1 mb-3 transition-colors"
-            >
-              {expanded ? (
-                <>
-                  <ChevronUp className="w-3 h-3" />
-                  收起
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-3 h-3" />
-                  展开
-                </>
-              )}
-            </button>
-          )}
-        </>
-      )}
-
-      {/* Selectors: 2 rows */}
-      <div className="space-y-2 mb-3">
-        {/* Row 1: Image settings */}
-        <div className="flex gap-2">
-          <div className="flex-1 min-w-0">
-            <label className="text-[10px] text-gray-400 mb-0.5 block">图片布局</label>
-            <select
-              value={gridLayout}
-              onChange={async (e) => {
-                const newLayout = e.target.value
-                setGridLayout(newLayout)
-                try {
-                  await updatePrompt(prompt.id, prompt.prompt_text, { grid_layout: newLayout })
-                  onUpdate()
-                } catch (e: any) {
-                  alert('更新失败：' + (e.response?.data?.detail || e.message))
-                }
-              }}
-              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs"
-            >
-              {[
-                { key: "single_keyframe", label: "单图" },
-                { key: "storyboard_6panel", label: "6宫格 (3×2)" },
-                { key: "storyboard_9panel", label: "9宫格 (3×3)" },
-                { key: "storyboard_12panel_3x4", label: "12宫格 (3×4)" },
-                { key: "storyboard_12panel_4x3", label: "12宫格 (4×3)" },
-                { key: "storyboard_16panel", label: "16宫格 (4×4)" },
-              ].map(o => (
-                <option key={o.key} value={o.key}>{o.label}</option>
-              ))}
-              {imageLayoutTemplates.filter(t => !["single_keyframe","storyboard_6panel","storyboard_9panel","storyboard_12panel_3x4","storyboard_12panel_4x3","storyboard_16panel"].includes(t.key)).map(t => (
-                <option key={t.key} value={t.key}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1 min-w-0">
-            <label className="text-[10px] text-gray-400 mb-0.5 block">画面比例</label>
-            <select
-              value={aspectRatio}
-              onChange={async (e) => {
-                const newRatio = e.target.value
-                setAspectRatio(newRatio)
-                try {
-                  await updatePrompt(prompt.id, prompt.prompt_text, { aspect_ratio: newRatio })
-                  onUpdate()
-                } catch (e: any) {
-                  alert('更新失败：' + (e.response?.data?.detail || e.message))
-                }
-              }}
-              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs"
-            >
-              <option value="16:9">16:9</option>
-              <option value="9:16">9:16</option>
-              <option value="1:1">1:1</option>
-            </select>
-          </div>
-          <div className="flex-1 min-w-0">
-            <label className="text-[10px] text-gray-400 mb-0.5 block">视频风格</label>
-            <select
-              value={videoStyle}
-              onChange={async (e) => {
-                const newStyle = e.target.value
-                setVideoStyle(newStyle)
-                await updatePrompt(prompt.id, prompt.prompt_text, { video_style: newStyle })
-              }}
-              disabled={regenerating}
-              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs disabled:opacity-50"
-            >
-              {templates.map(t => (
-                <option key={t.key} value={t.key}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        {/* Row 2: Video settings */}
-        <div className="flex gap-2">
-          <div className="flex-1 min-w-0">
-            <label className="text-[10px] text-gray-400 mb-0.5 block">开场白</label>
-            <select
-              value={templates.find(t => t.key === videoStyle)?.has_builtin_hook ? 'none' : hookKey}
-              onChange={(e) => setHookKey(e.target.value)}
-              disabled={regenerating || !!templates.find(t => t.key === videoStyle)?.has_builtin_hook}
-              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs disabled:opacity-50"
-            >
-              <option value="none">不使用</option>
-              <option value="auto">智能选择</option>
-              {hookTemplates.map(h => (
-                <option key={h.key} value={h.key}>{h.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex-1 min-w-0">
-            <label className="text-[10px] text-gray-400 mb-0.5 block">视频模型</label>
-            <select
-              value={videoModel}
-              onChange={async (e) => {
-                const newModel = e.target.value
-                setVideoModel(newModel)
-                const newDurationOptions = VIDEO_DURATION_MAP[newModel] || [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-                let adjustedDuration = videoDuration
-                if (!newDurationOptions.includes(videoDuration)) {
-                  adjustedDuration = newDurationOptions[newDurationOptions.length - 1]
-                  setVideoDuration(adjustedDuration)
-                }
-                try {
-                  await updatePrompt(prompt.id, prompt.prompt_text, { video_model: newModel, video_duration: adjustedDuration })
-                  onUpdate()
-                } catch (e: any) {
-                  alert('更新失败：' + (e.response?.data?.detail || e.message))
-                }
-              }}
-              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs"
-            >
-              <option value="seedance-2.0">Seedance 2.0</option>
-              <option value="happyhorse-1.0">HappyHorse 1.0</option>
-              <option value="wan-2.6">Wan 2.6</option>
-              <option value="veo-3.1">Veo 3.1</option>
-            </select>
-          </div>
-          <div className="flex-1 min-w-0">
-            <label className="text-[10px] text-gray-400 mb-0.5 block">时长</label>
-            <select
-              value={videoDuration}
-              onChange={async (e) => {
-                const newDuration = Number(e.target.value)
-                setVideoDuration(newDuration)
-                try {
-                  await updatePrompt(prompt.id, prompt.prompt_text, { video_duration: newDuration })
-                  onUpdate()
-                } catch (e: any) {
-                  alert('更新失败：' + (e.response?.data?.detail || e.message))
-                }
-              }}
-              className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs"
-            >
-              {durationOptions.map(d => (
-                <option key={d} value={d}>{d}秒</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex gap-2 mb-2">
-        <button
-          onClick={async () => {
-            setRegenerating(true)
-            try {
-              const updated = await regeneratePrompt(prompt.id, videoStyle, hookKey === 'none' ? undefined : hookKey)
-              setHookKey(updated.hook_key || 'auto')
-              setVideoStyle(updated.video_style || videoStyle)
-              onUpdate()
-            } catch (e: any) {
-              alert('重新生成失败：' + (e.response?.data?.detail || e.message))
-            } finally {
-              setRegenerating(false)
-            }
-          }}
-          disabled={regenerating || refining}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-orange-50 text-orange-600 rounded-lg hover:bg-orange-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-        >
-          {regenerating ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Edit className="w-3.5 h-3.5" />
-          )}
-          重新生成提示词
-        </button>
-        <button
-          onClick={() => setShowRefine(v => !v)}
-          disabled={regenerating || refining}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-violet-50 text-violet-600 rounded-lg hover:bg-violet-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-        >
-          微调
-        </button>
-      </div>
-
-      {showRefine && (
-        <div className="mb-2 bg-violet-50 border border-violet-200 rounded-lg p-3">
-          <textarea
-            value={refineText}
-            onChange={e => setRefineText(e.target.value)}
-            placeholder="输入微调指令，如：所有镜头都要有宠物出镜、加入产品特写、语气更活泼..."
-            rows={2}
-            className="w-full text-xs border border-violet-200 rounded-lg p-2 mb-2 focus:outline-none focus:ring-1 focus:ring-violet-400 resize-none"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={async () => {
-                if (!refineText.trim()) return
-                setRefining(true)
-                try {
-                  await refinePrompt(prompt.id, refineText.trim())
-                  onUpdate()
-                  setRefineText('')
-                  setShowRefine(false)
-                } catch (e: any) {
-                  alert('微调失败：' + (e.response?.data?.detail || e.message))
-                } finally {
-                  setRefining(false)
-                }
-              }}
-              disabled={refining || !refineText.trim()}
-              className="px-3 py-1.5 text-xs font-medium bg-violet-500 text-white rounded-lg hover:bg-violet-600 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1"
-            >
-              {refining ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
-              {refining ? '微调中...' : '确认微调'}
-            </button>
-            <button
-              onClick={() => { setShowRefine(false); setRefineText('') }}
-              className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700"
-            >
-              取消
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="flex gap-2">
-        <button
-          onClick={handleGenerateImage}
-          disabled={generating === 'image' || prompt.image_status === 'generating'}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-        >
-          {generating === 'image' || prompt.image_status === 'generating' ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <ImageIcon className="w-3.5 h-3.5" />
-          )}
-          生成图片
-        </button>
-        <button
-          onClick={handleGenerateVideo}
-          disabled={generating === 'video' || prompt.video_status === 'generating'}
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-        >
-          {generating === 'video' || prompt.video_status === 'generating' ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Video className="w-3.5 h-3.5" />
-          )}
-          生成视频
-        </button>
-      </div>
-
-      <div className="flex gap-2 mt-2">
-        {getStatusBadge(prompt.image_status)}
-        {getStatusBadge(prompt.video_status)}
-      </div>
-
-      {/* Image generating progress */}
-      {prompt.image_status === 'generating' && (
-        <div className="mt-3 flex items-center gap-2 px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-lg">
-          <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
-          <span className="text-xs text-blue-600 font-medium">图片生成中，预计需要 30-60 秒...</span>
-        </div>
-      )}
-
-      {/* Image failed */}
-      {prompt.image_status === 'failed' && (
-        <div className="mt-3 flex items-start gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-lg">
-          <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-red-500" />
-          <span className="text-xs leading-relaxed text-red-600">
-            图片生成失败{prompt.error_message ? `：${prompt.error_message}` : '，请重试'}
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden">
+      {/* ── Card Header ── */}
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-50">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center justify-center w-7 h-7 rounded-xl bg-gray-50 text-xs font-bold text-gray-600">
+            {prompt.variant_index}
           </span>
+          <div>
+            <span className="text-sm font-semibold text-gray-800">Variant {prompt.variant_index}</span>
+            <span className="ml-2 rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-medium text-gray-500">{prompt.template_name}</span>
+          </div>
         </div>
-      )}
-
-      {/* Media toggle buttons - show when both image and video are available */}
-      {(prompt.image_status === 'completed' || prompt.video_status === 'completed') && (
-        <div className="mt-3 flex gap-2 border-b border-gray-200">
-          <button
-            onClick={() => setMediaView('image')}
-            disabled={prompt.image_status !== 'completed'}
-            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-              mediaView === 'image'
-                ? 'text-blue-600 border-b-2 border-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            } disabled:opacity-40 disabled:cursor-not-allowed`}
-          >
-            图片 {prompt.image_status === 'completed' && '✓'}
+        <div className="flex items-center gap-1.5">
+          {prompt.image_prompt && (
+            <button onClick={() => setShowImagePrompt(v => !v)} className="text-[11px] text-gray-400 hover:text-violet-500 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-violet-50 transition-colors">
+              <ImageIcon className="w-3.5 h-3.5" />Prompt
+            </button>
+          )}
+          <button onClick={handleEdit} disabled={editing} className="text-[11px] text-gray-400 hover:text-gray-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-30">
+            <Edit className="w-3.5 h-3.5" />Edit
           </button>
-          <button
-            onClick={() => setMediaView('video')}
-            disabled={prompt.video_status !== 'completed'}
-            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
-              mediaView === 'video'
-                ? 'text-purple-600 border-b-2 border-purple-600'
-                : 'text-gray-500 hover:text-gray-700'
-            } disabled:opacity-40 disabled:cursor-not-allowed`}
-          >
-            视频 {prompt.video_status === 'completed' && '✓'}
+          <button onClick={handleCopy} className="text-[11px] text-blue-500 hover:text-blue-600 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-blue-50 transition-colors">
+            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
-      )}
+      </div>
 
-      {/* Image display */}
-      {mediaView === 'image' && prompt.image_status === 'completed' && (
-        <div className="mt-3 rounded-lg overflow-hidden border border-gray-200">
-          <img
-            src={`${getGeneratedImageUrl(prompt.id)}?t=${Date.now()}`}
-            alt="生成的图片"
-            className="w-full cursor-pointer hover:opacity-90 transition-opacity"
-            onClick={() => onPreviewImage(`${getGeneratedImageUrl(prompt.id)}?t=${Date.now()}`)}
-          />
-        </div>
-      )}
+      {/* ── Card Body ── */}
+      <div className="px-5 py-4 space-y-4">
+        {/* Image prompt expandable */}
+        {showImagePrompt && prompt.image_prompt && (
+          <div className="px-3 py-2.5 bg-violet-50/60 border border-violet-100 rounded-xl">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-violet-400">Image Prompt</span>
+            <p className="text-xs text-violet-700 leading-relaxed mt-1">{prompt.image_prompt}</p>
+          </div>
+        )}
 
-      {/* Video generating progress */}
-      {prompt.video_status === 'generating' && (
-        <div className="mt-3 flex items-center gap-2 px-3 py-2.5 bg-purple-50 border border-purple-100 rounded-lg">
-          <Loader2 className="w-4 h-4 text-purple-500 animate-spin flex-shrink-0" />
-          <span className="text-xs text-purple-600 font-medium">视频生成中，预计需要 2-5 分钟...</span>
-        </div>
-      )}
+        {/* Prompt text */}
+        {editing ? (
+          <div>
+            <textarea value={editText} onChange={(e) => setEditText(e.target.value)}
+              className="w-full text-sm text-gray-700 leading-relaxed border border-gray-200 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300 transition-all" rows={5} />
+            <div className="flex gap-2 mt-2">
+              <button onClick={handleSave} disabled={saving}
+                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium bg-gray-900 text-white rounded-xl hover:bg-gray-800 disabled:opacity-40 transition-all">
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}Save
+              </button>
+              <button onClick={handleCancel} disabled={saving}
+                className="px-4 py-2 text-xs font-medium text-gray-600 hover:text-gray-800 transition-colors">Cancel</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {expanded ? (
+              <div className="bg-gray-50/80 rounded-xl p-4 max-h-96 overflow-y-auto">{formatPromptText(prompt.prompt_text)}</div>
+            ) : (
+              <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">{displayText}</p>
+            )}
+            {shouldTruncate && (
+              <button onClick={() => setExpanded(!expanded)} className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors">
+                {expanded ? <><ChevronUp className="w-3.5 h-3.5" />Collapse</> : <><ChevronDown className="w-3.5 h-3.5" />Expand</>}
+              </button>
+            )}
+          </>
+        )}
 
-      {/* Video failed */}
-      {prompt.video_status === 'failed' && (
-        <div className="mt-3 flex items-center gap-2 px-3 py-2.5 bg-red-50 border border-red-100 rounded-lg">
-          <span className="text-xs text-red-600">视频生成失败，请重试</span>
+        {/* Config grid: 2 rows x 3 cols */}
+        <div className="grid grid-cols-3 gap-3">
+          <SelectField label="Layout" value={gridLayout} onChange={async (v) => { setGridLayout(v); try { await updatePrompt(prompt.id, prompt.prompt_text, { grid_layout: v }); onUpdate() } catch {} }}>
+            {[
+              { key: "single_keyframe", label: "Single" }, { key: "storyboard_6panel", label: "6-panel (3×2)" },
+              { key: "storyboard_9panel", label: "9-panel (3×3)" }, { key: "storyboard_12panel_3x4", label: "12-panel (3×4)" },
+              { key: "storyboard_12panel_4x3", label: "12-panel (4×3)" }, { key: "storyboard_16panel", label: "16-panel (4×4)" },
+              ...imageLayoutTemplates.filter(t => !["single_keyframe","storyboard_6panel","storyboard_9panel","storyboard_12panel_3x4","storyboard_12panel_4x3","storyboard_16panel"].includes(t.key)).map(t => ({ key: t.key, label: t.name }))
+            ].map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+          </SelectField>
+          <SelectField label="Aspect" value={aspectRatio} onChange={async (v) => { setAspectRatio(v); try { await updatePrompt(prompt.id, prompt.prompt_text, { aspect_ratio: v }); onUpdate() } catch {} }}>
+            <option value="16:9">16:9</option><option value="9:16">9:16</option><option value="1:1">1:1</option>
+          </SelectField>
+          <SelectField label="Style" value={videoStyle} onChange={async (v) => { setVideoStyle(v); await updatePrompt(prompt.id, prompt.prompt_text, { video_style: v }) }} disabled={regenerating}>
+            {templates.map(t => <option key={t.key} value={t.key}>{t.name}</option>)}
+          </SelectField>
+          <SelectField label="Hook" value={templates.find(t => t.key === videoStyle)?.has_builtin_hook ? 'none' : hookKey} onChange={(v) => setHookKey(v)} disabled={regenerating || !!templates.find(t => t.key === videoStyle)?.has_builtin_hook}>
+            <option value="none">None</option><option value="auto">Smart Select</option>
+            {hookTemplates.map(h => <option key={h.key} value={h.key}>{h.name}</option>)}
+          </SelectField>
+          <SelectField label="Model" value={videoModel} onChange={async (v) => { setVideoModel(v); const dOpts = VIDEO_DURATION_MAP[v] || [5,6,7,8,9,10,11,12,13,14,15]; let d = videoDuration; if (!dOpts.includes(d)) { d = dOpts[dOpts.length - 1]; setVideoDuration(d) }; try { await updatePrompt(prompt.id, prompt.prompt_text, { video_model: v, video_duration: d }); onUpdate() } catch {} }}>
+            <option value="seedance-2.0">Seedance 2.0</option><option value="happyhorse-1.0">HappyHorse 1.0</option>
+            <option value="wan-2.6">Wan 2.6</option><option value="veo-3.1">Veo 3.1</option>
+          </SelectField>
+          <SelectField label="Duration" value={videoDuration} onChange={async (v) => { const n = Number(v); setVideoDuration(n); try { await updatePrompt(prompt.id, prompt.prompt_text, { video_duration: n }); onUpdate() } catch {} }}>
+            {durationOptions.map(d => <option key={d} value={d}>{d}s</option>)}
+          </SelectField>
         </div>
-      )}
 
-      {/* Video display */}
-      {mediaView === 'video' && prompt.video_status === 'completed' && (
-        <div className="mt-3 rounded-lg overflow-hidden border border-gray-200">
-          <video src={`/api/products/prompts/${prompt.id}/video`} controls className="w-full" />
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <button onClick={async () => {
+            setRegenerating(true)
+            try { const u = await regeneratePrompt(prompt.id, videoStyle, hookKey === 'none' ? undefined : hookKey); setHookKey(u.hook_key || 'auto'); setVideoStyle(u.video_style || videoStyle); onUpdate() }
+            catch (e: any) { alert('Failed: ' + (e.response?.data?.detail || e.message)) }
+            finally { setRegenerating(false) }
+          }} disabled={regenerating || refining}
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-amber-50 text-amber-700 rounded-xl hover:bg-amber-100 disabled:opacity-40 border border-amber-100 transition-all">
+            {regenerating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Edit className="w-3.5 h-3.5" />}Regenerate
+          </button>
+          <button onClick={() => setShowRefine(v => !v)} disabled={regenerating || refining}
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-violet-50 text-violet-700 rounded-xl hover:bg-violet-100 disabled:opacity-40 border border-violet-100 transition-all">
+            Refine
+          </button>
         </div>
-      )}
+
+        {showRefine && (
+          <div className="bg-violet-50/60 border border-violet-100 rounded-xl p-3">
+            <textarea value={refineText} onChange={e => setRefineText(e.target.value)}
+              placeholder="Describe your refinements…"
+              rows={2} className="w-full text-sm border border-violet-200 rounded-xl p-2.5 focus:outline-none focus:ring-1 focus:ring-violet-300 resize-none" />
+            <div className="flex gap-2 mt-2">
+              <button onClick={async () => {
+                if (!refineText.trim()) return; setRefining(true)
+                try { await refinePrompt(prompt.id, refineText.trim()); onUpdate(); setRefineText(''); setShowRefine(false) }
+                catch (e: any) { alert('Failed: ' + (e.response?.data?.detail || e.message)) }
+                finally { setRefining(false) }
+              }} disabled={refining || !refineText.trim()}
+                className="px-4 py-2 text-xs font-medium bg-violet-600 text-white rounded-xl hover:bg-violet-700 disabled:opacity-40 flex items-center gap-1.5 transition-all">
+                {refining ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}{refining ? 'Refining…' : 'Apply'}
+              </button>
+              <button onClick={() => { setShowRefine(false); setRefineText('') }} className="px-3 py-2 text-xs text-gray-500 hover:text-gray-700 transition-colors">Cancel</button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button onClick={handleGenerateImage} disabled={generating === 'image' || prompt.image_status === 'generating'}
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-gray-900 text-white rounded-xl hover:bg-gray-800 disabled:opacity-30 transition-all">
+            {generating === 'image' || prompt.image_status === 'generating' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+            Generate Image
+          </button>
+          <button onClick={handleGenerateVideo} disabled={generating === 'video' || prompt.video_status === 'generating'}
+            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold bg-violet-600 text-white rounded-xl hover:bg-violet-700 disabled:opacity-30 transition-all">
+            {generating === 'video' || prompt.video_status === 'generating' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Video className="w-3.5 h-3.5" />}
+            Generate Video
+          </button>
+        </div>
+
+        {/* Status badges */}
+        <div className="flex gap-2">
+          {getStatusBadge(prompt.image_status)}
+          {getStatusBadge(prompt.video_status)}
+        </div>
+
+        {/* Progress / error messages */}
+        {prompt.image_status === 'generating' && (
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-blue-50/60 border border-blue-100 rounded-xl">
+            <Loader2 className="w-4 h-4 text-blue-500 animate-spin flex-shrink-0" />
+            <span className="text-xs text-blue-700 font-medium">Generating image (30–60s)...</span>
+          </div>
+        )}
+        {prompt.image_status === 'failed' && (
+          <div className="flex items-start gap-2 px-3 py-2.5 bg-red-50/60 border border-red-100 rounded-xl">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
+            <span className="text-xs text-red-700 leading-relaxed">Image generation failed{prompt.error_message ? ': ' + prompt.error_message : '. Retry?'}</span>
+          </div>
+        )}
+        {prompt.video_status === 'generating' && (
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-violet-50/60 border border-violet-100 rounded-xl">
+            <Loader2 className="w-4 h-4 text-violet-500 animate-spin flex-shrink-0" />
+            <span className="text-xs text-violet-700 font-medium">Generating video (2–5 min)...</span>
+          </div>
+        )}
+        {prompt.video_status === 'failed' && (
+          <div className="flex items-center gap-2 px-3 py-2.5 bg-red-50/60 border border-red-100 rounded-xl">
+            <span className="text-xs text-red-700">Video generation failed. Retry?</span>
+          </div>
+        )}
+
+        {/* Media toggle */}
+        {(prompt.image_status === 'completed' || prompt.video_status === 'completed') && (
+          <div className="flex rounded-xl bg-gray-50 p-1">
+            <button onClick={() => setMediaView('image')} disabled={prompt.image_status !== 'completed'}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${mediaView === 'image' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'} disabled:opacity-30`}>
+              Image {prompt.image_status === 'completed' && ' ✓'}
+            </button>
+            <button onClick={() => setMediaView('video')} disabled={prompt.video_status !== 'completed'}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${mediaView === 'video' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'} disabled:opacity-30`}>
+              Video {prompt.video_status === 'completed' && ' ✓'}
+            </button>
+          </div>
+        )}
+
+        {/* Media display */}
+        {mediaView === 'image' && prompt.image_status === 'completed' && (
+          <div className="rounded-xl overflow-hidden border border-gray-100 shadow-sm">
+            <img src={`${getGeneratedImageUrl(prompt.id)}?t=${Date.now()}`} alt="Generated"
+              className="w-full cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => onPreviewImage(`${getGeneratedImageUrl(prompt.id)}?t=${Date.now()}`)} />
+          </div>
+        )}
+        {mediaView === 'video' && prompt.video_status === 'completed' && (
+          <div className="rounded-xl overflow-hidden border border-gray-100 shadow-sm">
+            <video src={`/api/products/prompts/${prompt.id}/video`} controls className="w-full" />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
+
+// ── SelectField helper ──
+function SelectField({ label, value, onChange, disabled, children }: {
+  label: string; value: string | number; onChange: (v: string) => void; disabled?: boolean; children: React.ReactNode
+}) {
+  return (
+    <div className="min-w-0">
+      <label className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-1 block">{label}</label>
+      <select value={value} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)} disabled={disabled}
+        className="w-full border border-gray-200 rounded-lg px-2.5 py-2 text-xs font-medium text-gray-700 bg-gray-50/50 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-100 focus:border-gray-300 disabled:opacity-40 transition-all">
+        {children}
+      </select>
+    </div>
+  )
+}
+
 
 function GeneratePromptsForm({
   productId,
