@@ -26,14 +26,20 @@ def _call_with_retry(fn, max_retries: int = 3, base_wait: int = 10):
                 raise
 
 _PRODUCT_IMAGE_PROMPT_FALLBACK = (
-    "Analyze this product image and return a JSON object with exactly these fields:\n"
-    '{"basic_recognition":"Describe what you see: the object, colors, materials, background scene",'
-    '"product_understanding":"Product details: appearance features, selling points, target audience, use cases",'
-    '"creative_usage":"TikTok video suggestions: what type of shot this suits (unboxing/detail close-up/lifestyle/comparison), recommended camera angle and lighting",'
-    '"focus_subject":"What the image is mainly showing in relation to the target product",'
+    "Analyze this product image WITH the product page context above as ground truth. Return a JSON object with exactly these fields:\n"
+    '{"basic_recognition":"Describe literally what you see: objects, people, colors, materials, text, background",'
+    '"product_understanding":"IF this image shows the actual target product: describe appearance features, selling points. '
+    'IF it shows a phone screen, app UI, packaging, chart, room, hand, or lifestyle prop: identify what it shows and '
+    'explain what product information can be gathered from it (e.g. \'phone screenshot showing product listing\' or '
+    '\'lifestyle photo with product visible on desk\')",'
+    '"creative_usage":"TikTok video suggestions based on this image: shot type, camera angle, lighting",'
+    '"focus_subject":"Be specific: name the EXACT main object in the image. If it shows a mobile phone or screen, '
+    'do NOT mistake the phone for the product. State \'mobile phone displaying product page\' or similar.",'
     '"relevance":"primary_product|packaging_or_infographic|usage_scene|comparison|unrelated_or_ambiguous",'
-    '"context_alignment":"Explain whether the visual evidence matches the provided product page context"}'
-    "\nAll descriptions must be in English. Return ONLY the JSON, no other text."
+    '"context_alignment":"CRITICAL: Compare what you see against the product page context. If the image shows a phone, '
+    'app, room, or prop that is clearly NOT the target product described in the context, explain the discrepancy and '
+    'identify what the image actually depicts"}\n'
+    "All descriptions must be in English. Return ONLY the JSON, no other text."
 )
 
 # Keep the old name as an alias so any existing callers still work
@@ -55,15 +61,19 @@ def _get_product_image_prompt(db=None) -> str:
 
 def _format_product_context(title: str = "", description: str = "") -> str:
     return (
-        "Product page context (treat this as the source of truth when interpreting images):\n"
-        f"- Title: {title or 'Unknown'}\n"
-        f"- Page description: {description or 'No page description'}\n"
-        "Rules:\n"
-        "- Identify the TARGET PRODUCT from the title and page description first.\n"
-        "- If an image contains a phone, app screen, hand, room, packaging text, comparison chart, or lifestyle prop, "
-        "do not classify that prop as the product unless the page context says it is the product.\n"
-        "- If the raw visual caption conflicts with the product page context, correct it and explain the correction in context_alignment.\n"
-        "- For infographic or usage images, describe the product information shown and keep the target product as the focus.\n"
+        "PRODUCT PAGE CONTEXT (this is the authoritative source; use it to validate every image):\n"
+        f"- Product Title: {title or 'Unknown'}\n"
+        f"- Product Description: {description or 'No page description'}\n"
+        "RULES (follow strictly):\n"
+        "1. The TARGET PRODUCT is defined by the title and description above. This is the ONLY product.\n"
+        "2. Many images will show props: phones, computer screens, app UIs, hands, rooms, packaging, text charts, "
+        "decoration elements. Do NOT classify these props as the product. Label them accurately.\n"
+        "3. If the image clearly IS the target product (matches the title/description): set relevance='primary_product'.\n"
+        "4. If the image shows a phone/screen displaying product info: set relevance='packaging_or_infographic', "
+        "focus_subject='mobile phone showing product listing'.\n"
+        "5. If the image shows the product in a lifestyle setting: set relevance='usage_scene'.\n"
+        "6. If the visual content conflicts with the product context, you MUST explain the discrepancy in context_alignment.\n"
+        "7. Never assume a phone, screen, hand, room, or decoration is the product. Always cross-check against the title.\n"
     )
 
 

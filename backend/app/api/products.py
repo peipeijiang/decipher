@@ -476,7 +476,7 @@ def regenerate_prompt(prompt_id: str, body: dict, db: Session = Depends(get_db))
                     resolved_hook_key = matched.key
                     import json as _json
                     examples = _json.loads(matched.examples) if matched.examples else []
-                    hook_instruction = f"\nFor [Hook], use the '{matched.name}' strategy. Example: \"{examples[0] if examples else matched.description}\""
+                    hook_instruction = f"\n[MANDATORY] For [Hook], use the '{matched.name}' strategy. Format: [Hook] [{matched.name}]: <your hook line>. Example: \"{examples[0] if examples else matched.description}\""
         except Exception:
             pass
     elif hook_key and hook_key != "none":
@@ -486,7 +486,7 @@ def regenerate_prompt(prompt_id: str, body: dict, db: Session = Depends(get_db))
             if hook:
                 import json as _json
                 examples = _json.loads(hook.examples) if hook.examples else []
-                hook_instruction = f"\nFor [Hook], use the '{hook.name}' strategy. Example: \"{examples[0] if examples else hook.description}\""
+                hook_instruction = f"\n[MANDATORY] For [Hook], use the '{hook.name}' strategy. Format: [Hook] [{hook.name}]: <your hook line>. Example: \"{examples[0] if examples else hook.description}\""
         except Exception:
             pass
 
