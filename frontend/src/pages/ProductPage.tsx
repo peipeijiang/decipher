@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { MainLayout } from '../components/layout/MainLayout'
 import { TaskQueueSidebar } from '../components/TaskQueueSidebar'
-import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X } from 'lucide-react'
+import { Loader2, Check, Copy, Image as ImageIcon, Video, AlertCircle, ChevronDown, ChevronUp, Edit, Save, X, FileText, Layers, Target, Lightbulb } from 'lucide-react'
 import {
   createProduct,
   getProduct,
@@ -436,32 +436,7 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* Right: Product Doc */}
-            <div>
-              <h3 className="text-sm font-semibold text-gray-800 mb-3">文档摘要</h3>
-              <div className="space-y-3 text-sm">
-                <div>
-                  <div className="text-xs font-semibold text-gray-500 mb-1">标题</div>
-                  <div className="text-gray-800">{doc.title}</div>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-gray-500 mb-1">描述</div>
-                  <div className="text-gray-700 text-xs leading-relaxed">{doc.description}</div>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-gray-500 mb-1">外观</div>
-                  <div className="text-gray-700 text-xs leading-relaxed">{doc.appearance}</div>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-gray-500 mb-1">使用场景</div>
-                  <div className="text-gray-700 text-xs leading-relaxed">{doc.usage}</div>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-gray-500 mb-1">卖点</div>
-                  <div className="text-gray-700 text-xs leading-relaxed">{doc.selling_points}</div>
-                </div>
-              </div>
-            </div>
+            <ProductDocSummary doc={doc} />
             </div>
           </div>
         )}
@@ -670,6 +645,101 @@ export default function ProductPage() {
         </div>
       )}
     </MainLayout>
+  )
+}
+
+function compactText(value?: string | null, fallback = '待补充'): string {
+  const text = (value || '').replace(/\s+/g, ' ').trim()
+  return text || fallback
+}
+
+function takeInsightSnippets(doc: ProductDoc, field: 'basic_recognition' | 'product_understanding' | 'creative_usage', limit = 3): string[] {
+  const seen = new Set<string>()
+  return (doc.images || [])
+    .map(img => compactText(img[field], ''))
+    .filter(Boolean)
+    .map(text => text.split(/(?<=[.!?。！？])\s+/)[0] || text)
+    .map(text => text.length > 170 ? `${text.slice(0, 170)}...` : text)
+    .filter(text => {
+      const key = text.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, limit)
+}
+
+function ProductDocSummary({ doc }: { doc: ProductDoc }) {
+  const appearanceSnippets = takeInsightSnippets(doc, 'basic_recognition')
+  const usageSnippets = takeInsightSnippets(doc, 'creative_usage')
+  const sellingSnippets = takeInsightSnippets(doc, 'product_understanding')
+  const summaryBlocks = [
+    {
+      label: '外观识别',
+      icon: Layers,
+      value: compactText(doc.appearance, appearanceSnippets[0] || '图片里暂未形成稳定外观结论'),
+      evidence: appearanceSnippets.slice(1),
+    },
+    {
+      label: '使用场景',
+      icon: Target,
+      value: compactText(doc.usage, usageSnippets[0] || '图片里暂未识别到明确使用场景'),
+      evidence: usageSnippets.slice(1),
+    },
+    {
+      label: '卖点线索',
+      icon: Lightbulb,
+      value: compactText(doc.selling_points, sellingSnippets[0] || '图片里暂未提炼出明确卖点'),
+      evidence: sellingSnippets.slice(1),
+    },
+  ]
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="mb-1 flex items-center gap-2">
+            <FileText className="h-4 w-4 text-blue-500" />
+            <h3 className="text-sm font-semibold text-gray-900">文档摘要</h3>
+          </div>
+          <p className="text-sm font-medium leading-snug text-gray-800">{compactText(doc.title, '未识别到商品标题')}</p>
+        </div>
+        <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+          {doc.images?.length || 0} 张图
+        </span>
+      </div>
+
+      <div className="mb-4 rounded-lg bg-gray-50 px-3 py-2.5">
+        <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">页面文案</div>
+        <p className="text-xs leading-relaxed text-gray-700">{compactText(doc.description, '页面文案为空，建议重新识别或补充商品链接信息')}</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3">
+        {summaryBlocks.map(block => {
+          const Icon = block.icon
+          return (
+            <div key={block.label} className="rounded-lg border border-gray-100 bg-white px-3 py-3">
+              <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-blue-50 text-blue-600">
+                  <Icon className="h-3.5 w-3.5" />
+                </span>
+                <div className="text-xs font-semibold text-gray-800">{block.label}</div>
+              </div>
+              <p className="text-xs leading-relaxed text-gray-700">{block.value}</p>
+              {block.evidence.length > 0 && (
+                <div className="mt-2 space-y-1.5 border-t border-gray-100 pt-2">
+                  {block.evidence.map((item, idx) => (
+                    <p key={idx} className="text-[11px] leading-relaxed text-gray-500">
+                      {item}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
