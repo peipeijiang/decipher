@@ -692,32 +692,41 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
   const evidence = normalizeList(doc.image_evidence)
   const hasContent = (v?: string | null) => v && v.trim().length > 0
 
-  // Selling points as cleaned tags
   const sellingTags = (doc.selling_points || '')
     .split(/[,，;；、]/)
     .map(s => s.trim())
     .filter(Boolean)
     .slice(0, 10)
 
+  // Alternate tag backgrounds for visual variety
+  const tagColors = [
+    'bg-indigo-50/70 text-indigo-700 border-indigo-100',
+    'bg-sky-50/70 text-sky-700 border-sky-100',
+    'bg-emerald-50/70 text-emerald-700 border-emerald-100',
+    'bg-amber-50/70 text-amber-700 border-amber-100',
+    'bg-rose-50/70 text-rose-700 border-rose-100',
+    'bg-violet-50/70 text-violet-700 border-violet-100',
+  ]
+
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_4px_16px_rgba(0,0,0,0.03)]">
-      {/* ── Header ── */}
-      <div className="flex items-center gap-4 px-5 py-4 border-b border-gray-100">
+    <div className="rounded-2xl border border-gray-100 bg-[#fcfcf9] shadow-[0_1px_3px_rgba(0,0,0,0.03),0_4px_16px_rgba(0,0,0,0.04)]">
+      {/* ── Header with warm background ── */}
+      <div className="flex items-center gap-4 px-5 py-4 border-b border-amber-100/50 bg-gradient-to-r from-amber-50/40 to-white">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-          <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100">
-            <FileText className="h-4 w-4 text-blue-600" />
+          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-white shadow-sm border border-amber-100">
+            <FileText className="h-4 w-4 text-amber-600" />
           </div>
           <div className="min-w-0">
-            <h3 className="text-sm font-bold text-gray-900 truncate">{compactText(doc.title, sourceTitle)}</h3>
-            <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1">{sourceDescription}</p>
+            <h3 className="text-sm font-bold text-[#2d2a24] tracking-tight truncate">{compactText(doc.title, sourceTitle)}</h3>
+            <p className="text-[11px] text-gray-400 mt-0.5 line-clamp-1 leading-relaxed">{sourceDescription}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-500">
+          <span className="rounded-full bg-white border border-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-400 shadow-sm">
             {doc.images?.length || 0} images
           </span>
           {doc.category && (
-            <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-600 capitalize">
+            <span className="rounded-full bg-white border border-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-700 capitalize shadow-sm">
               {doc.category}
             </span>
           )}
@@ -725,44 +734,44 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
       </div>
 
       {/* ── Body ── */}
-      <div className="px-5 py-4 space-y-4">
+      <div className="px-5 py-4 space-y-5">
 
-        {/* Selling points */}
+        {/* Selling points — alternating pastel chips */}
         {sellingTags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {sellingTags.map((tag, i) => (
-              <span key={i} className="rounded-md bg-gray-50 border border-gray-100 px-2.5 py-1 text-xs text-gray-600 font-medium">
+              <span key={i} className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${tagColors[i % tagColors.length]}`}>
                 {tag}
               </span>
             ))}
           </div>
         )}
 
-        {/* Key parts + usage steps — side by side on desktop */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Key parts + usage steps — side by side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {keyParts.length > 0 && (
-            <div>
-              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">Key Components</h4>
-              <ul className="space-y-1.5">
+            <div className="relative pl-4 border-l-2 border-indigo-100">
+              <h4 className="text-[10px] font-bold uppercase tracking-[0.15em] text-indigo-400 mb-3">Key Components</h4>
+              <ul className="space-y-2">
                 {keyParts.map((part, i) => (
-                  <li key={i} className="flex gap-2 text-xs text-gray-700 leading-relaxed">
-                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-blue-400" />
-                    <span>{part}</span>
+                  <li key={i} className="flex gap-2.5 text-xs text-gray-700 leading-relaxed">
+                    <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-indigo-400" />
+                    <span className="text-[#3d3830]">{part}</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
           {usageSteps.length > 0 && (
-            <div>
-              <h4 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 mb-2">How to Use</h4>
-              <ol className="space-y-1.5">
+            <div className="relative pl-4 border-l-2 border-emerald-100">
+              <h4 className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-500 mb-3">How to Use</h4>
+              <ol className="space-y-2">
                 {usageSteps.map((step, idx) => (
-                  <li key={idx} className="flex gap-2 text-xs text-gray-700 leading-relaxed">
-                    <span className="flex-shrink-0 w-4 h-4 mt-0.5 flex items-center justify-center rounded-full bg-blue-50 text-[10px] font-bold text-blue-600">
+                  <li key={idx} className="flex gap-2.5 text-xs text-gray-700 leading-relaxed">
+                    <span className="flex-shrink-0 w-[18px] h-[18px] mt-0.5 flex items-center justify-center rounded-md bg-emerald-100 text-[10px] font-bold text-emerald-700">
                       {idx + 1}
                     </span>
-                    <span>{step}</span>
+                    <span className="text-[#3d3830]">{step}</span>
                   </li>
                 ))}
               </ol>
@@ -770,36 +779,40 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
           )}
         </div>
 
-        {/* Tips + warnings — side by side on desktop */}
+        {/* Tips + warnings — side by side with distinct zone backgrounds */}
         {(tips.length > 0 || warnings.length > 0) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {tips.length > 0 && (
-              <div>
-                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-amber-600/70 mb-2 flex items-center gap-1.5">
-                  <Lightbulb className="h-3 w-3" />
+              <div className="rounded-xl bg-amber-50/40 border border-amber-100/60 px-4 py-3">
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-500 mb-2.5 flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-md bg-amber-100 flex items-center justify-center">
+                    <Lightbulb className="h-3 w-3 text-amber-600" />
+                  </span>
                   Tips
                 </h4>
-                <ul className="space-y-1">
+                <ul className="space-y-1.5">
                   {tips.map((t, i) => (
-                    <li key={i} className="text-xs text-gray-600 leading-relaxed flex gap-1.5">
-                      <span className="text-amber-400 flex-shrink-0">-</span>
-                      <span>{t}</span>
+                    <li key={i} className="text-xs leading-relaxed flex gap-2">
+                      <span className="text-amber-400 font-bold flex-shrink-0 select-none">-</span>
+                      <span className="text-[#3d3830]">{t}</span>
                     </li>
                   ))}
                 </ul>
               </div>
             )}
             {warnings.length > 0 && (
-              <div>
-                <h4 className="text-[11px] font-semibold uppercase tracking-wider text-red-500/70 mb-2 flex items-center gap-1.5">
-                  <ShieldAlert className="h-3 w-3" />
+              <div className="rounded-xl bg-rose-50/40 border border-rose-100/60 px-4 py-3">
+                <h4 className="text-[10px] font-bold uppercase tracking-[0.15em] text-rose-400 mb-2.5 flex items-center gap-1.5">
+                  <span className="w-5 h-5 rounded-md bg-rose-100 flex items-center justify-center">
+                    <ShieldAlert className="h-3 w-3 text-rose-500" />
+                  </span>
                   Warnings
                 </h4>
-                <ul className="space-y-1">
+                <ul className="space-y-1.5">
                   {warnings.map((w, i) => (
-                    <li key={i} className="text-xs text-gray-600 leading-relaxed flex gap-1.5">
-                      <span className="text-red-300 flex-shrink-0">-</span>
-                      <span>{w}</span>
+                    <li key={i} className="text-xs leading-relaxed flex gap-2">
+                      <span className="text-rose-300 font-bold flex-shrink-0 select-none">-</span>
+                      <span className="text-[#3d3830]">{w}</span>
                     </li>
                   ))}
                 </ul>
@@ -808,12 +821,12 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
           </div>
         )}
 
-        {/* Expand: full description + evidence */}
+        {/* Expand: full description */}
         {(hasContent(doc.description) || hasContent(doc.appearance) || evidence.length > 0) && (
           <div>
             <button
               onClick={() => setShowFull(!showFull)}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors"
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-gray-400 hover:text-gray-600 transition-colors"
             >
               <span className={`transition-transform duration-200 ${showFull ? 'rotate-180' : ''}`}>
                 <ChevronDown className="h-3.5 w-3.5" />
@@ -821,23 +834,23 @@ function ProductDocSummary({ doc }: { doc: ProductDoc }) {
               {showFull ? 'Hide details' : 'Full description & evidence'}
             </button>
             {showFull && (
-              <div className="mt-3 rounded-xl bg-gray-50/80 px-4 py-3.5 space-y-3">
+              <div className="mt-3 rounded-xl bg-[#fafaf7] border border-gray-100 px-4 py-3.5 space-y-3">
                 {hasContent(doc.description) && (
-                  <p className="text-xs leading-relaxed text-gray-700">{doc.description}</p>
+                  <p className="text-xs leading-relaxed text-[#4a433c]">{doc.description}</p>
                 )}
                 {hasContent(doc.appearance) && doc.appearance !== doc.description && (
                   <div>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Appearance</span>
-                    <p className="mt-1 text-xs leading-relaxed text-gray-600">{doc.appearance}</p>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">Appearance</span>
+                    <p className="mt-1 text-xs leading-relaxed text-[#5c544a]">{doc.appearance}</p>
                   </div>
                 )}
                 {evidence.length > 0 && (
-                  <div className="pt-2 border-t border-gray-200/80">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Image Evidence</span>
+                  <div className="pt-2 border-t border-gray-100">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">Image Evidence</span>
                     <ul className="mt-1.5 space-y-1">
                       {evidence.map((e, i) => (
-                        <li key={i} className="text-xs text-gray-500 flex gap-1.5">
-                          <span className="text-gray-300 flex-shrink-0">-</span>
+                        <li key={i} className="text-xs text-gray-400 flex gap-1.5">
+                          <span className="text-gray-300 flex-shrink-0 select-none">-</span>
                           <span>{e}</span>
                         </li>
                       ))}
