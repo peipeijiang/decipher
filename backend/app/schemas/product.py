@@ -51,4 +51,14 @@ class ProductDocOut(BaseModel):
     appearance: str
     usage: str
     selling_points: str
+    source_content: dict | None = None
+    category: str | None = None
+    target_users: str | None = None
+    usage_scenarios: str | None = None
+    usage_steps: list[str] | None = None
+    preparation: list[str] | None = None
+    tips: list[str] | None = None
+    warnings: list[str] | None = None
+    key_parts: list[str] | None = None
+    image_evidence: list[str] | None = None
     images: list[dict]
