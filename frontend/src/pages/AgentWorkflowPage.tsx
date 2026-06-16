@@ -197,7 +197,7 @@ function EditPanel({ prompt, onClose, onUpdated }: EditPanelProps) {
                         <div key={f.name} className="flex items-start gap-2 px-3 py-1.5 rounded-lg bg-blue-50/60 border border-blue-100">
                           <span className="text-[10px] font-mono font-semibold text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0">{f.type}</span>
                           <div className="min-w-0">
-                            <span className="text-xs font-semibold text-blue-800">{f.label}</span>
+                            <span className="text-xs font-semibold text-blue-800">{f.label}</span>{' '}<code className="text-[10px] font-mono text-blue-400 bg-blue-100/50 px-1 py-0.5 rounded">{'{' + f.name + '}'}</code>
                             <p className="text-[10px] text-blue-600/70 leading-tight mt-0.5">{f.desc}</p>
                           </div>
                         </div>
@@ -216,7 +216,7 @@ function EditPanel({ prompt, onClose, onUpdated }: EditPanelProps) {
                         <div key={f.name} className="flex items-start gap-2 px-3 py-1.5 rounded-lg bg-amber-50/60 border border-amber-100">
                           <span className="text-[10px] font-mono font-semibold text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded mt-0.5 flex-shrink-0">{f.type}</span>
                           <div className="min-w-0">
-                            <span className="text-xs font-semibold text-amber-800">{f.label}</span>
+                            <span className="text-xs font-semibold text-amber-800">{f.label}</span>{' '}<code className="text-[10px] font-mono text-amber-400 bg-amber-100/50 px-1 py-0.5 rounded">{'{' + f.name + '}'}</code>
                             <p className="text-[10px] text-amber-600/70 leading-tight mt-0.5">{f.desc}</p>
                           </div>
                         </div>
