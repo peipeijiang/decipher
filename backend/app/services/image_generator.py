@@ -59,7 +59,7 @@ class ImageGeneratorService:
                 panel_rows = int(grid_layout[0])
                 panel_cols = int(grid_layout[2])
                 panel_count = panel_rows * panel_cols
-                final_prompt = f"STRICTLY a {panel_rows}-column by {panel_cols}-row grid = EXACTLY {panel_count} equal panels. DO NOT output any other grid arrangement. No text captions, no labels on any panel. Clean gutters. {prompt}"
+                final_prompt = f"STRICTLY a {panel_rows}-column by {panel_cols}-row grid = EXACTLY {panel_count} equal panels. DO NOT output any other grid arrangement. No text captions, no labels on any panel. No subtitles, no dialogue as text. Only Instagram-style thin sans-serif overlay (2-3 words, no stroke). Clean gutters. {prompt}"
 
             # Submit generation request
             response = self._request(
@@ -194,7 +194,7 @@ class ImageGeneratorService:
                 final_prompt = f"STRICTLY a {panel_rows}-column by {panel_cols}-row grid = EXACTLY {panel_count} equal panels. DO NOT output any other grid arrangement. No text captions, no labels on any panel. Clean gutters. {final_prompt}"
 
             # Prepend reference image instruction
-            final_prompt = f"Photorealistic style, real photography, not illustration, not cartoon, not anime. The product in this reference image must appear EXACTLY as-is in every panel - same shape, color, texture. Do not alter the product. Stylish overlay text in Instagram/TikTok aesthetic is OK (short keywords, emojis, decorative labels). Do NOT add subtitles, captions, paragraphs, or watermarks. {final_prompt}"
+            final_prompt = f"Photorealistic style, real photography, not illustration, not cartoon, not anime. The product in this reference image must appear EXACTLY as-is in every panel - same shape, color, texture. Do not alter the product. OVERLAY TEXT RULES: Only minimalist Instagram-style text overlays allowed — thin sans-serif lowercase, no bold, no stroke, no shadow, placed creatively in corners. Maximum 2-3 short words per panel. NEVER render dialogue as on-screen text. NEVER add subtitles, captions, speech bubbles, large paragraphs, or watermarks. The image must look like a clean social-media ad, not a video screenshot. {final_prompt}"
 
             # Use images/edits endpoint with multipart/form-data (retry on connection errors)
             import time as _time
@@ -323,6 +323,9 @@ class ImageGeneratorService:
                 "Use the first reference image as the exact product identity reference. Preserve product shape, "
                 "color, material, logo/markings, proportions, and distinctive details. "
                 "Create a polished commercial social-media image. "
+                "OVERLAY TEXT: Only minimalist Instagram-style thin sans-serif text overlays — maximum 2-3 short words per panel, "
+                "placed in corners. NEVER render dialogue as on-screen text. NEVER add subtitles, captions, speech bubbles, "
+                "or large text blocks. No bold, no stroke, no shadow on text. "
                 f"{final_prompt}"
             )
 

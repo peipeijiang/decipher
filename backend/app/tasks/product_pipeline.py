@@ -361,6 +361,7 @@ def generate_image_for_prompt(prompt_id: str):
                         _storyboard_system = _sys or (
                             "Fill in the {placeholders} in the template below using content from the video script. "
                             "Output ONLY the filled template — same structure, same sentence flow, placeholders replaced with real content. "
+                            "CRITICAL: Describe only visual scenes. Do NOT include dialogue, subtitles, speech bubbles, or on-screen text. "
                             "Do NOT explain, do NOT add commentary, do NOT output your reasoning. "
                             "Just output the single filled paragraph directly. English only."
                         )
@@ -404,6 +405,7 @@ def generate_image_for_prompt(prompt_id: str):
                         _storyboard_system = _sys or (
                             "Fill in the {placeholders} in the template below using content from the video script. "
                             "Output ONLY the filled template — same structure, same sentence flow, placeholders replaced with real content. "
+                            "CRITICAL: Describe only visual scenes. Do NOT include dialogue, subtitles, speech bubbles, or on-screen text. "
                             "Do NOT explain, do NOT add commentary, do NOT output your reasoning. "
                             "Just output the single filled paragraph directly. English only."
                         )
@@ -465,9 +467,10 @@ def generate_image_for_prompt(prompt_id: str):
                             "1. Include the FULL original video script at the beginning for context.\n"
                             "2. After the script, add a storyboard instruction section.\n"
                             f"3. Break the video story into {panel_count} panels based on the natural story flow.\n"
-                            "4. Each panel should describe the key visual: character pose, camera angle, product placement, lighting, mood.\n"
+                            "4. Each panel: describe only the visual scene (actor pose, camera angle, product, lighting, mood).\n"
                             "5. Preserve exact product appearance from [Product Consistency] section.\n"
-                            "6. Output in English, under 1500 characters total.\n\n"
+                            "6. CRITICAL: Do NOT include any dialogue lines, subtitles, speech bubbles, or on-screen text in the panel descriptions. Visuals only.\n"
+                            "7. Output in English, under 1500 characters total.\n\n"
                             "OUTPUT FORMAT:\n"
                             "[Original Script]\n<paste the full original script here>\n\n"
                             "[Storyboard Instruction]\n"
@@ -484,8 +487,10 @@ def generate_image_for_prompt(prompt_id: str):
                             "Extract the key visual elements (character, action, setting, lighting, composition) from the video script. "
                             "Remove all bracketed tags like [Equipment], [Video Style], etc. "
                             "Preserve product details from [Product Consistency] section. "
+                            "CRITICAL: Do NOT include any dialogue lines, subtitles, captions, or on-screen text. Visual scene description only. "
+                            "Overlay text allowed: maximum 1-2 short keyword phrases total, no full sentences. "
                             "Output a concise English paragraph (under 500 chars) optimized for AI image generation. "
-                            "Start with 'Keep the product exactly as shown, preserving all details. Only change the background and scene.' "
+                            "Start with 'Keep the product exactly as shown, preserving all details. Only change the background and scene. No on-screen dialogue.' "
                             "No explanations, just the prompt."
                         )
                         _DEFAULT_VID2IMG_USR = "Convert this video script to an image prompt:\n\n{prompt_text}"
