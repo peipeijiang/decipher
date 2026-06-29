@@ -1,0 +1,384 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1780631346240,
+  "projectRoot": "/Users/shane/projects/tiktok-analyzer/frontend",
+  "techStack": {
+    "languages": [
+      {
+        "name": "JavaScript/TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "package.json"
+        ]
+      },
+      {
+        "name": "TypeScript",
+        "version": null,
+        "confidence": "high",
+        "markers": [
+          "tsconfig.json"
+        ]
+      }
+    ],
+    "frameworks": [
+      {
+        "name": "react",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "react-dom",
+        "version": "18.3.1",
+        "category": "frontend"
+      },
+      {
+        "name": "@playwright/test",
+        "version": "1.59.1",
+        "category": "testing"
+      },
+      {
+        "name": "vite",
+        "version": "5.4.8",
+        "category": "build"
+      }
+    ],
+    "packageManager": "npm",
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": "npm run build",
+    "testCommand": null,
+    "lintCommand": "npm run lint",
+    "devCommand": "npm run dev",
+    "scripts": {
+      "dev": "vite",
+      "build": "tsc -b && vite build",
+      "lint": "eslint .",
+      "preview": "vite preview"
+    }
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": "type-based"
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "src",
+      "tests"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "dist": {
+      "path": "dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 1,
+      "lastAccessed": 1780631346228,
+      "keyFiles": [
+        "index.html"
+      ]
+    },
+    "src": {
+      "path": "src",
+      "purpose": "Source code",
+      "fileCount": 5,
+      "lastAccessed": 1780631346230,
+      "keyFiles": [
+        "App.tsx",
+        "index.css",
+        "main.tsx",
+        "vite-env.d.ts"
+      ]
+    },
+    "test-results": {
+      "path": "test-results",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1780631346230,
+      "keyFiles": []
+    },
+    "tests": {
+      "path": "tests",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1780631346230,
+      "keyFiles": [
+        "setup.ts"
+      ]
+    },
+    "dist/assets": {
+      "path": "dist/assets",
+      "purpose": "Static assets",
+      "fileCount": 2,
+      "lastAccessed": 1780631346231,
+      "keyFiles": [
+        "index-BONWglBp.js",
+        "index-ByuShjp5.css"
+      ]
+    },
+    "src/api": {
+      "path": "src/api",
+      "purpose": "API routes",
+      "fileCount": 1,
+      "lastAccessed": 1780631346231,
+      "keyFiles": [
+        "client.ts"
+      ]
+    },
+    "src/components": {
+      "path": "src/components",
+      "purpose": "UI components",
+      "fileCount": 1,
+      "lastAccessed": 1780631346231,
+      "keyFiles": [
+        "TaskQueueSidebar.tsx"
+      ]
+    },
+    "src/config": {
+      "path": "src/config",
+      "purpose": "Configuration files",
+      "fileCount": 1,
+      "lastAccessed": 1780631346232,
+      "keyFiles": [
+        "navigation.ts"
+      ]
+    },
+    "src/pages": {
+      "path": "src/pages",
+      "purpose": "Page components",
+      "fileCount": 15,
+      "lastAccessed": 1780631346232,
+      "keyFiles": [
+        "AgentWorkflowPage.tsx",
+        "AnalysisPage.tsx",
+        "ConfigPage.tsx"
+      ]
+    },
+    "tests/fixtures": {
+      "path": "tests/fixtures",
+      "purpose": "Test fixtures",
+      "fileCount": 0,
+      "lastAccessed": 1780631346232,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "src/pages/ProductPage.tsx",
+      "accessCount": 110,
+      "lastAccessed": 1779702024398,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/TemplateSettingsPage.tsx",
+      "accessCount": 53,
+      "lastAccessed": 1779852382476,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/AnalysisPage.tsx",
+      "accessCount": 27,
+      "lastAccessed": 1780630981217,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/AgentWorkflowPage.tsx",
+      "accessCount": 23,
+      "lastAccessed": 1779861780642,
+      "type": "file"
+    },
+    {
+      "path": "src/api/client.ts",
+      "accessCount": 19,
+      "lastAccessed": 1780632286699,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/VideoGenPage.tsx",
+      "accessCount": 15,
+      "lastAccessed": 1780629473194,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/CreativePage.tsx",
+      "accessCount": 14,
+      "lastAccessed": 1776418704967,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/StoryboardReplicationPage.tsx",
+      "accessCount": 14,
+      "lastAccessed": 1780632662432,
+      "type": "file"
+    },
+    {
+      "path": "src/App.tsx",
+      "accessCount": 13,
+      "lastAccessed": 1780631258339,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/TemplateSettingsPage.new.tsx",
+      "accessCount": 10,
+      "lastAccessed": 1779074160770,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/ConfigPage.tsx",
+      "accessCount": 9,
+      "lastAccessed": 1779073938467,
+      "type": "file"
+    },
+    {
+      "path": "src",
+      "accessCount": 8,
+      "lastAccessed": 1779257406049,
+      "type": "directory"
+    },
+    {
+      "path": "src/components/layout/Sidebar.tsx",
+      "accessCount": 8,
+      "lastAccessed": 1780630988022,
+      "type": "directory"
+    },
+    {
+      "path": "src/config/navigation.ts",
+      "accessCount": 8,
+      "lastAccessed": 1780631227826,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/WorkbenchPage.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1779257454915,
+      "type": "file"
+    },
+    {
+      "path": "src/components/storyboard/ProductUploadSection.tsx",
+      "accessCount": 5,
+      "lastAccessed": 1780631368196,
+      "type": "file"
+    },
+    {
+      "path": "src/types/product.ts",
+      "accessCount": 4,
+      "lastAccessed": 1779088663581,
+      "type": "directory"
+    },
+    {
+      "path": "src/index.css",
+      "accessCount": 3,
+      "lastAccessed": 1779073943250,
+      "type": "file"
+    },
+    {
+      "path": "vite.config.ts",
+      "accessCount": 3,
+      "lastAccessed": 1780627594741,
+      "type": "file"
+    },
+    {
+      "path": "src/types/index.ts",
+      "accessCount": 3,
+      "lastAccessed": 1780630987799,
+      "type": "directory"
+    },
+    {
+      "path": "src/components/storyboard/VideoUploadSection.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1780631305945,
+      "type": "file"
+    },
+    {
+      "path": "src/components/storyboard/ResultSection.tsx",
+      "accessCount": 3,
+      "lastAccessed": 1780631314806,
+      "type": "file"
+    },
+    {
+      "path": "src/pages",
+      "accessCount": 2,
+      "lastAccessed": 1779073931499,
+      "type": "directory"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 2,
+      "lastAccessed": 1780627530189,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout/MainLayout.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1780630987699,
+      "type": "file"
+    },
+    {
+      "path": "src/components/storyboard/StoryboardPreview.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1780631123132,
+      "type": "file"
+    },
+    {
+      "path": "src/components/storyboard/ProgressSteps.tsx",
+      "accessCount": 2,
+      "lastAccessed": 1780631271429,
+      "type": "file"
+    },
+    {
+      "path": "src/components/ui/MissingDataAlert.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1776070995841,
+      "type": "file"
+    },
+    {
+      "path": "src/components/layout",
+      "accessCount": 1,
+      "lastAccessed": 1778298175740,
+      "type": "directory"
+    },
+    {
+      "path": "src/components",
+      "accessCount": 1,
+      "lastAccessed": 1779073931984,
+      "type": "directory"
+    },
+    {
+      "path": "src/components/ui/GlassCard.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779073936090,
+      "type": "file"
+    },
+    {
+      "path": "src/pages/HomePage.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1779073936294,
+      "type": "file"
+    },
+    {
+      "path": "src/types/videoGen.ts",
+      "accessCount": 1,
+      "lastAccessed": 1780629474204,
+      "type": "file"
+    },
+    {
+      "path": "src/types/storyboard.ts",
+      "accessCount": 1,
+      "lastAccessed": 1780631043958,
+      "type": "file"
+    },
+    {
+      "path": "src/components/storyboard/LoadingSection.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1780631109141,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

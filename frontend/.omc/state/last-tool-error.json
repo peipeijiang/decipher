@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"python3 -c \\\"\\nfrom app.database import SessionLocal\\nfrom app.models.storyboard_replication import StoryboardReplication\\ndb = SessionLocal()\\nr = db.query(StoryboardReplication).order_by...",
+  "error": "Exit code 1\nTraceback (most recent call last):\n  File \"<string>\", line 2, in <module>\nModuleNotFoundError: No module named 'app'",
+  "timestamp": "2026-06-05T14:49:19.636Z",
+  "retry_count": 1
+}

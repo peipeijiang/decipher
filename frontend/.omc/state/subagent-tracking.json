@@ -1,0 +1,197 @@
+{
+  "agents": [
+    {
+      "agent_id": "a702d71489174eb9d",
+      "agent_type": "general-purpose",
+      "started_at": "2026-04-28T21:49:20.706Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-28T21:50:45.081Z",
+      "duration_ms": 84375
+    },
+    {
+      "agent_id": "a0a3b39b842c41aed",
+      "agent_type": "debugger",
+      "started_at": "2026-04-30T08:17:23.246Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-30T08:19:22.730Z",
+      "duration_ms": 119484
+    },
+    {
+      "agent_id": "a17953c37242840eb",
+      "agent_type": "build-error-resolver",
+      "started_at": "2026-05-15T03:35:26.557Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-15T03:36:10.425Z",
+      "duration_ms": 43868
+    },
+    {
+      "agent_id": "ad50f84a4ab27d31e",
+      "agent_type": "oh-my-claudecode:planner",
+      "started_at": "2026-05-18T02:20:53.211Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-18T02:22:47.161Z",
+      "duration_ms": 113950
+    },
+    {
+      "agent_id": "a7ff7b519249ccc63",
+      "agent_type": "oh-my-claudecode:executor",
+      "started_at": "2026-05-18T02:23:26.040Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-18T02:28:48.020Z",
+      "duration_ms": 321980
+    },
+    {
+      "agent_id": "a4c188ed99652729d",
+      "agent_type": "debugger",
+      "started_at": "2026-05-18T02:32:34.064Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-18T02:33:42.427Z",
+      "duration_ms": 68363
+    },
+    {
+      "agent_id": "ab185da3825cfb623",
+      "agent_type": "oh-my-claudecode:designer",
+      "started_at": "2026-05-18T03:12:01.018Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-18T03:16:48.392Z",
+      "duration_ms": 287374
+    },
+    {
+      "agent_id": "ac58e758c2f6731ed",
+      "agent_type": "oh-my-claudecode:explore",
+      "started_at": "2026-05-18T03:25:58.853Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-18T03:26:51.563Z",
+      "duration_ms": 52710
+    },
+    {
+      "agent_id": "a8ebdc688f59ca417",
+      "agent_type": "oh-my-claudecode:executor",
+      "started_at": "2026-05-18T03:34:36.027Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-18T03:36:56.432Z",
+      "duration_ms": 140405
+    },
+    {
+      "agent_id": "a1cfcad57d35972b0",
+      "agent_type": "oh-my-claudecode:executor",
+      "started_at": "2026-05-18T06:45:13.323Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-18T06:58:51.172Z",
+      "duration_ms": 817849
+    },
+    {
+      "agent_id": "afa67bbfd1db2f87b",
+      "agent_type": "oh-my-claudecode:writer",
+      "started_at": "2026-05-19T06:05:30.699Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-19T06:06:03.307Z",
+      "duration_ms": 32608
+    },
+    {
+      "agent_id": "a0f86a421183c8243",
+      "agent_type": "Explore",
+      "started_at": "2026-05-27T03:18:22.240Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-27T03:19:15.737Z",
+      "duration_ms": 53497
+    },
+    {
+      "agent_id": "a180a3ad6ec0b14bd",
+      "agent_type": "frontend-developer",
+      "started_at": "2026-05-27T03:24:07.038Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-27T03:26:46.332Z",
+      "duration_ms": 159294
+    },
+    {
+      "agent_id": "ab1288979aeaa3128",
+      "agent_type": "python-pro",
+      "started_at": "2026-05-27T03:37:12.692Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-27T03:40:04.496Z",
+      "duration_ms": 171804
+    },
+    {
+      "agent_id": "a6c138a43fa7caf3f",
+      "agent_type": "python-pro",
+      "started_at": "2026-05-27T04:52:15.155Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-05-27T04:56:05.061Z",
+      "duration_ms": 229906
+    },
+    {
+      "agent_id": "af735eb12f0e88556",
+      "agent_type": "devops-troubleshooter",
+      "started_at": "2026-06-05T02:45:14.317Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-06-05T02:47:09.050Z",
+      "duration_ms": 114733
+    },
+    {
+      "agent_id": "aa669bcc6342bd3ad",
+      "agent_type": "Explore",
+      "started_at": "2026-06-05T03:17:40.992Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-06-05T03:18:48.411Z",
+      "duration_ms": 67419
+    },
+    {
+      "agent_id": "a49689be581102c7a",
+      "agent_type": "Plan",
+      "started_at": "2026-06-05T03:19:25.343Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-06-05T03:27:56.804Z",
+      "duration_ms": 511461
+    },
+    {
+      "agent_id": "adac9a0b69e3a9920",
+      "agent_type": "python-pro",
+      "started_at": "2026-06-05T03:35:24.403Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-06-05T03:42:04.537Z",
+      "duration_ms": 400134
+    },
+    {
+      "agent_id": "a565de403cb37978f",
+      "agent_type": "frontend-developer",
+      "started_at": "2026-06-05T03:42:49.574Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-06-05T03:50:10.379Z",
+      "duration_ms": 440805
+    },
+    {
+      "agent_id": "a3aa8c51e669e031b",
+      "agent_type": "python-pro",
+      "started_at": "2026-06-05T03:55:50.823Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-06-05T03:58:05.206Z",
+      "duration_ms": 134383
+    }
+  ],
+  "total_spawned": 24,
+  "total_completed": 24,
+  "total_failed": 0,
+  "last_updated": "2026-06-05T03:58:05.309Z"
+}

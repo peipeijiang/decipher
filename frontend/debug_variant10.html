@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Variant 10 - Image Prompt</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Variant 10 Image Prompt Debug</h1>
+    <div id="status">Loading...</div>
+    <h2>API Response:</h2>
+    <pre id="output"></pre>
+
+    <script>
+        const productId = '1a621bd9-092e-4058-a9c8-29c4c3459252';
+
+        fetch(`http://localhost:8000/api/products/${productId}/prompts`)
+            .then(response => response.json())
+            .then(data => {
+                const variant10 = data.find(p => p.variant_index === 10);
+
+                if (!variant10) {
+                    document.getElementById('status').innerHTML = '<span class="error">❌ Variant 10 not found</span>';
+                    return;
+                }
+
+                const hasImagePrompt = !!variant10.image_prompt;
+                const imagePromptLength = variant10.image_prompt ? variant10.image_prompt.length : 0;
+
+                document.getElementById('status').innerHTML = hasImagePrompt
+                    ? `<span class="success">✅ image_prompt exists (${imagePromptLength} chars)</span>`
+                    : '<span class="error">❌ image_prompt is missing or empty</span>';
+
+                document.getElementById('output').textContent = JSON.stringify({
+                    variant_index: variant10.variant_index,
+                    template_name: variant10.template_name,
+                    grid_layout: variant10.grid_layout,
+                    image_status: variant10.image_status,
+                    has_image_prompt_field: 'image_prompt' in variant10,
+                    image_prompt_type: typeof variant10.image_prompt,
+                    image_prompt_is_null: variant10.image_prompt === null,
+                    image_prompt_is_empty_string: variant10.image_prompt === '',
+                    image_prompt_length: imagePromptLength,
+                    image_prompt_truthy: !!variant10.image_prompt,
+                    image_prompt_preview: variant10.image_prompt ? variant10.image_prompt.substring(0, 200) : null
+                }, null, 2);
+            })
+            .catch(error => {
+                document.getElementById('status').innerHTML = `<span class="error">❌ Error: ${error.message}</span>`;
+                document.getElementById('output').textContent = error.stack;
+            });
+    </script>
+</body>
+</html>

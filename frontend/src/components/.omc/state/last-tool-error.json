@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"grep -n \\\"useNavigate\\\\|navigate\\\" /Users/shane/projects/tiktok-analyzer/frontend/src/pages/ConfigPage.tsx && echo \\\"---\\\" && cd /Users/shane/projects/tiktok-analyzer/frontend && npx tsc -...",
+  "error": "Exit code 1",
+  "timestamp": "2026-04-07T17:24:04.437Z",
+  "retry_count": 1
+}
