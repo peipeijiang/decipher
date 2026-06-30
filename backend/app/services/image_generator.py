@@ -74,7 +74,7 @@ class ImageGeneratorService:
                 panel_rows = int(grid_layout[0])
                 panel_cols = int(grid_layout[2])
                 panel_count = panel_rows * panel_cols
-                final_prompt = f"STRICTLY a {panel_rows}-column by {panel_cols}-row grid = EXACTLY {panel_count} equal panels. DO NOT output any other grid arrangement. No text captions, no labels on any panel. No subtitles, no dialogue as text. Only Instagram-style thin sans-serif overlay (2-3 words, no stroke). Clean gutters. {prompt}"
+                final_prompt = f"Create a {panel_rows}-column by {panel_cols}-row grid with exactly {panel_count} equal panels. Use clean gutters between panels. No text captions, no panel labels, no subtitles, no dialogue as text. Only minimalist Instagram-style overlay text when specified. {prompt}"
 
             # Submit generation request
             response = self._request(
@@ -213,7 +213,7 @@ class ImageGeneratorService:
                 panel_rows = int(grid_layout[0])
                 panel_cols = int(grid_layout[2])
                 panel_count = panel_rows * panel_cols
-                final_prompt = f"STRICTLY a {panel_rows}-column by {panel_cols}-row grid = EXACTLY {panel_count} equal panels. DO NOT output any other grid arrangement. No text captions, no labels on any panel. Clean gutters. {final_prompt}"
+                final_prompt = f"Create a {panel_rows}-column by {panel_cols}-row grid with exactly {panel_count} equal panels. Use clean gutters between panels. No text captions, no panel labels, no subtitles, no dialogue as text. {final_prompt}"
 
             # Prepend reference image instruction
             final_prompt = f"Photorealistic style, real photography, not illustration, not cartoon, not anime. The product in this reference image must appear EXACTLY as-is in every panel - same shape, color, texture. Do not alter the product. OVERLAY TEXT RULES: Only minimalist Instagram-style text overlays allowed — thin sans-serif lowercase, no bold, no stroke, no shadow, placed creatively in corners. Maximum 2-3 short words per panel. NEVER render dialogue as on-screen text. NEVER add subtitles, captions, speech bubbles, large paragraphs, or watermarks. The image must look like a clean social-media ad, not a video screenshot. {final_prompt}"
@@ -335,9 +335,9 @@ class ImageGeneratorService:
                 panel_cols = int(grid_layout[2])
                 panel_count = panel_rows * panel_cols
                 final_prompt = (
-                    f"STRICTLY a {panel_rows}-column by {panel_cols}-row grid = EXACTLY {panel_count} equal panels. "
-                    f"DO NOT output any other grid arrangement. "
-                    f"No text captions, no labels on any panel. Clean gutters. "
+                    f"Create a {panel_rows}-column by {panel_cols}-row grid with exactly {panel_count} equal panels. "
+                    f"Use clean gutters between panels. "
+                    f"No text captions, no panel labels, no subtitles, no dialogue as text. "
                     f"{final_prompt}"
                 )
 

@@ -1,13 +1,14 @@
 """Product video generation API routes."""
 import json
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.models.product import Product
 from app.models.product_prompt import ProductPrompt
 from app.schemas.product import ProductCreate, ProductOut, ProductPromptOut, ProductDocOut
@@ -19,6 +20,81 @@ from app.tasks.product_pipeline import (
 from app.services.prompt_generator import TEMPLATES
 
 router = APIRouter(prefix="/api/products", tags=["products"])
+
+IMAGE_GENERATION_WORKERS = 1
+_image_generation_executor = ThreadPoolExecutor(
+    max_workers=IMAGE_GENERATION_WORKERS,
+    thread_name_prefix="product-image",
+)
+_image_generation_lock = threading.Lock()
+_image_generation_jobs: set[str] = set()
+
+
+def _is_image_generation_queued(prompt_id: str) -> bool:
+    with _image_generation_lock:
+        return prompt_id in _image_generation_jobs
+
+
+def _run_queued_image_generation(prompt_id: str):
+    try:
+        db = SessionLocal()
+        try:
+            pp = db.get(ProductPrompt, prompt_id)
+            if not pp or pp.image_status != "generating":
+                return
+        finally:
+            db.close()
+        generate_image_for_prompt(prompt_id)
+    finally:
+        with _image_generation_lock:
+            _image_generation_jobs.discard(prompt_id)
+
+
+def _queue_image_generation(prompt_id: str) -> bool:
+    with _image_generation_lock:
+        if prompt_id in _image_generation_jobs:
+            return False
+        _image_generation_jobs.add(prompt_id)
+    _image_generation_executor.submit(_run_queued_image_generation, prompt_id)
+    return True
+
+
+VIDEO_GENERATION_WORKERS = 1
+_video_generation_executor = ThreadPoolExecutor(
+    max_workers=VIDEO_GENERATION_WORKERS,
+    thread_name_prefix="product-video",
+)
+_video_generation_lock = threading.Lock()
+_video_generation_jobs: set[str] = set()
+
+
+def _is_video_generation_queued(prompt_id: str) -> bool:
+    with _video_generation_lock:
+        return prompt_id in _video_generation_jobs
+
+
+def _run_queued_video_generation(prompt_id: str):
+    try:
+        db = SessionLocal()
+        try:
+            pp = db.get(ProductPrompt, prompt_id)
+            if not pp or pp.video_status not in ("queued", "generating"):
+                return
+        finally:
+            db.close()
+        generate_video_for_prompt(prompt_id)
+    finally:
+        with _video_generation_lock:
+            _video_generation_jobs.discard(prompt_id)
+
+
+def _queue_video_generation(prompt_id: str) -> bool:
+    with _video_generation_lock:
+        if prompt_id in _video_generation_jobs:
+            return False
+        _video_generation_jobs.add(prompt_id)
+    _video_generation_executor.submit(_run_queued_video_generation, prompt_id)
+    return True
 
 
 @router.get("/templates")
@@ -283,6 +359,8 @@ def trigger_image_generation(prompt_id: str, body: dict = {}, db: Session = Depe
     pp = db.get(ProductPrompt, prompt_id)
     if not pp:
         raise HTTPException(404, "Prompt not found")
+    if pp.image_status == "generating" and _is_image_generation_queued(prompt_id):
+        return {"ok": True, "prompt_id": prompt_id, "queued": True}
     # Save grid_layout and aspect_ratio if provided
     if body.get("grid_layout"):
         pp.grid_layout = body["grid_layout"]
@@ -293,8 +371,8 @@ def trigger_image_generation(prompt_id: str, body: dict = {}, db: Session = Depe
     pp.image_url = None
     pp.image_path = None
     db.commit()
-    threading.Thread(target=generate_image_for_prompt, args=(prompt_id,), daemon=True).start()
-    return {"ok": True, "prompt_id": prompt_id}
+    queued = _queue_image_generation(prompt_id)
+    return {"ok": True, "prompt_id": prompt_id, "queued": queued}
 
 
 @router.get("/prompts/{prompt_id}/image")
@@ -313,8 +391,13 @@ def trigger_video_generation(prompt_id: str, db: Session = Depends(get_db)):
     pp = db.get(ProductPrompt, prompt_id)
     if not pp:
         raise HTTPException(404, "Prompt not found")
-    threading.Thread(target=generate_video_for_prompt, args=(prompt_id,), daemon=True).start()
-    return {"ok": True, "prompt_id": prompt_id}
+    if pp.video_status in ("queued", "generating") and _is_video_generation_queued(prompt_id):
+        return {"ok": True, "prompt_id": prompt_id, "queued": True}
+    pp.video_status = "queued"
+    pp.error_message = None
+    db.commit()
+    queued = _queue_video_generation(prompt_id)
+    return {"ok": True, "prompt_id": prompt_id, "queued": queued}
 
 
 @router.get("/prompts/{prompt_id}/video")
@@ -328,6 +411,21 @@ def get_generated_video(prompt_id: str, db: Session = Depends(get_db)):
     if pp.video_url:
         return {"video_url": pp.video_url, "status": pp.video_status}
     raise HTTPException(404, "Generated video not found")
+
+
+@router.get("/prompts/{prompt_id}/video/download")
+def download_generated_video(prompt_id: str, db: Session = Depends(get_db)):
+    pp = db.get(ProductPrompt, prompt_id)
+    if not pp:
+        raise HTTPException(404, "Prompt not found")
+    if not pp.video_path or not Path(pp.video_path).exists():
+        raise HTTPException(404, "Generated video file not found")
+    filename = f"variant_{pp.variant_index}_{pp.template_name}_video.mp4"
+    return FileResponse(
+        str(Path(pp.video_path)),
+        media_type="video/mp4",
+        filename=filename,
+    )
 
 
 @router.patch("/prompts/{prompt_id}", response_model=ProductPromptOut)
@@ -565,9 +663,14 @@ def trigger_batch_video_generation(product_id: str, db: Session = Depends(get_db
     prompts = db.query(ProductPrompt).filter(ProductPrompt.product_id == product_id).all()
     if not prompts:
         raise HTTPException(404, "No prompts found for product")
-    for pp in prompts:
-        threading.Thread(target=generate_video_for_prompt, args=(pp.id,), daemon=True).start()
-    return {"ok": True, "count": len(prompts)}
+    pending = [pp for pp in prompts if pp.video_status not in ("generating", "completed")]
+    for pp in pending:
+        pp.video_status = "queued"
+        pp.error_message = None
+    db.commit()
+    for pp in pending:
+        _queue_video_generation(pp.id)
+    return {"ok": True, "count": len(pending)}
 
 
 @router.post("/prompts/{prompt_id}/cancel")
@@ -988,13 +1091,6 @@ def trigger_batch_image_generation(product_id: str, db: Session = Depends(get_db
         pp.image_status = "generating"
     db.commit()
 
-    # Run sequentially in a single background thread to avoid API rate limits
-    def _batch_generate(prompt_ids: list[str]):
-        import time
-        for pid in prompt_ids:
-            generate_image_for_prompt(pid)
-            time.sleep(2)  # Small delay between requests
-
-    if pending:
-        threading.Thread(target=_batch_generate, args=([pp.id for pp in pending],), daemon=True).start()
+    for pp in pending:
+        _queue_image_generation(pp.id)
     return {"ok": True, "count": len(pending)}
