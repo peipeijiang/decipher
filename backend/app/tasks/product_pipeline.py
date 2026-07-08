@@ -1,5 +1,6 @@
 """Background pipeline: scrape → analyze → generate prompts."""
 import logging
+import subprocess
 from pathlib import Path
 from sqlalchemy.orm import Session
 
@@ -60,6 +61,81 @@ def _make_doc_progress_callback(product_id: str, base: int = 10, span: int = 50)
     return _callback
 
 
+def _provider_configured(cfg: ModelConfig, provider: str) -> bool:
+    try:
+        providers = cfg.get_providers()
+        return bool((providers.get(provider) or {}).get("api_key"))
+    except Exception:
+        return False
+
+
+def _image_results_need_fallback(image_results: list[dict]) -> bool:
+    if not image_results:
+        return True
+
+    useful_count = 0
+    for result in image_results:
+        fields = [
+            result.get("basic_recognition", ""),
+            result.get("product_understanding", ""),
+            result.get("focus_subject", ""),
+            result.get("context_alignment", ""),
+        ]
+        combined = " ".join(str(field) for field in fields if field).strip()
+        if (
+            combined
+            and "analysis failed" not in combined.lower()
+            and result.get("relevance") != "unrelated_or_ambiguous"
+        ):
+            useful_count += 1
+
+    return useful_count == 0
+
+
+def _analyze_images_with_vision_fallback(
+    image_paths: list[str],
+    cfg: ModelConfig,
+    vision_model,
+    product: Product,
+    db: Session,
+    product_id: str,
+):
+    from app.ai_models import get_model
+    from app.services.product_analyzer import analyze_product_images
+
+    image_results = analyze_product_images(
+        image_paths,
+        vision_model,
+        product_title=product.title,
+        product_description=product.description,
+        db=db,
+        progress_callback=_make_doc_progress_callback(product_id),
+    )
+
+    if (
+        cfg.vision_model != "zhipu"
+        and _image_results_need_fallback(image_results)
+        and _provider_configured(cfg, "zhipu")
+    ):
+        logger.warning(
+            "Vision model %s produced no usable product image analysis for %s; retrying with zhipu",
+            cfg.vision_model,
+            product_id,
+        )
+        _set_progress(product_id, doc=10, doc_stage="视觉模型降级重试")
+        fallback_model = get_model("zhipu", cfg)
+        image_results = analyze_product_images(
+            image_paths,
+            fallback_model,
+            product_title=product.title,
+            product_description=product.description,
+            db=db,
+            progress_callback=_make_doc_progress_callback(product_id),
+        )
+
+    return image_results
+
+
 def resume_product_pipeline(product_id: str, start_from: str = "scrape"):
     """Resume pipeline from a specific stage."""
     db: Session = SessionLocal()
@@ -95,13 +171,13 @@ def resume_product_pipeline(product_id: str, start_from: str = "scrape"):
             images_dir = Path(product.images_dir)
             image_paths = sorted(str(p) for p in images_dir.glob("image_*")) if images_dir.exists() else []
 
-            image_results = analyze_product_images(
+            image_results = _analyze_images_with_vision_fallback(
                 image_paths,
+                cfg,
                 vision_model,
-                product_title=product.title,
-                product_description=product.description,
+                product,
                 db=db,
-                progress_callback=_make_doc_progress_callback(product_id),
+                product_id=product_id,
             )
             _set_progress(product_id, doc=65, doc_stage="生成文档摘要")
 
@@ -225,13 +301,13 @@ def run_product_pipeline(product_id: str):
         if len(image_paths) > 20:
             logger.info("Limiting image analysis from %d to 20 images", len(image_paths))
             image_paths = image_paths[:20]
-        image_results = analyze_product_images(
+        image_results = _analyze_images_with_vision_fallback(
             image_paths,
+            cfg,
             vision_model,
-            product_title=product.title,
-            product_description=product.description,
+            product,
             db=db,
-            progress_callback=_make_doc_progress_callback(product_id),
+            product_id=product_id,
         )
         _set_progress(product_id, doc=65, doc_stage="生成文档摘要")
 
@@ -885,6 +961,7 @@ def generate_video_for_prompt(prompt_id: str):
 
         # Route to appropriate video generation service based on model
         duration = pp.video_duration or 15
+        aspect_ratio = pp.aspect_ratio or "9:16"
 
         # Get instruction board as second reference image (product detail reference)
         instruction_board_path = None
@@ -899,7 +976,9 @@ def generate_video_for_prompt(prompt_id: str):
                 f"{pp.prompt_text}"
             )
 
-        if video_model == "veo-3.1":
+        if video_model == "omni_flash-10s":
+            result = _generate_video_updrama(enhanced_prompt, image_url, providers, aspect_ratio=aspect_ratio, local_image_path=local_image_path)
+        elif video_model == "veo-3.1":
             result = _generate_video_veo(enhanced_prompt, image_url, providers, duration=duration, local_image_path=local_image_path)
         elif video_model in ["happyhorse-1.0", "wan-2.6"]:
             result = _generate_video_aliyun(enhanced_prompt, image_url, providers, model_name=video_model, duration=duration, local_image_path=local_image_path, instruction_board_path=instruction_board_path)
@@ -1160,3 +1239,103 @@ def _generate_video_aliyun(prompt: str, image_url: str, providers: dict, model_n
         # PENDING / RUNNING → keep polling
 
     raise RuntimeError("Wan 2.6 video generation timeout after 360s")
+
+
+
+def _upload_to_litterbox(path: Path, lifetime: str = "1h") -> str:
+    """Upload an image to litterbox.catbox.moe for temp public hosting."""
+    result = subprocess.run(
+        [
+            "curl", "--noproxy", "*", "--http1.1", "-fsS",
+            "-F", "reqtype=fileupload",
+            "-F", f"time={lifetime}",
+            "-F", f"fileToUpload=@{path}",
+            "https://litterbox.catbox.moe/resources/internals/api.php",
+        ],
+        check=True, capture_output=True, text=True, timeout=180,
+    )
+    url = result.stdout.strip()
+    if not url.startswith("https://"):
+        raise RuntimeError(f"Unexpected litterbox response for {path}: {url[:300]}")
+    return url
+
+
+def _generate_video_updrama(prompt: str, image_url: str, providers: dict, aspect_ratio: str = "9:16", local_image_path: str = None, reference_images: list[str] = None) -> dict:
+    """Omni Flash 10s via Updrama API (api.lk888.ai)."""
+    import requests
+    import time
+
+    api_key = providers.get("_updrama_api_key") or getattr(settings, 'updrama_api_key', '')
+    if not api_key:
+        raise RuntimeError("updrama_api_key not configured")
+
+    base_url = "https://api.lk888.ai"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+
+    # Build images array (up to 7 reference images)
+    images = list(reference_images or [])
+    if not images:
+        if image_url and image_url.startswith("http"):
+            images.append(image_url)
+        elif local_image_path:
+            local_path = Path(local_image_path)
+            if local_path.exists():
+                # Upload to temp hosting for public URL (Updrama rejects base64)
+                import subprocess
+                uploaded_url = _upload_to_litterbox(local_path)
+                logger.info("Uploaded storyboard to %s", uploaded_url)
+                images.append(uploaded_url)
+
+    payload = {
+        "model": "omni_flash-10s",
+        "prompt": prompt,
+        "params": {
+            "aspect_ratio": aspect_ratio,
+        },
+    }
+    if images:
+        payload["params"]["images"] = images
+
+    logger.info("Submitting Omni Flash 10s task to %s/v1/media/generate", base_url)
+    resp = requests.post(
+        f"{base_url}/v1/media/generate",
+        headers=headers,
+        json=payload,
+        timeout=30,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    task_id = data.get("id") or (data.get("data") or {}).get("task_id")
+    if not task_id:
+        raise RuntimeError(f"Updrama did not return task id: {data}")
+
+    logger.info("Omni Flash 10s task submitted: %s", task_id)
+
+    # Poll for completion
+    for attempt in range(240):
+        time.sleep(3)
+        poll_resp = requests.get(
+            f"{base_url}/v1/media/status",
+            headers=headers,
+            params={"task_id": task_id},
+            timeout=10,
+        )
+        poll_resp.raise_for_status()
+        poll_data = poll_resp.json()
+
+        if poll_data.get("is_final"):
+            if poll_data.get("state") == "success":
+                result_url = poll_data.get("result_url", "")
+                logger.info("Omni Flash 10s completed: %s", result_url)
+                return {"status": "completed", "video_url": result_url}
+            else:
+                error_msg = poll_data.get("error", poll_data.get("status", "Unknown error"))
+                raise RuntimeError(f"Omni Flash 10s failed: {error_msg}")
+
+        # pending / running → continue polling
+        logger.debug("Omni Flash 10s polling: state=%s progress=%s", poll_data.get("state"), poll_data.get("progress"))
+
+    raise RuntimeError("Omni Flash 10s video generation timeout after 720s")

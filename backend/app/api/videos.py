@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.models.video import Video
 from app.models.report import Report
 from app.schemas.video import VideoOut
@@ -69,7 +69,7 @@ def get_video(video_id: str, db: Session = Depends(get_db)):
     report = db.query(Report).filter(Report.video_id == video_id).first()
     progress = get_analysis_progress(video_id)
     if video.status == "completed":
-        progress = {"upload": 100, "parse": 100, "strategy": 100, "prompt": 100, "error": None}
+        progress = {"upload": 100, "parse": 100, "strategy": 100, "prompt": 100, "creative": 100, "error": None}
     elif video.status == "failed":
         progress = {**progress, "error": video.error}
 
@@ -94,14 +94,120 @@ def get_video(video_id: str, db: Session = Depends(get_db)):
     }
 
 
+import threading as _threading
+import queue as _queue
+
+_video_analysis_queue: _queue.Queue[str] = _queue.Queue()
+_video_analysis_worker_started = False
+_video_analysis_lock = _threading.Lock()
+_queued_video_ids: set[str] = set()
+_active_video_id: str | None = None
+
+
+def _ensure_video_analysis_worker_started() -> None:
+    global _video_analysis_worker_started
+    with _video_analysis_lock:
+        if _video_analysis_worker_started:
+            return
+        _video_analysis_worker_started = True
+        _threading.Thread(target=_video_analysis_worker, daemon=True).start()
+
+
+def enqueue_video_analysis(video_id: str) -> bool:
+    """Queue one video analysis task.
+
+    Returns True when the task was newly queued. A single worker consumes this
+    queue, so bulk uploads/recovery cannot exhaust local model/API resources.
+    """
+    global _active_video_id
+    _ensure_video_analysis_worker_started()
+    with _video_analysis_lock:
+        if video_id == _active_video_id or video_id in _queued_video_ids:
+            return False
+        _queued_video_ids.add(video_id)
+        _video_analysis_queue.put(video_id)
+        return True
+
+
+def get_video_analysis_queue_snapshot() -> dict:
+    with _video_analysis_lock:
+        return {
+            "active_video_id": _active_video_id,
+            "queued_count": len(_queued_video_ids),
+            "queued_video_ids": list(_queued_video_ids),
+            "worker_started": _video_analysis_worker_started,
+        }
+
+def _video_analysis_worker():
+    global _active_video_id
+    while True:
+        video_id = _video_analysis_queue.get()
+        try:
+            with _video_analysis_lock:
+                _queued_video_ids.discard(video_id)
+                _active_video_id = video_id
+            run_analysis(video_id)
+        except Exception:
+            logger.exception("Queued video analysis failed unexpectedly: %s", video_id)
+        finally:
+            with _video_analysis_lock:
+                if _active_video_id == video_id:
+                    _active_video_id = None
+            _video_analysis_queue.task_done()
+
+
+def resume_unfinished_video_analyses() -> dict:
+    """Recover unfinished viral-replica analyses after server start/reload."""
+    db = SessionLocal()
+    try:
+        with _video_analysis_lock:
+            active_video_id = _active_video_id
+        unfinished = (
+            db.query(Video)
+            .filter(Video.status.in_(["pending", "processing"]))
+            .order_by(Video.created_at.asc())
+            .all()
+        )
+        queued = 0
+        for video in unfinished:
+            if video.id == active_video_id:
+                continue
+            # A previous process may have died after setting processing. Treat it
+            # as waiting until the single worker actually picks it up.
+            video.status = "pending"
+            video.error = None
+        db.commit()
+        for video in unfinished:
+            if video.id == active_video_id:
+                continue
+            if enqueue_video_analysis(video.id):
+                queued += 1
+        logger.info("Recovered %d unfinished video analyses (%d queued)", len(unfinished), queued)
+        return {"recovered": len(unfinished), "queued": queued}
+    finally:
+        db.close()
+
 @router.post("/{video_id}/analyze")
 def start_analysis(video_id: str, db: Session = Depends(get_db)):
     video = db.get(Video, video_id)
     if not video:
         raise HTTPException(404, "Video not found")
-    import threading
-    threading.Thread(target=run_analysis, args=(video_id,), daemon=True).start()
-    return {"status": "started"}
+    if video.status != "processing":
+        video.status = "pending"
+    video.error = None
+    db.commit()
+    queued = enqueue_video_analysis(video_id)
+    return {"status": "queued", "queued": queued}
+
+
+@router.post("/resume-unfinished")
+def resume_unfinished_analyses():
+    return resume_unfinished_video_analyses()
+
+
+@router.get("/analysis-queue/status")
+def get_video_analysis_queue_status():
+    return get_video_analysis_queue_snapshot()
 
 
 MEDIA_TYPES = {
@@ -341,3 +447,120 @@ def _extract_section(markdown: str, section_name: str) -> str:
     pattern = rf'##\s*{re.escape(section_name)}\s*\n([\s\S]*?)(?=\n##|\Z)'
     m = re.search(pattern, markdown)
     return m.group(1).strip() if m else ""
+
+
+# ── Auto creative generation ──────────────────────────────────────────────────
+
+@router.post("/{video_id}/auto-creatives")
+def auto_generate_creatives(video_id: str, db: Session = Depends(get_db)):
+    """Auto-generate 10 creative prompt variants from completed video analysis."""
+    video = db.get(Video, video_id)
+    if not video:
+        raise HTTPException(404, "Video not found")
+
+    report = db.query(Report).filter(Report.video_id == video_id).first()
+    if not report or not report.strategy:
+        raise HTTPException(400, "请先完成视频分析")
+
+    from app.ai_models import get_model
+    from app.models.config import ModelConfig
+    from app.models.creative_prompt import CreativePrompt
+    from app.api.creative import _parse_json_array
+
+    cfg = db.query(ModelConfig).first() or ModelConfig()
+    analysis_model = get_model(cfg.analysis_model, cfg)
+
+    # Extract core creative from strategy + prompt
+    strategy_text = report.strategy or ""
+    prompt_text = report.prompt or ""
+
+    core_creative_prompt = f"""You are an expert at distilling viral TikTok video creativity into reusable formulas.
+
+Given below is a detailed analysis of a viral TikTok video. Extract the CORE CREATIVE FORMULA in 3-5 sentences. Focus on:
+- The emotional hook mechanism
+- The unique visual rhythm/pattern
+- The narrative structure that made it go viral
+- What makes it replicable across different products
+
+Video Analysis:
+{strategy_text[:2000]}
+
+Reverse Prompt:
+{prompt_text[:1000]}
+
+Return ONLY the core creative formula as 3-5 plain English sentences. No markdown, no JSON."""
+
+    try:
+        core_creative = analysis_model.analyze_text(core_creative_prompt, task="direct").strip()
+    except Exception as e:
+        logger.warning("Core creative extraction failed: %s, using fallback", e)
+        core_creative = strategy_text[:500]
+    prompt_text = report.prompt or ""
+    reverse_prompt_short = prompt_text[:1500] if prompt_text else ""
+
+    # Generate 10 creative prompt variants
+    variants_prompt = f"""You are a TikTok creative director. Use the CORE CREATIVE FORMULA and REVERSE PROMPT below to generate 10 distinct prompt variants.
+
+CORE CREATIVE FORMULA:
+{core_creative}
+
+REFERENCE REVERSE PROMPT (the original video's visual style, camera work, lighting, shot structure):
+{reverse_prompt_short}
+
+Generate 10 prompt variants. For each variant, output a JSON object with TWO parts: a detailed "angle" object AND a complete "prompt" string.
+
+The "angle" object must contain:
+- title: Short catchy title describing this variant's unique twist
+- hook_visual: The first 3-seconds visual hook in 1 sentence
+- hook_copy: The first 3-seconds opening line (dialogue or overlay text)
+- concept: Detailed shooting concept (2-3 sentences with camera movement, framing, editing)
+- why: Why this angle fits and how it adapts the core formula (1-2 sentences)
+- emotion_curve: The emotional journey, e.g. "curiosity→delight→trust→action"
+- structure_reference: Which part of the core formula this variant emphasizes
+- shot_sequence: Lens progression, e.g. "medium→close-up→medium→wide→close-up"
+
+The "prompt" must be a COMPLETE English video generation prompt with sections: STYLE, CAMERA, LIGHTING, ACTIONS, AUDIO. Mirror the reverse prompt's level of detail.
+
+Output a JSON array of 10 objects:
+[
+  {{
+    "angle": {{
+      "title": "...",
+      "hook_visual": "...",
+      "hook_copy": "...",
+      "concept": "...",
+      "why": "...",
+      "emotion_curve": "...",
+      "structure_reference": "...",
+      "shot_sequence": "..."
+    }},
+    "prompt": "Complete video generation prompt..."
+  }}
+]
+
+Return ONLY the JSON array. No markdown, no explanation."""
+
+    raw = analysis_model.analyze_text(variants_prompt, task="direct")
+    variants = _parse_json_array(raw)
+
+    if not variants:
+        raise HTTPException(500, "Failed to generate creative variants")
+
+    # Save to DB
+    import uuid as _uuid
+    from datetime import datetime as _dt
+    record = CreativePrompt(
+        id=str(_uuid.uuid4()),
+        description=core_creative,
+        results=json.dumps(variants, ensure_ascii=False),
+        video_id=video_id,
+        created_at=_dt.utcnow(),
+    )
+    db.add(record)
+    db.commit()
+
+    return {
+        "id": record.id,
+        "core_creative": core_creative,
+        "variants": variants,
+    }

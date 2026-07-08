@@ -1,5 +1,6 @@
 """Background task for standalone video generation."""
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -9,8 +10,32 @@ from app.config import settings
 from app.database import SessionLocal
 from app.models.video_generation import VideoGeneration
 from app.models.config import ModelConfig
+from app.models.storyboard_replication import StoryboardReplication
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_reference_image(db: Session, ref: str | None) -> str | None:
+    """If reference_image is a storyboard API URL, resolve to local file path."""
+    if not ref:
+        return None
+    # Check if it's a local path that already exists
+    if Path(ref).exists():
+        return ref
+    # Check if it's a storyboard URL: /api/storyboard/{uuid}/image
+    m = re.match(r'^/api/storyboard/([a-f0-9-]+)/image$', ref)
+    if m:
+        sb = db.get(StoryboardReplication, m.group(1))
+        if sb and sb.storyboard_image_path and Path(sb.storyboard_image_path).exists():
+            logger.info("Resolved storyboard reference %s -> %s", ref, sb.storyboard_image_path)
+            return sb.storyboard_image_path
+    # Could be a video-gen ref-image path
+    m = re.match(r'^video_gen_refs/(.+)$', ref)
+    if m:
+        p = Path("video_gen_refs") / m.group(1)
+        if p.exists():
+            return str(p)
+    return None
 
 
 def run_video_generation(gen_id: str):
@@ -27,9 +52,9 @@ def run_video_generation(gen_id: str):
         cfg = db.query(ModelConfig).first() or ModelConfig()
         providers = cfg.get_providers() if cfg else {}
 
-        # Determine image source
+        # Resolve reference image (may be a storyboard API URL)
+        local_image_path = _resolve_reference_image(db, gen.reference_image)
         image_url = None
-        local_image_path = gen.reference_image if gen.reference_image and Path(gen.reference_image).exists() else None
 
         # Route to appropriate backend
         duration = gen.duration or 5
@@ -39,9 +64,12 @@ def run_video_generation(gen_id: str):
             _generate_video_volcengine,
             _generate_video_veo,
             _generate_video_aliyun,
+            _generate_video_updrama,
         )
 
-        if model == "veo-3.1":
+        if model == "omni_flash-10s":
+            result = _generate_video_updrama(gen.prompt, image_url, providers, aspect_ratio=gen.aspect_ratio or "9:16", local_image_path=local_image_path)
+        elif model == "veo-3.1":
             result = _generate_video_veo(gen.prompt, image_url, providers, duration=duration, local_image_path=local_image_path)
         elif model in ["happyhorse-1.0", "wan-2.6"]:
             result = _generate_video_aliyun(gen.prompt, image_url, providers, model_name=model, duration=duration, local_image_path=local_image_path)
