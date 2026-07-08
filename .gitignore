@@ -16,3 +16,6 @@ node_modules/
 processed/
 uploads/
 venv/
+dist-dmg/Decipher.app
+dist-dmg/Decipher.dmg
+dist-dmg/staging
