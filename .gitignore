@@ -1,21 +1,51 @@
-*.db
-*.egg-info/
-*.pyc
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+*.tmp
 *.sqlite
+*.db
+
+# OS
 .DS_Store
+.AppleDouble
+.LSOverride
+
+# Python
+*.pyc
+*.egg-info/
+__pycache__/
+.venv/
+venv/
+
+# Node
+node_modules/
+
+# Env
 .env
+
+# IDE
 .omc/sessions/
 .omc/state/
 .superpowers/
-.venv/
-__pycache__/
-backend/products/
+.codegraph/
+
+# Build
 build/
 dist/
-node_modules/
-processed/
-uploads/
-venv/
 dist-dmg/Decipher.app
 dist-dmg/Decipher.dmg
 dist-dmg/staging
+
+# Runtime data (local only)
+backend/uploads/
+backend/processed/
+backend/data/
+backend/video_gen_outputs/
+backend/video_gen_refs/
+backend/products/
+backend/launcher.py
+
+# Temp artifacts
+project_report.html
