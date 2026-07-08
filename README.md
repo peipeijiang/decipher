@@ -3,131 +3,27 @@
 </p>
 <h1 align="center">Decipher</h1>
 <p align="center">
-  <strong>看懂爆款 → 批量复刻 → AIGC 出片</strong>
+  <strong>AI 短视频内容工作台 — 分析爆款 · 复刻结构 · 批量出片</strong>
 </p>
 <p align="center">
   <a href="https://github.com/peipeijiang/decipher/releases"><img src="https://img.shields.io/badge/macOS-DMG-blue" alt="macOS"></a>
   <a href="https://github.com/peipeijiang/decipher/releases"><img src="https://img.shields.io/github/v/release/peipeijiang/decipher" alt="release"></a>
-  &nbsp;
+  &nbsp;·&nbsp;
   <a href="#english">English</a> · <a href="#中文">中文</a>
 </p>
 
 ---
 
-<a name="english"></a>
+## 功能地图
 
-## English
-
-> **Decipher** is a TikTok video analysis workbench for cross-border e-commerce. Upload a viral video — AI breaks down the marketing strategy, shot timeline, and reverse-engineered prompts. Then it generates 10 creative variants, auto-produces storyboard panels, and submits them to your video model of choice. From "I saw a hit" to "I have 10 versions to test" in one flow.
-
-### Pain Points
-
-- You see a viral TikTok but **can't explain why it worked** — hook, rhythm, subtitles, or just luck?
-- You want to replicate the structure for your product but **can't write a matching Prompt**.
-- You need 10 variants to A/B test but **only have one idea in your head**.
-- Briefing an editing team at the shot level is **slow, expensive, and the output still misses the mark**.
-
-### Screenshots
-
-| Workbench | Analysis Report |
-|:---:|:---:|
-| ![Workbench](docs/screenshots/02-workbench.png) | ![Analysis](docs/screenshots/03-replica-analysis.png) |
-
-| Creative Variants | Storyboard |
-|:---:|:---:|
-| ![Creative](docs/screenshots/04b-replica-creative.png) | ![Storyboard](docs/screenshots/04-replica-storyboard.png) |
-
-### Core Capability: 3 Steps from Hit to Your Video
-
-**Step 1 — Deconstruct**
-
-Upload a TikTok video. AI handles:
-
-- **Speech recognition** — Whisper transcription with timestamps
-- **Smart frame extraction** — adaptive scene detection, 6–20 key frames
-- **Multi-model analysis** — vision model reads visuals, text model reads structure
-
-Output: **marketing strategy report + shot timeline + reverse-engineered Prompt**. Every shot has a timestamp — click to jump to that moment.
-
-**Step 2 — Replicate**
-
-AI extracts the core creative formula and generates **10 distinct variants**:
-
-- Each variant: **title, hook visual, opening line, shot sequence, emotional curve**
-- Preserves the viral structure, swaps scene / product / persona / emotion
-- Ready to paste into Sora / Jimeng / Kling / Pika
-
-10 variants = one ad test cycle. No more creative block.
-
-**Step 3 — Generate**
-
-Select variants, pick a model, submit:
-
-| Model | Capability | Duration |
-|------|------|------|
-| Omni Flash 10s | Image + Prompt → Video | 10s |
-| Seedance 2.0 | Image + Prompt → Video | 4–15s |
-| Veo 3.1 | Image-to-Video | 5–8s |
-| HappyHorse / Wan 2.6 | Text-to-Video | 3–15s |
-
-The storyboard grid auto-fills as the reference image — product appearance stays faithful, shot language stays on-brand.
-
-### Why Not Just Another AI Video Tool
-
-| Existing tools | Decipher adds |
-|---|---|
-| Prompt → Video | Analyzes the viral formula, writes a quality Prompt *for you* |
-| One prompt = one video | One deconstruction → 10 variants → batch generation |
-| Manual judgment of structure | AI identifies hooks, selling points, conversion paths |
-| Hand-write shot scripts | Auto-generates storyboard panels |
-
-### Architecture
-
-```
-Frontend:  React 18 + Vite + TailwindCSS
-Backend:   FastAPI + SQLAlchemy + SQLite
-Video:     FFmpeg + Whisper (local small model)
-AI:        DeepSeek / MiniMax / OpenAI / ...
-Deploy:    macOS .app, http://127.0.0.1:18888
-```
-
-### Quick Start
-
-**Option 1: macOS App**
-
-Download `Decipher.dmg` from [Releases](https://github.com/peipeijiang/decipher/releases) → mount → drag to `/Applications` → double-click. First run installs deps automatically (~1 min).
-
-**Option 2: From Source**
-
-```bash
-git clone https://github.com/peipeijiang/decipher.git
-cd decipher
-cd backend && cp .env.example .env && pip install -r requirements.txt
-uvicorn main:app --port 8000
-
-cd frontend && npm install && npm run dev -- --port 18889
-```
-
-**Configure AI Models**
-
-Set at least one API Key in `.env` or the in-app Settings page. Recommended: DeepSeek (best value) or MiniMax (best vision).
-
-### Workflow
-
-```mermaid
-graph LR
-    A[Upload TikTok] --> B[Key frames + Whisper]
-    B --> C[AI Analysis: strategy + shots + prompt]
-    C --> D[10 Creative Variants]
-    D --> E[Storyboard]
-    E --> F[Select → Generate]
-    F --> G[Creatives]
-```
-
-### Related Projects
-
-- [Wibly Orbit](https://github.com/peipeijiang/wibly-orbit) — Multi-platform social media management
-- [Product UGC Pipeline](https://github.com/peipeijiang/product-ugc-pipeline) — Product → UGC video pipeline
+<table>
+<tr>
+  <td width="25%" align="center"><b>🔍 爆款复刻</b><br><sub>上传 TikTok 视频 → 策略·分镜·Prompt</sub></td>
+  <td width="25%" align="center"><b>📦 产品视频</b><br><sub>1688 链接 → 产品文档 → AIGC 脚本</sub></td>
+  <td width="25%" align="center"><b>🧠 智能体工作流</b><br><sub>自定义 Prompt 模板 → 编排分析管线</sub></td>
+  <td width="25%" align="center"><b>🎬 视频生成</b><br><sub>多模型集成 · 一键批量出片</sub></td>
+</tr>
+</table>
 
 ---
 
@@ -135,16 +31,9 @@ graph LR
 
 ## 中文
 
-> **Decipher** 是面向 TikTok 跨境电商的视频分析工作台。上传一段爆款视频，AI 自动拆解营销策略、分镜时间轴、逆向提示词；然后生成 10 个创意变体、自动产出 storyboard 分镜图，勾选后直接提交视频模型出片。从"看到一个爆款"到"我有 10 个版本可以投"，一步到位。
+### 爆款复刻
 
-### 痛点
-
-- 刷到一个爆款视频，**说不清它为什么爆** — hook 狠？节奏快？字幕密？还是运气？
-- 想复刻这个视频结构套自己的产品，**写不出对标的 Prompt**。
-- 需要出 10 个变体测素材，**脑子里只有一个版本**。
-- 请剪辑团队做分镜级视频，**沟通成本极高**，最后出片还不像。
-
-### 界面预览
+> 把你刷到的 TikTok 爆款视频拆成可复用的结构资产。AI 分析：它为什么爆？分镜怎么切的？Prompt 该怎么写？然后自动生成 10 个可替换产品/场景的创意变体。
 
 | 工作台 | 分析报告 |
 |:---:|:---:|
@@ -154,94 +43,212 @@ graph LR
 |:---:|:---:|
 | ![创意变体](docs/screenshots/04b-replica-creative.png) | ![分镜复刻](docs/screenshots/04-replica-storyboard.png) |
 
-### 核心能力：三步把爆款变成你的视频
+#### 三步走：拆解 → 复刻 → 出片
 
-**Step 1 — 拆解**
+**Step 1 — 拆解**：上传视频 → Whisper 语音转文字 → 自适应关键帧提取 → 多模型分析 → 输出**营销策略 + 分镜时间轴 + 逆向 Prompt**
 
-上传一段 TikTok 爆款视频，AI 自动完成：
+**Step 2 — 复刻**：AI 提取核心创意公式 → 自动生成 **10 个变体**（标题 · Hook 画面 · 开场文案 · 分镜序列 · 情绪曲线），保留爆款结构，替换场景/产品/情绪。
 
-- **语音识别** — Whisper 转文字 + 时间轴
-- **智能关键帧** — 自适应场景检测，6–20 帧
-- **多模型分析** — 视觉模型看画面，文本模型看结构
+**Step 3 — 出片**：勾选变体 → 选模型 → 一键批量提交视频生成。Storyboard 自动作为参考图传入。
 
-输出：**营销策略报告 + 分镜时间轴 + 逆向 Prompt**。每个分镜带时间戳，点击跳转到对应画面位置。
+---
 
-**Step 2 — 复刻**
+### 产品视频
 
-拿到原视频的核心创意公式后，AI 自动生成 **10 个创意变体**：
+> 粘贴 1688 / Shopify / 任意电商链接，AI 自动抓取产品信息、生成结构化产品文档、输出 10 个 TikTok 视频脚本变体，对接视频生成模型直接出片。
 
-- 每个变体：**标题、Hook 画面描述、开场文案、分镜序列、情绪曲线**
-- 保留爆款结构，替换场景 / 产品 / 人设 / 情绪
-- 可直接粘贴到 Sora / 即梦 / Kling / Pika 生成视频
+![产品页](docs/screenshots/06-product.png)
 
-10 个变体 = 10 条素材 = 一轮投放测试，不再为想不出脚本卡住。
+#### 产品视频流程
 
-**Step 3 — 出片**
+1. **链接抓取**：输入商品链接，自动提取标题、价格、主图、卖点
+2. **产品文档**：AI 分析产品特性 → 结构化产品认知（使用场景 · 目标人群 · 卖点排序）
+3. **脚本生成**：根据模板生成 10 个视频脚本变体，含 Hook、分镜、文案、BGM
+4. **视频出片**：勾选脚本 → 选择视频模型 → 批量生成
 
-勾选创意变体，选择视频模型，一键提交：
+---
 
-| 模型 | 能力 | 时长 |
-|------|------|------|
-| Omni Flash 10s | 参考图 + Prompt → 视频 | 10s |
-| Seedance 2.0 | 参考图 + Prompt → 视频 | 4–15s |
-| Veo 3.1 | 图生视频 | 5–8s |
-| HappyHorse / Wan 2.6 | 文生视频 | 3–15s |
+### 智能体工作流
 
-分镜 storyboard 自动作为参考图传入 — **产品外观保真，镜头语言对版**。
+> 自定义 Prompt 模板，编排分析管线。把上面的所有流程拆成可配置的「智能体」，每个节点可独立调整模型、Prompt、输入输出。
 
-### 为什么不是"又一个 AI 视频工具"
+![智能体工作流](docs/screenshots/07-agent-workflow.png)
 
-| 现有工具能做 | Decipher 多做的 |
-|---|---|
-| 输入 Prompt → 输出视频 | 帮你分析爆款、写出高质量 Prompt |
-| 一个 Prompt 一条视频 | 一次拆解 → 10 个变体 → 批量生成 |
-| 靠人判断视频结构 | AI 识别 hook / 卖点表达 / 转化路径 |
-| 手写分镜脚本 | Storyboard 自动生成 |
+#### 内置智能体
+
+| 智能体 | 职责 | 输入 | 输出 |
+|--------|------|------|------|
+| 营销策略分析 | 视频类型 · 转化逻辑 · 用户心智 | 视频帧 + 转写文本 | 策略报告 |
+| 分镜分析 | 镜头类型 · 节奏 · 画面元素 | 视频帧 + 时间轴 | 分镜 JSON |
+| 逆向 Prompt 生成 | 还原拍摄指令 | 策略 + 分镜 | AIGC Prompt |
+| 创意改写 | 批量生成变体 | 核心创意 + 逆向 Prompt | 10 个变体 |
+| 分镜复刻 | 抽取关键帧拼图 | 视频 + 分镜时间戳 | Storyboard 图片 |
+| 产品文档生成 | 1688 链接 → 产品认知 | 产品链接 | 结构化 JSON |
+| 视频脚本生成 | 产品文档 → 拍摄脚本 | 产品 JSON + 模板 | 10 个脚本 |
+
+每个智能体可独立配置**视觉模型**和**文本模型**（DeepSeek / MiniMax / OpenAI 等）。
+
+---
+
+### 视频生成
+
+> 集成多个视频生成后端，从创意 Prompt 到成品视频一步完成。
+
+![视频生成](docs/screenshots/08-video-gen.png)
+
+| 模型 | 能力 | 时长 | 参考图 |
+|------|------|------|--------|
+| Omni Flash 10s | 图 + Prompt → 视频 | 10s | ✅ |
+| Seedance 2.0 | 图 + Prompt → 视频 | 4–15s | ✅ |
+| Veo 3.1 | 图生视频 | 5–8s | ✅ |
+| HappyHorse / Wan 2.6 | 文生视频 | 3–15s | ❌ |
+
+支持上传参考图、本地 Prompt 自由输入、队列管理、批量重试。
+
+---
+
+### 模板配置
+
+> 所有 Prompt 模板集中管理，包括视频脚本模板、图片布局模板、Hook 模板，可版本化迭代。
+
+![模板配置](docs/screenshots/09-templates.png)
+
+---
+
+### 多模型配置
+
+支持 **DeepSeek / MiniMax / OpenAI / Claude / 豆包 / 智谱**，视觉模型和文本模型可独立选择，API Key 在线管理。
+
+![模型配置](docs/screenshots/05-config.png)
+
+---
 
 ### 技术架构
 
 ```
-前端：React 18 + Vite + TailwindCSS
+前端：React 18 + Vite + TypeScript + TailwindCSS
 后端：FastAPI + SQLAlchemy + SQLite
-视频：FFmpeg + Whisper（本地 small 模型）
-AI：  DeepSeek / MiniMax / OpenAI / ...
-部署：macOS .app，http://127.0.0.1:18888
+视频：FFmpeg + Whisper (本地 small 模型)
+AI：  DeepSeek / MiniMax / OpenAI / Claude / 豆包 / 智谱
+部署：macOS .app 双击即用 (http://127.0.0.1:18888)
 ```
 
 ### 快速开始
 
-**方式一：macOS 应用（推荐）**
+**方式一：macOS 应用**
 
-从 [Releases](https://github.com/peipeijiang/decipher/releases) 下载 `Decipher.dmg` → 拖入 `/Applications` → 双击运行。首次自动安装依赖，约 1 分钟。
+从 [Releases](https://github.com/peipeijiang/decipher/releases) 下载 Decipher.dmg → 拖入 /Applications → 双击运行。首次自动安装依赖。
 
-**方式二：源码启动**
+**方式二：源码**
 
 ```bash
-git clone https://github.com/peipeijiang/decipher.git
-cd decipher
 cd backend && cp .env.example .env && pip install -r requirements.txt
 uvicorn main:app --port 8000
 
 cd frontend && npm install && npm run dev -- --port 18889
 ```
 
-**配置 AI 模型**
-
-在 `.env` 或界面「设置 → 模型配置」至少配一个 API Key。推荐 DeepSeek（性价比最高）或 MiniMax（视觉分析效果好）。
-
-### 工作流程
-
-```mermaid
-graph LR
-    A[上传 TikTok 视频] --> B[关键帧 + 语音识别]
-    B --> C[AI 分析：策略 + 分镜 + Prompt]
-    C --> D[10 个创意变体]
-    D --> E[Storyboard 分镜拼图]
-    E --> F[勾选 → 出片]
-    F --> G[产出素材]
-```
-
 ### 相关项目
 
 - [Wibly Orbit](https://github.com/peipeijiang/wibly-orbit) — 多平台社媒运营编排
 - [Product UGC Pipeline](https://github.com/peipeijiang/product-ugc-pipeline) — 产品 → UGC 视频全自动流水线
+
+---
+
+<a name="english"></a>
+
+## English
+
+### Viral Replication
+
+> Upload a viral TikTok. AI analyzes why it worked — marketing strategy, shot breakdown, and a reverse-engineered prompt. Then generates 10 creative variants you can test with your own product.
+
+| Workbench | Analysis Report |
+|:---:|:---:|
+| ![Workbench](docs/screenshots/02-workbench.png) | ![Analysis](docs/screenshots/03-replica-analysis.png) |
+
+| Creative Variants | Storyboard |
+|:---:|:---:|
+| ![Creative](docs/screenshots/04b-replica-creative.png) | ![Storyboard](docs/screenshots/04-replica-storyboard.png) |
+
+**Deconstruct → Replicate → Generate**
+
+1. Upload → Whisper transcription → adaptive frame extraction → multi-model analysis → marketing strategy + shot timeline + reverse prompt
+2. AI extracts core formula → generates 10 variants (title · hook visual · opening line · shot sequence · emotional curve)
+3. Select variants → pick model → batch submit for video generation
+
+---
+
+### Product Video
+
+> Paste a 1688 / Shopify / e-commerce URL. AI scrapes product info, builds a structured product document, and generates 10 TikTok video script variants. Hook directly into video generation.
+
+![Product](docs/screenshots/06-product.png)
+
+1. **Link Scraping** — auto-extract title, price, images, selling points
+2. **Product Document** — structured cognition: use cases, target audience, benefit ranking
+3. **Script Generation** — 10 variants with hook, shots, copy, BGM
+4. **Video Output** — select scripts → choose model → batch generate
+
+---
+
+### Agent Workflow
+
+> Build custom prompt pipelines. Every analysis node is a configurable "agent" — swap the model, edit the prompt, define inputs and outputs.
+
+![Agent Workflow](docs/screenshots/07-agent-workflow.png)
+
+| Agent | Role |
+|-------|------|
+| Marketing Strategy | Video type · conversion logic · user psychology |
+| Shot Analysis | Shot type · rhythm · visual elements |
+| Reverse Prompt | Reconstruct filming instructions |
+| Creative Rewrite | Generate 10 creative variants |
+| Storyboard | Extract key frames → grid image |
+| Product Doc | 1688 URL → structured product JSON |
+| Video Script | Product doc → shooting scripts |
+
+Each agent independently configures **vision model** and **text model** (DeepSeek / MiniMax / OpenAI, etc.).
+
+---
+
+### Video Generation
+
+![Video Gen](docs/screenshots/08-video-gen.png)
+
+| Model | Capability | Duration | Ref Image |
+|------|------|------|------|
+| Omni Flash 10s | Image + Prompt → Video | 10s | ✅ |
+| Seedance 2.0 | Image + Prompt → Video | 4–15s | ✅ |
+| Veo 3.1 | Image-to-Video | 5–8s | ✅ |
+| HappyHorse / Wan 2.6 | Text-to-Video | 3–15s | ❌ |
+
+---
+
+### Architecture
+
+```
+Frontend:  React 18 + Vite + TypeScript + TailwindCSS
+Backend:   FastAPI + SQLAlchemy + SQLite
+Video:     FFmpeg + Whisper (local small)
+AI:        DeepSeek / MiniMax / OpenAI / Claude / ...
+Deploy:    macOS .app (http://127.0.0.1:18888)
+```
+
+### Quick Start
+
+**macOS App**: Download from [Releases](https://github.com/peipeijiang/decipher/releases) → mount → drag to /Applications → double-click.
+
+**From Source**:
+
+```bash
+cd backend && cp .env.example .env && pip install -r requirements.txt
+uvicorn main:app --port 8000
+
+cd frontend && npm install && npm run dev -- --port 18889
+```
+
+### Related
+
+- [Wibly Orbit](https://github.com/peipeijiang/wibly-orbit)
+- [Product UGC Pipeline](https://github.com/peipeijiang/product-ugc-pipeline)
