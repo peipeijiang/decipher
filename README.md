@@ -9,7 +9,7 @@
   <a href="https://github.com/peipeijiang/decipher/releases"><img src="https://img.shields.io/badge/macOS-DMG-blue" alt="macOS"></a>
   <a href="https://github.com/peipeijiang/decipher/releases"><img src="https://img.shields.io/github/v/release/peipeijiang/decipher" alt="release"></a>
   &nbsp;·&nbsp;
-  <a href="#english">English</a> · <a href="#中文">中文</a>
+  <a href="README.md">🇨🇳 中文</a> · <a href="README_EN.md">🇬🇧 English</a>
 </p>
 
 ---
@@ -26,10 +26,6 @@
 </table>
 
 ---
-
-<a name="中文"></a>
-
-## 中文
 
 ### 爆款复刻
 
@@ -58,8 +54,6 @@
 > 粘贴 1688 / Shopify / 任意电商链接，AI 自动抓取产品信息、生成结构化产品文档、输出 10 个 TikTok 视频脚本变体，对接视频生成模型直接出片。
 
 ![产品页](docs/screenshots/06-product.png)
-
-#### 产品视频流程
 
 1. **链接抓取**：输入商品链接，自动提取标题、价格、主图、卖点
 2. **产品文档**：AI 分析产品特性 → 结构化产品认知（使用场景 · 目标人群 · 卖点排序）
@@ -101,10 +95,6 @@
 **模式一：流水线模式**（推荐）
 
 在爆款复刻 / 产品视频页面，勾选创意变体或视频脚本 → 选择模型 · 比例 · 时长 → 点击生成。Storyboard 自动作为参考图传入，保证产品外观在视频中保真。
-
-```
-创意变体 / 视频脚本 → 选择模型 → 参考图自动注入 → 视频生成 → 下载
-```
 
 **模式二：自由创作模式**
 
@@ -164,139 +154,15 @@ AI：  DeepSeek / MiniMax / OpenAI / Claude / 豆包 / 智谱
 **方式二：源码**
 
 ```bash
+git clone https://github.com/peipeijiang/decipher.git
 cd backend && cp .env.example .env && pip install -r requirements.txt
 uvicorn main:app --port 8000
 
 cd frontend && npm install && npm run dev -- --port 18889
 ```
 
-### 相关项目
-
-- [Wibly Orbit](https://github.com/peipeijiang/wibly-orbit) — 多平台社媒运营编排
-- [Product UGC Pipeline](https://github.com/peipeijiang/product-ugc-pipeline) — 产品 → UGC 视频全自动流水线
-
 ---
 
-<a name="english"></a>
-
-## English
-
-### Viral Replication
-
-> Upload a viral TikTok. AI analyzes why it worked — marketing strategy, shot breakdown, and a reverse-engineered prompt. Then generates 10 creative variants you can test with your own product.
-
-| Workbench | Analysis Report |
-|:---:|:---:|
-| ![Workbench](docs/screenshots/02-workbench.png) | ![Analysis](docs/screenshots/03-replica-analysis.png) |
-
-| Creative Variants | Storyboard |
-|:---:|:---:|
-| ![Creative](docs/screenshots/04b-replica-creative.png) | ![Storyboard](docs/screenshots/04-replica-storyboard.png) |
-
-**Deconstruct → Replicate → Generate**
-
-1. Upload → Whisper transcription → adaptive frame extraction → multi-model analysis → marketing strategy + shot timeline + reverse prompt
-2. AI extracts core formula → generates 10 variants (title · hook visual · opening line · shot sequence · emotional curve)
-3. Select variants → pick model → batch submit for video generation
-
----
-
-### Product Video
-
-> Paste a 1688 / Shopify / e-commerce URL. AI scrapes product info, builds a structured product document, and generates 10 TikTok video script variants. Hook directly into video generation.
-
-![Product](docs/screenshots/06-product.png)
-
-1. **Link Scraping** — auto-extract title, price, images, selling points
-2. **Product Document** — structured cognition: use cases, target audience, benefit ranking
-3. **Script Generation** — 10 variants with hook, shots, copy, BGM
-4. **Video Output** — select scripts → choose model → batch generate
-
----
-
-### Agent Workflow
-
-> Build custom prompt pipelines. Every analysis node is a configurable "agent" — swap the model, edit the prompt, define inputs and outputs.
-
-![Agent Workflow](docs/screenshots/07-agent-workflow.png)
-
-| Agent | Role |
-|-------|------|
-| Marketing Strategy | Video type · conversion logic · user psychology |
-| Shot Analysis | Shot type · rhythm · visual elements |
-| Reverse Prompt | Reconstruct filming instructions |
-| Creative Rewrite | Generate 10 creative variants |
-| Storyboard | Extract key frames → grid image |
-| Product Doc | 1688 URL → structured product JSON |
-| Video Script | Product doc → shooting scripts |
-
-Each agent independently configures **vision model** and **text model** (DeepSeek / MiniMax / OpenAI, etc.).
-
----
-
-### Video Generation
-
-> The final step: turn creative ideas into actual videos. Accepts output from Viral Replication and Product Video, submits generation tasks to multiple models in parallel, polls for completion, and serves downloadable videos.
-
-![Video Gen](docs/screenshots/08-video-gen.png)
-
-#### Two Work Modes
-
-**Pipeline Mode** (recommended)
-
-In the Viral Replication or Product Video pages: select creative variants or scripts → pick model / ratio / duration → click generate. Storyboard panels auto-inject as reference images.
-
-```
-Creative Variants / Scripts → Pick Model → Auto Reference → Generate → Download
-```
-
-**Freeform Mode**
-
-In the Video Generation page, type a prompt directly, optionally upload a reference image, and freely choose model and parameters.
-
-#### Built-in Models
-
-| Model | Engine | Capability | Duration | Ref | Best For |
-|------|------|------|------|------|------|
-| **Omni Flash 10s** | Google Gemini | Image+Prompt → video with audio | 10s | ✅ up to 7 | Scene replication |
-| **Seedance 2.0** | ByteDance | Image+Prompt → video | 4–15s | ✅ | Product / UGC |
-| **Veo 3.1** | Google | Image-to-Video | 5–8s | ✅ | High-quality shots |
-| **HappyHorse** | Alibaba Cloud | Text-to-Video | 3–15s | ❌ | Rapid prototyping |
-| **Wan 2.6** | Alibaba Cloud | Text-to-Video | 3–15s | ❌ | Creative exploration |
-
-#### Task Management
-
-- **Queue**: batch submissions auto-queued to prevent overload
-- **Live Status**: pending → generating → completed/failed, auto-polling
-- **Download**: videos auto-saved locally, retry failed tasks
-- **History**: all records traceable, prompts re-editable for re-submission
-
----
-
-### Architecture
-
-```
-Frontend:  React 18 + Vite + TypeScript + TailwindCSS
-Backend:   FastAPI + SQLAlchemy + SQLite
-Video:     FFmpeg + Whisper (local small)
-AI:        DeepSeek / MiniMax / OpenAI / Claude / ...
-Deploy:    macOS .app (http://127.0.0.1:18888)
-```
-
-### Quick Start
-
-**macOS App**: Download from [Releases](https://github.com/peipeijiang/decipher/releases) → mount → drag to /Applications → double-click.
-
-**From Source**:
-
-```bash
-cd backend && cp .env.example .env && pip install -r requirements.txt
-uvicorn main:app --port 8000
-
-cd frontend && npm install && npm run dev -- --port 18889
-```
-
-### Related
-
-- [Wibly Orbit](https://github.com/peipeijiang/wibly-orbit)
-- [Product UGC Pipeline](https://github.com/peipeijiang/product-ugc-pipeline)
+<p align="center">
+  <a href="README.md">🇨🇳 中文</a> · <a href="README_EN.md">🇬🇧 English</a>
+</p>
