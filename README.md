@@ -92,18 +92,40 @@
 
 ### 视频生成
 
-> 集成多个视频生成后端，从创意 Prompt 到成品视频一步完成。
+> 把创意变成视频的最后一步。承接爆款复刻的分析结果和产品视频的脚本输出，一键提交视频生成任务，多模型并行，自动轮询状态，成品直接下载。
 
 ![视频生成](docs/screenshots/08-video-gen.png)
 
-| 模型 | 能力 | 时长 | 参考图 |
-|------|------|------|--------|
-| Omni Flash 10s | 图 + Prompt → 视频 | 10s | ✅ |
-| Seedance 2.0 | 图 + Prompt → 视频 | 4–15s | ✅ |
-| Veo 3.1 | 图生视频 | 5–8s | ✅ |
-| HappyHorse / Wan 2.6 | 文生视频 | 3–15s | ❌ |
+#### 两种工作模式
 
-支持上传参考图、本地 Prompt 自由输入、队列管理、批量重试。
+**模式一：流水线模式**（推荐）
+
+在爆款复刻 / 产品视频页面，勾选创意变体或视频脚本 → 选择模型 · 比例 · 时长 → 点击生成。Storyboard 自动作为参考图传入，保证产品外观在视频中保真。
+
+```
+创意变体 / 视频脚本 → 选择模型 → 参考图自动注入 → 视频生成 → 下载
+```
+
+**模式二：自由创作模式**
+
+在视频生成页面直接输入 Prompt，上传参考图（可选），自由选择模型和参数，适合定制化需求。
+
+#### 内置视频模型
+
+| 模型 | 引擎 | 能力 | 时长 | 参考图 | 适用场景 |
+|------|------|------|------|--------|----------|
+| **Omni Flash 10s** | Google Gemini | 图+Prompt → 含音效视频 | 10s | ✅ 最多7张 | 剧情/场景复刻 |
+| **Seedance 2.0** | 字节跳动 | 图+Prompt → 视频 | 4–15s | ✅ | 产品展示/UGC |
+| **Veo 3.1** | Google | 图生视频 | 5–8s | ✅ | 高质量质感视频 |
+| **HappyHorse** | 阿里云 | 文生视频 | 3–15s | ❌ | 快速原型 |
+| **Wan 2.6** | 阿里云 | 文生视频 | 3–15s | ❌ | 创意探索 |
+
+#### 任务管理
+
+- **队列管理**：批量提交自动排队，避免并发过载
+- **实时状态**：等待中 → 生成中 → 完成 / 失败，页面自动轮询
+- **视频下载**：完成后自动下载到本地，支持重试失败任务
+- **历史记录**：所有生成记录可回溯，Prompt 可重新编辑再提交
 
 ---
 
@@ -214,14 +236,40 @@ Each agent independently configures **vision model** and **text model** (DeepSee
 
 ### Video Generation
 
+> The final step: turn creative ideas into actual videos. Accepts output from Viral Replication and Product Video, submits generation tasks to multiple models in parallel, polls for completion, and serves downloadable videos.
+
 ![Video Gen](docs/screenshots/08-video-gen.png)
 
-| Model | Capability | Duration | Ref Image |
-|------|------|------|------|
-| Omni Flash 10s | Image + Prompt → Video | 10s | ✅ |
-| Seedance 2.0 | Image + Prompt → Video | 4–15s | ✅ |
-| Veo 3.1 | Image-to-Video | 5–8s | ✅ |
-| HappyHorse / Wan 2.6 | Text-to-Video | 3–15s | ❌ |
+#### Two Work Modes
+
+**Pipeline Mode** (recommended)
+
+In the Viral Replication or Product Video pages: select creative variants or scripts → pick model / ratio / duration → click generate. Storyboard panels auto-inject as reference images.
+
+```
+Creative Variants / Scripts → Pick Model → Auto Reference → Generate → Download
+```
+
+**Freeform Mode**
+
+In the Video Generation page, type a prompt directly, optionally upload a reference image, and freely choose model and parameters.
+
+#### Built-in Models
+
+| Model | Engine | Capability | Duration | Ref | Best For |
+|------|------|------|------|------|------|
+| **Omni Flash 10s** | Google Gemini | Image+Prompt → video with audio | 10s | ✅ up to 7 | Scene replication |
+| **Seedance 2.0** | ByteDance | Image+Prompt → video | 4–15s | ✅ | Product / UGC |
+| **Veo 3.1** | Google | Image-to-Video | 5–8s | ✅ | High-quality shots |
+| **HappyHorse** | Alibaba Cloud | Text-to-Video | 3–15s | ❌ | Rapid prototyping |
+| **Wan 2.6** | Alibaba Cloud | Text-to-Video | 3–15s | ❌ | Creative exploration |
+
+#### Task Management
+
+- **Queue**: batch submissions auto-queued to prevent overload
+- **Live Status**: pending → generating → completed/failed, auto-polling
+- **Download**: videos auto-saved locally, retry failed tasks
+- **History**: all records traceable, prompts re-editable for re-submission
 
 ---
 
