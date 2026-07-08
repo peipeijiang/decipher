@@ -49,3 +49,44 @@ backend/launcher.py
 
 # Temp artifacts
 project_report.html
+
+# Aliyun / cloud SDK creds (local only)
+credentials
+*.cred
+
+# Local docs and reports (keep on disk, not on GitHub)
+*.backup
+BACKUP_*.md
+CHANGES.md
+COMPLETION_REPORT.md
+COWORK_CONTEXT.md
+DESIGN_SPECS.md
+FINAL_IMPLEMENTATION_REPORT.md
+IMPLEMENTATION_CHECKLIST.md
+INDEX.md
+LIGHT_THEME_REPORT.md
+NAVIGATION_REFACTOR_SUMMARY.md
+PROGRESS_REPORT.md
+QUICK_START_GUIDE.md
+README_REDESIGN.md
+UI_REDESIGN_PROPOSAL.md
+VISUAL_COMPARISON.md
+backend/LIGHT_THEME_FINAL.md
+backend/PHASE1_SUMMARY.md
+backend/README_STORYBOARD_PHASE1.md
+design-system/
+docs/dev-session-*.md
+docs/superpowers/
+docs/产品*
+docs/产品*
+
+# Local AI agent skills (not project source)
+.agents/
+.claude/
+
+AGENTS.md
+CLAUDE.md
+PRD.md
+START.md
+
+start-*.sh
