@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import axios from 'axios'
-import { Film, Sparkles, Package, Video, Clock, Search, Inbox, Trash2, CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react'
+import { Film, Sparkles, Package, Video, Clock, Search, Inbox, Trash2, CheckCircle2, AlertCircle, Loader2, X, FolderOpen } from 'lucide-react'
 import { MainLayout } from '../components/layout/MainLayout'
 import { StatusBadge } from '../components/ui/StatusBadge'
 import { ListSkeleton } from '../components/ui/LoadingSkeleton'
@@ -10,7 +10,7 @@ type ItemType = 'replica' | 'creative' | 'product' | 'video-gen'
 type FilterTab = 'all' | 'replica' | 'creative' | 'product' | 'video-gen'
 
 interface BaseItem { id: string; type: ItemType; title: string; created_at: string }
-interface ReplicaItem extends BaseItem { type: 'replica'; video_id: string; filename: string; status: 'pending'|'processing'|'completed'|'failed'; duration?: number }
+interface ReplicaItem extends BaseItem { type: 'replica'; video_id: string; filename: string; status: 'pending'|'processing'|'completed'|'failed'; duration?: number; source_path?: string; source_exists?: boolean }
 interface CreativeItem extends BaseItem { type: 'creative'; description: string; style: string; count: number }
 interface ProductItem extends BaseItem { type: 'product'; product_id: string; url: string; status: 'pending'|'analyzing'|'completed'|'failed' }
 interface VideoGenItem extends BaseItem { type: 'video-gen'; gen_id: string; model: string; status: 'pending'|'generating'|'completed'|'failed' }
@@ -71,9 +71,24 @@ function ItemRow({ item, onDel }: { item: WorkbenchItem; onDel: (e:React.MouseEv
     if (item.type==='creative') return `${item.count}个角度`
     if (item.type==='product') return (item as ProductItem).url
     if (item.type==='video-gen') return (item as VideoGenItem).model
-    if (item.type==='replica' && item.duration) { const m=Math.floor(item.duration/60); const s=String(Math.round(item.duration%60)).padStart(2,'0'); return `时长 ${m}:${s}` }
+    if (item.type==='replica') {
+      const parts: string[] = []
+      if (item.duration) { const m=Math.floor(item.duration/60); const s=String(Math.round(item.duration%60)).padStart(2,'0'); parts.push(`时长 ${m}:${s}`) }
+      if (item.filename && item.filename !== item.title) parts.push(item.filename)
+      return parts.join(' · ')
+    }
     return ''
   }, [item])
+
+  const openSource = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (item.type !== 'replica') return
+    try {
+      await axios.post(`/api/reports/${item.video_id}/reveal-source`)
+    } catch (err) {
+      console.warn('Failed to reveal source video', err)
+    }
+  }
 
   return (
     <div onClick={() => { if(item.type==='replica') nav(`/replica/${item.video_id}`); else if(item.type==='product') nav(`/product/${item.product_id}`); else if(item.type==='creative') nav('/creative/new'); else nav('/video-gen') }}
@@ -97,6 +112,16 @@ function ItemRow({ item, onDel }: { item: WorkbenchItem; onDel: (e:React.MouseEv
       <div className="flex items-center gap-2 flex-shrink-0">
         {'status' in item && <StatusBadge status={ms(item.status)} />}
         {ip && <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />}
+        {item.type === 'replica' && item.source_exists && (
+          <button
+            onClick={openSource}
+            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-xl transition-all duration-300 cursor-pointer ml-1"
+            aria-label="在 Finder 中显示源视频"
+            title="在 Finder 中显示源视频"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+          </button>
+        )}
         <button onClick={onDel} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all duration-300 cursor-pointer ml-1" aria-label="删除"><Trash2 className="w-3.5 h-3.5" /></button>
       </div>
     </div>
@@ -110,38 +135,48 @@ export default function WorkbenchPage() {
   const [tab, setTab] = useState<FilterTab>(it); const [q, setQ] = useState(''); const [dt, setDt] = useState<WorkbenchItem | null>(null)
   useEffect(() => { setTab(it) }, [it])
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [rr, cr, pr, vr] = await Promise.allSettled([
-          axios.get('/api/reports'),
-          axios.get('/api/creative/history'),
-          axios.get('/api/products'),
-          axios.get('/api/video-gen', { params: { limit: 50 } }),
-        ])
-        const reports = rr.status === 'fulfilled' ? rr.value.data : []
-        const creative = cr.status === 'fulfilled' ? cr.value.data : []
-        const products = pr.status === 'fulfilled' ? pr.value.data : []
-        const videoGen = vr.status === 'fulfilled' ? vr.value.data : { items: [] }
-        ;[rr, cr, pr, vr].forEach((res, idx) => {
-          if (res.status === 'rejected') console.warn(`Workbench source ${idx} failed`, res.reason)
-        })
-        const ri: ReplicaItem[] = reports.map((i:any)=>({id:`replica-${i.video_id}`,type:'replica' as const,video_id:i.video_id,title:i.filename,filename:i.filename,status:i.status,duration:i.duration,created_at:i.created_at}))
-        const ci: CreativeItem[] = creative.map((i:any)=>({id:`creative-${i.id}`,type:'creative' as const,title:i.description||'创意改写',description:i.description||'',style:'',count:i.results?.length||0,created_at:i.created_at}))
-        const pi: ProductItem[] = (products||[]).map((i:any)=>({id:`product-${i.id}`,type:'product' as const,product_id:i.id,title:i.title||i.url||'产品',url:i.url||'',status:i.status,created_at:i.created_at}))
-        const vi: VideoGenItem[] = (videoGen.items||[]).map((i:any)=>({id:`video-gen-${i.id}`,type:'video-gen' as const,gen_id:i.id,title:i.prompt?.slice(0,60)+(i.prompt?.length>60?'...':'')||'视频生成',model:i.model,status:i.status,created_at:i.created_at}))
-        const all = [...ri,...ci,...pi,...vi]; all.sort((a,b)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime()); setItems(all)
-      } catch {} finally { setLd(false) }
-    })()
+  const loadItems = useCallback(async (showLoading = false) => {
+    if (showLoading) setLd(true)
+    try {
+      const [rr, cr, pr, vr] = await Promise.allSettled([
+        axios.get('/api/reports'),
+        axios.get('/api/creative/history', { params: { standalone: true } }),
+        axios.get('/api/products'),
+        axios.get('/api/video-gen', { params: { limit: 50 } }),
+      ])
+      const reports = rr.status === 'fulfilled' ? rr.value.data : []
+      const creative = cr.status === 'fulfilled' ? cr.value.data : []
+      const products = pr.status === 'fulfilled' ? pr.value.data : []
+      const videoGen = vr.status === 'fulfilled' ? vr.value.data : { items: [] }
+      ;[rr, cr, pr, vr].forEach((res, idx) => {
+        if (res.status === 'rejected') console.warn(`Workbench source ${idx} failed`, res.reason)
+      })
+      const ri: ReplicaItem[] = reports.map((i:any)=>({id:`replica-${i.video_id}`,type:'replica' as const,video_id:i.video_id,title:i.display_title||i.filename,filename:i.filename,status:i.status,duration:i.duration,source_path:i.source_path,source_exists:i.source_exists,created_at:i.created_at}))
+      const ci: CreativeItem[] = creative.map((i:any)=>({id:`creative-${i.id}`,type:'creative' as const,title:i.description||'创意改写',description:i.description||'',style:'',count:i.results?.length||0,created_at:i.created_at}))
+      const pi: ProductItem[] = (products||[]).map((i:any)=>({id:`product-${i.id}`,type:'product' as const,product_id:i.id,title:i.title||i.url||'产品',url:i.url||'',status:i.status,created_at:i.created_at}))
+      const vi: VideoGenItem[] = (videoGen.items||[]).map((i:any)=>({id:`video-gen-${i.id}`,type:'video-gen' as const,gen_id:i.id,title:i.prompt?.slice(0,60)+(i.prompt?.length>60?'...':'')||'视频生成',model:i.model,status:i.status,created_at:i.created_at}))
+      const all = [...ri,...ci,...pi,...vi]; all.sort((a,b)=>new Date(b.created_at).getTime()-new Date(a.created_at).getTime()); setItems(all)
+    } catch {} finally { setLd(false) }
   }, [])
+
+  useEffect(() => {
+    loadItems(true)
+  }, [loadItems])
+
+  useEffect(() => {
+    const hasLiveItems = items.some(i => 'status' in i && ['pending','processing','analyzing','scraping','generating','extracting'].includes(i.status))
+    if (!hasLiveItems) return
+    const timer = window.setInterval(() => loadItems(false), 5000)
+    return () => window.clearInterval(timer)
+  }, [items, loadItems])
 
   const hd = async () => { if(!dt)return; const i=dt; setDt(null)
     try { if(i.type==='replica')await axios.delete(`/api/reports/${i.video_id}`); else if(i.type==='creative')await axios.delete(`/api/creative/history/${i.id.replace('creative-','')}`); else if(i.type==='product')await axios.delete(`/api/products/${i.product_id}`); setItems(p=>p.filter(x=>x.id!==i.id)) } catch {} }
 
   const fi = items.filter(i => { if(tab!=='all'&&i.type!==tab)return false; if(q.trim())return i.title.toLowerCase().includes(q.toLowerCase()); return true })
 
-  const st = useMemo(() => { const c={total:items.length,processing:0,completed:0,failed:0}
-    items.forEach(i=>{if('status' in i){if(i.status==='completed')c.completed++;else if(i.status==='failed')c.failed++;else if(['pending','processing','analyzing','scraping','generating','extracting'].includes(i.status))c.processing++}}); return c }, [items])
+  const st = useMemo(() => { const c={total:items.length,pending:0,processing:0,completed:0,failed:0}
+    items.forEach(i=>{if('status' in i){if(i.status==='completed')c.completed++;else if(i.status==='failed')c.failed++;else if(i.status==='pending')c.pending++;else if(['processing','analyzing','scraping','generating','extracting'].includes(i.status))c.processing++}}); return c }, [items])
 
   return (
     <MainLayout>
@@ -154,6 +189,7 @@ export default function WorkbenchPage() {
             <div className="flex gap-5 text-center">
               {!ld && <><div><div className="text-xl font-bold text-gray-800 tabular-nums">{st.total}</div><div className="text-[10px] text-gray-400 font-medium">总计</div></div>
                 <div><div className="text-xl font-bold text-emerald-600 tabular-nums">{st.completed}</div><div className="text-[10px] text-gray-400 font-medium">完成</div></div>
+                {st.pending>0&&<div><div className="text-xl font-bold text-gray-600 tabular-nums">{st.pending}</div><div className="text-[10px] text-gray-400 font-medium">等待</div></div>}
                 <div><div className="text-xl font-bold text-amber-600 tabular-nums">{st.processing}</div><div className="text-[10px] text-gray-400 font-medium">进行中</div></div>
                 {st.failed>0&&<div><div className="text-xl font-bold text-red-500 tabular-nums">{st.failed}</div><div className="text-[10px] text-gray-400 font-medium">失败</div></div>}</>}
             </div>

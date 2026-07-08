@@ -9,6 +9,7 @@ const MODELS = [
   { value: 'veo-3.1', label: 'Veo 3.1' },
   { value: 'happyhorse-1.0', label: 'HappyHorse 1.0' },
   { value: 'wan-2.6', label: 'Wan 2.6' },
+  { value: 'omni_flash-10s', label: 'Omni Flash 10s' },
 ]
 
 const ASPECT_RATIOS = [
@@ -22,6 +23,7 @@ const DURATIONS: Record<string, number[]> = {
   'veo-3.1': [5, 6, 7, 8],
   'happyhorse-1.0': [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
   'wan-2.6': [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+  'omni_flash-10s': [10],
 }
 
 export default function VideoGenPage() {
@@ -278,7 +280,7 @@ function VideoGenCard({ item, onRetry, onDelete, onReEdit }: {
         {item.reference_image && (
           <div className="flex-shrink-0 w-12 h-12 rounded-lg overflow-hidden border border-gray-200">
             <img
-              src={`${API_BASE}/api/video-gen/ref-image/${encodeURIComponent(item.reference_image)}`}
+              src={item.reference_image.startsWith("/api/") ? `${API_BASE}${item.reference_image}` : `${API_BASE}/api/video-gen/ref-image/${encodeURIComponent(item.reference_image)}`}
               alt="ref"
               className="w-full h-full object-cover"
               onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}

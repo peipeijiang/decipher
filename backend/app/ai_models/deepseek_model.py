@@ -32,7 +32,7 @@ class DeepSeekModel(AIModel):
             resp = self._client.chat.completions.create(
                 model=self._text_model,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=2048,
+                max_tokens=16384,
             )
             return resp.choices[0].message.content or ""
         except Exception as e:

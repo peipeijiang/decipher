@@ -31,6 +31,7 @@ export interface Progress {
   parse: number
   strategy: number
   prompt: number
+  creative: number
   error?: string | null
 }
 

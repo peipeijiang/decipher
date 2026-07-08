@@ -77,15 +77,30 @@ def _recent_activity(db: Session) -> list[dict]:
             )
         ).fetchall()
 
+        # Load reports for videos to compute display titles
+        video_ids = [r.id for r in rows if r.type == 'video']
+        reports_map = {}
+        if video_ids:
+            from app.models.report import Report
+            from app.models.video import Video as VideoModel
+            reports = db.query(Report).filter(Report.video_id.in_(video_ids)).all()
+            for rep in reports:
+                reports_map[rep.video_id] = rep
+
         results = []
         for r in rows:
             created = r.created_at
             if isinstance(created, datetime):
                 created = created.isoformat()
+            title = r.title or ""
+            # For videos, compute display_title from report if available
+            if r.type == 'video' and r.id in reports_map:
+                from app.api.reports import _build_replica_display_title
+                title = _build_replica_display_title(None, reports_map[r.id])
             results.append({
                 "type": r.type,
                 "id": r.id,
-                "title": r.title or "",
+                "title": title,
                 "status": r.status or "",
                 "created_at": created or "",
             })

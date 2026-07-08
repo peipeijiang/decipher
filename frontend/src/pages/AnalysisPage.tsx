@@ -14,6 +14,11 @@ import {
   ChevronUp,
   ChevronDown,
   Camera,
+  FolderOpen,
+  Square,
+  CheckSquare,
+  CheckCircle2,
+  Clapperboard,
 } from 'lucide-react'
 import { VideoSkeleton } from '../components/ui/LoadingSkeleton'
 import { MissingDataAlert } from '../components/ui/MissingDataAlert'
@@ -25,6 +30,8 @@ const STEPS = [
   { label: '智能解析', desc: '提取关键帧 + Whisper 语音转文字' },
   { label: '策略拆解', desc: 'AI 深度分析生成策略与分镜报告' },
   { label: '提示词生成', desc: '逆向生成可复用的 AI 视频提示词' },
+  { label: '创意改写', desc: '自动生成10个创意变体' },
+  { label: '分镜复刻', desc: '自动生成关键帧 storyboard' },
 ]
 const TABS = ['营销策略', '分镜分析', '逆向提示词', '创意改写', '分镜复刻']
 
@@ -117,10 +124,22 @@ function PromptBlock({ prompt }: { prompt: string }) {
   )
 }
 
-function AngleCard({ result, idx }: { result: CreativeResult; idx: number }) {
+function AngleCard({ result, idx }: { result: any; idx: number }) {
   const [expanded, setExpanded] = useState(false)
   const color = CARD_COLORS[idx % CARD_COLORS.length]
-  const { angle, prompt } = result
+  // Handle both formats: {angle: CreativeAngle, prompt} and flat {title, prompt, angle: string}
+  const angle = result.angle || {}
+  const prompt = result.prompt || ''
+  const title = angle.title || result.title || 'Variant'
+  const hookVisual = angle.hook_visual || ''
+  const hookCopy = angle.hook_copy || ''
+  const concept = angle.concept || (typeof result.angle === 'string' ? result.angle : '')
+  const why = angle.why || ''
+  const emotionCurve = angle.emotion_curve || ''
+  const structureRef = angle.structure_reference || ''
+  const shotSeq = angle.shot_sequence || ''
+
+  const hasAngleFields = hookVisual || hookCopy || concept
   return (
     <div className={`${color.bg} ${color.border} border rounded-2xl overflow-hidden`}>
       <div className="p-4">
@@ -128,44 +147,23 @@ function AngleCard({ result, idx }: { result: CreativeResult; idx: number }) {
           <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0 mt-0.5 ${color.badge}`}>
             {idx + 1}
           </span>
-          <h3 className={`text-sm font-bold ${color.title} leading-snug`}>{angle.title}</h3>
+          <h3 className={`text-sm font-bold ${color.title} leading-snug`}>{title}</h3>
         </div>
-        <div className="mb-3 space-y-1.5">
-          <div className="flex gap-2">
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ${color.tag}`}>视觉</span>
-            <p className="text-xs text-gray-700 leading-relaxed">{angle.hook_visual}</p>
-          </div>
-          <div className="flex gap-2">
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ${color.tag}`}>文案</span>
-            <p className="text-xs text-gray-800 font-medium leading-relaxed">"{angle.hook_copy}"</p>
-          </div>
-        </div>
-        {angle.structure_reference && (
-          <div className="mb-2">
-            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">结构参考</div>
-            <p className="text-xs text-gray-700 leading-relaxed">{angle.structure_reference}</p>
-          </div>
+        {hasAngleFields ? (
+          <>
+            <div className="mb-3 space-y-1.5">
+              {hookVisual && <div className="flex gap-2"><span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ${color.tag}`}>视觉</span><p className="text-xs text-gray-700 leading-relaxed">{hookVisual}</p></div>}
+              {hookCopy && <div className="flex gap-2"><span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded flex-shrink-0 ${color.tag}`}>文案</span><p className="text-xs text-gray-800 font-medium leading-relaxed">"{hookCopy}"</p></div>}
+            </div>
+            {structureRef && <div className="mb-2"><div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">结构参考</div><p className="text-xs text-gray-700 leading-relaxed">{structureRef}</p></div>}
+            {shotSeq && <div className="mb-2"><div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">镜头序列</div><p className="text-xs text-gray-700 leading-relaxed">{shotSeq}</p></div>}
+            {concept && <div className="mb-2"><div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Concept</div><p className="text-xs text-gray-700 leading-relaxed">{concept}</p></div>}
+            {emotionCurve && <div className="mb-2"><div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">情绪曲线</div><p className="text-xs text-gray-700 leading-relaxed">{emotionCurve}</p></div>}
+            {why && <div><div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Why it fits</div><p className="text-xs text-gray-600 leading-relaxed italic">{why}</p></div>}
+          </>
+        ) : (
+          <p className="text-xs text-gray-600 leading-relaxed line-clamp-3">{concept || prompt?.slice(0, 200)}</p>
         )}
-        {angle.shot_sequence && (
-          <div className="mb-2">
-            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">镜头序列</div>
-            <p className="text-xs text-gray-700 leading-relaxed">{angle.shot_sequence}</p>
-          </div>
-        )}
-        <div className="mb-2">
-          <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Concept</div>
-          <p className="text-xs text-gray-700 leading-relaxed">{angle.concept}</p>
-        </div>
-        {angle.emotion_curve && (
-          <div className="mb-2">
-            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">情绪曲线</div>
-            <p className="text-xs text-gray-700 leading-relaxed">{angle.emotion_curve}</p>
-          </div>
-        )}
-        <div>
-          <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Why it fits</div>
-          <p className="text-xs text-gray-600 leading-relaxed italic">{angle.why}</p>
-        </div>
       </div>
       {prompt && (
         <div className="border-t border-black/5">
@@ -282,7 +280,7 @@ export default function AnalysisPage() {
   const navigate = useNavigate()
   const [video, setVideo] = useState<Video | null>(null)
   const [report, setReport] = useState<Report | null>(null)
-  const [progress, setProgress] = useState<Progress>({ upload: 0, parse: 0, strategy: 0, prompt: 0 })
+  const [progress, setProgress] = useState<Progress>({ upload: 0, parse: 0, strategy: 0, prompt: 0, creative: 0 })
   const [analysisStarting, setAnalysisStarting] = useState(false)
 
   // Video playback state
@@ -313,10 +311,16 @@ export default function AnalysisPage() {
     frame_count?: number
     layout_grid?: string
   } | null>(null)
-  const [productFile, setProductFile] = useState<File | null>(null)
-  const [productDesc, setProductDesc] = useState('')
-  const [selectedImageModel, setSelectedImageModel] = useState('gpt-image-2-vip')
-  const [generating, setGenerating] = useState(false)
+  const [_productFile, setProductFile] = useState<File | null>(null)
+  const [_productDesc, setProductDesc] = useState('')
+  const [_selectedImageModel] = useState('gpt-image-2-vip')
+  const [_generating, _setGenerating] = useState(false)
+  const [selectedCreativeIndices, setSelectedCreativeIndices] = useState<Set<number>>(new Set())
+  const [videoGenLoading, setVideoGenLoading] = useState(false)
+  const [videoGenResult, setVideoGenResult] = useState<string | null>(null)
+  const [selectedVideoModel, setSelectedVideoModel] = useState('omni_flash-10s')
+  const [selectedAspectRatio, setSelectedAspectRatio] = useState('9:16')
+  const [selectedDuration, setSelectedDuration] = useState(10)
   const storyboardPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const mainPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -332,15 +336,35 @@ export default function AnalysisPage() {
     }
   }
 
+  const revealSourceVideo = async () => {
+    if (!videoId) return
+    try {
+      await axios.post(`/api/reports/${videoId}/reveal-source`)
+    } catch (e: any) {
+      alert('打开源文件失败：' + (e.response?.data?.detail || e.message))
+    }
+  }
+
   const fetchData = useCallback(async () => {
     if (!videoId) return
     try {
       const res = await axios.get(`/api/videos/${videoId}`)
       const v: Video = res.data.video
       setVideo(v)
-      setProgress(res.data.progress || { upload: 0, parse: 0, strategy: 0, prompt: 0 })
+      setProgress(res.data.progress || { upload: 0, parse: 0, strategy: 0, prompt: 0, creative: 0 })
       if (res.data.report) setReport(res.data.report)
-      if (v.status === 'completed' || v.status === 'failed') {
+      let nextStoryboardData = null
+      if (v.status === 'completed' || res.data.report) {
+        try {
+          const storyboardRes = await axios.get(`/api/storyboard/by-video/${videoId}`)
+          nextStoryboardData = storyboardRes.data
+          setStoryboardData(storyboardRes.data)
+        } catch {
+          nextStoryboardData = null
+        }
+      }
+      const storyboardDone = !nextStoryboardData || ['ready', 'completed', 'failed'].includes(nextStoryboardData.status || '')
+      if (v.status === 'failed' || (v.status === 'completed' && storyboardDone)) {
         if (mainPollRef.current) {
           clearInterval(mainPollRef.current)
           mainPollRef.current = null
@@ -401,11 +425,37 @@ export default function AnalysisPage() {
       if (progress.prompt > 0) return '逆向生成中…'
       return ''
     }
+    // Step 4: 创意改写
+    if (idx === 4) {
+      if (progress.creative >= 100) return '10个创意变体已生成'
+      if (progress.creative > 0) return 'AI 创意改写中…'
+      if (progress.prompt >= 100) return '等待创意生成…'
+      return ''
+    }
+    // Step 5: 分镜复刻
+    if (idx === 5) {
+      if (storyboardData?.status === 'ready') {
+        const count = storyboardData.frame_count ? `${storyboardData.frame_count}帧` : '关键帧'
+        return `${count} storyboard 已生成`
+      }
+      if (storyboardData?.status === 'completed') return '分镜复刻已完成'
+      if (storyboardData?.status === 'failed') return '分镜图生成失败'
+      if (storyboardData?.status === 'extracting' || storyboardData?.status === 'pending') return '正在抽取关键帧…'
+      if (progress.creative >= 100 && video?.status === 'processing') return '等待分镜生成…'
+      return ''
+    }
     return ''
   }
 
   const getStepStatus = (idx: number) => {
-    const values = [progress.upload, progress.parse, progress.strategy, progress.prompt]
+    if (idx === 5) {
+      if (storyboardData?.status === 'ready' || storyboardData?.status === 'completed') return 'completed'
+      if (storyboardData?.status === 'failed') return 'failed'
+      if (storyboardData?.status === 'extracting' || storyboardData?.status === 'pending') return 'active'
+      if (progress.creative >= 100 && video?.status === 'processing') return 'active'
+      return 'pending'
+    }
+    const values = [progress.upload, progress.parse, progress.strategy, progress.prompt, progress.creative]
     if (values[idx] >= 100) return 'completed'
     if (values[idx] > 0) return 'active'
     return 'pending'
@@ -444,13 +494,13 @@ export default function AnalysisPage() {
   useEffect(() => {
     if (activeTab !== 3 || adaptLoaded || !videoId) return
     setAdaptLoaded(true)
-    axios.get(`/api/creative/history?video_id=${videoId}`).then(res => {
-      const items: CreativeHistoryItem[] = res.data
+    axios.get(`/api/creative/history?video_id=${videoId}`).then(r => {
+      const items: CreativeHistoryItem[] = r.data
       setCreativeHistory(items)
     }).catch(() => {})
   }, [activeTab, adaptLoaded, videoId])
 
-  // Load storyboard replication data when tab 4 is opened
+  // Load storyboard replication data AND creative history when tab 4 is opened
   useEffect(() => {
     if (activeTab !== 4 || !videoId) return
     axios.get(`/api/storyboard/by-video/${videoId}`).then(res => {
@@ -458,6 +508,10 @@ export default function AnalysisPage() {
     }).catch(() => {
       setStoryboardData(null)
     })
+    // Also load creative history for the prompt selector
+    axios.get(`/api/creative/history?video_id=${videoId}`).then(res => {
+      setCreativeHistory(res.data)
+    }).catch(() => {})
   }, [activeTab, videoId])
 
   // Cleanup storyboard poll on unmount
@@ -500,42 +554,61 @@ export default function AnalysisPage() {
     }
   }
 
-  const handleGenerateReplacement = async () => {
-    if (!productFile || !storyboardData?.id) return
-    setGenerating(true)
+  const toggleCreativeSelection = (idx: number) => {
+    setSelectedCreativeIndices(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx)
+      else next.add(idx)
+      return next
+    })
+  }
+
+  const handleStoryboardVideoGen = async () => {
+    const selected = Array.from(selectedCreativeIndices).sort((a, b) => a - b)
+    if (!storyboardData?.id || selected.length === 0) return
+    setVideoGenLoading(true)
     try {
-      const formData = new FormData()
-      formData.append('file', productFile)
-      formData.append('description', productDesc)
-      formData.append('image_model', selectedImageModel)
-      await axios.post(`/api/storyboard/${storyboardData.id}/generate`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
-      setStoryboardData(prev => prev ? { ...prev, status: 'generating' } : prev)
-      if (storyboardPollRef.current) clearInterval(storyboardPollRef.current)
-      storyboardPollRef.current = setInterval(async () => {
-        try {
-          const res = await axios.get(`/api/storyboard/${storyboardData.id}`)
-          if (res.data.status === 'completed') {
-            setStoryboardData(res.data)
-            setGenerating(false)
-            clearInterval(storyboardPollRef.current!)
-            storyboardPollRef.current = null
-          } else if (res.data.status === 'failed') {
-            setStoryboardData(res.data)
-            setGenerating(false)
-            clearInterval(storyboardPollRef.current!)
-            storyboardPollRef.current = null
+      // Build flat prompt list
+      const allPrompts: { idx: number; title: string; prompt: string }[] = []
+      let flatIdx = 0
+      for (const item of creativeHistory) {
+        if (!item.results) continue
+        for (let ri = 0; ri < item.results.length; ri++) {
+          if (selected.includes(flatIdx)) {
+            const r: any = item.results[ri]
+            allPrompts.push({
+              idx: flatIdx,
+              title: r.angle?.title || r.title || `Variant ${flatIdx + 1}`,
+              prompt: r.prompt || r.angle || '',
+            })
           }
-        } catch {
-          setGenerating(false)
-          clearInterval(storyboardPollRef.current!)
-          storyboardPollRef.current = null
+          flatIdx++
         }
-      }, 2000)
-    } catch (error: any) {
-      alert('提交失败: ' + (error.response?.data?.detail || error.message))
-      setGenerating(false)
+      }
+      // Submit each selected variant
+      let successCount = 0
+      for (const p of allPrompts) {
+        try {
+          await axios.post('/api/video-gen/create', {
+            prompt: p.prompt,
+            reference_image: storyboardData.storyboard_image_url,
+            model: selectedVideoModel,
+            aspect_ratio: selectedAspectRatio,
+            duration: selectedDuration,
+          })
+          successCount++
+          // Small delay between submissions
+          await new Promise(r => setTimeout(r, 500))
+        } catch (e: any) {
+          console.warn('Video gen failed for', p.title, e)
+        }
+      }
+      setVideoGenResult(`${successCount}`)
+      setSelectedCreativeIndices(new Set())
+    } catch (e: any) {
+      alert('视频生成失败：' + (e.response?.data?.detail || e.message))
+    } finally {
+      setVideoGenLoading(false)
     }
   }
 
@@ -574,63 +647,83 @@ export default function AnalysisPage() {
         {/* Page Header */}
         <div className="flex items-center gap-4 mb-4">
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/workbench')}
             className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span className="text-sm">返回</span>
           </button>
           <h1 className="text-lg font-heading font-semibold truncate flex-1">{video.filename}</h1>
+          <button
+            onClick={revealSourceVideo}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-text-secondary border border-white/20 rounded-lg hover:bg-white/5 hover:text-text-primary transition-all cursor-pointer"
+            title="在 Finder 中显示源视频"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+            源文件
+          </button>
         </div>
 
         {/* Progress Steps */}
-        <div className="glass rounded-xl px-6 py-3 mb-6">
-          <div className="flex items-stretch gap-2 flex-wrap">
+        <div className="glass rounded-xl px-4 py-2.5 mb-6">
+          <div className="flex items-center gap-0">
             {STEPS.map((step, idx) => {
               const status = getStepStatus(idx)
               const detail = getStepDetail(idx)
               const isLast = idx === STEPS.length - 1
               return (
-                <div key={step.label} className="flex items-center gap-2" title={step.desc}>
-                  <div className={`flex flex-col justify-center px-3 py-2 rounded-lg min-w-0 transition-all ${
-                    status === 'completed' ? 'bg-green-50' :
-                    status === 'active' ? 'bg-accent/10' :
-                    'bg-transparent'
-                  }`}>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium transition-all flex-shrink-0 ${
+                <div key={step.label} className="flex-1 flex flex-col items-center gap-0.5 min-w-0">
+                  <div className="flex items-center gap-1 w-full">
+                    <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded-md transition-all ${
+                      status === 'completed' ? 'bg-green-50' :
+                      status === 'active' ? 'bg-accent/10' :
+                      status === 'failed' ? 'bg-red-50' :
+                      ''
+                    } min-w-0`}>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium transition-all flex-shrink-0 ${
                         status === 'completed' ? 'bg-status-success text-white' :
                         status === 'active' ? 'bg-accent text-white animate-pulse' :
+                        status === 'failed' ? 'bg-red-500 text-white' :
                         'bg-gray-100 text-text-muted'
                       }`}>
-                        {status === 'completed' ? <Check className="w-3.5 h-3.5" /> : idx + 1}
+                        {status === 'completed' ? <Check className="w-3 h-3" /> : status === 'failed' ? <AlertCircle className="w-3 h-3" /> : idx + 1}
                       </div>
-                      <span className={`text-sm font-semibold truncate ${
+                      <span className={`text-xs font-semibold whitespace-nowrap ${
                         status === 'completed' ? 'text-status-success' :
                         status === 'active' ? 'text-accent' :
+                        status === 'failed' ? 'text-red-600' :
                         'text-text-muted'
                       }`}>
                         {step.label}
                       </span>
                     </div>
-                    <span className={`text-[10px] mt-1 ml-9 truncate px-1.5 py-0.5 rounded-md font-medium ${
-                      status === 'completed' ? 'text-green-600 bg-green-50' :
-                      status === 'active' ? 'text-amber-600 bg-amber-50' :
-                      'text-gray-400 bg-gray-50'
-                    }`}>{detail || '等待中'}</span>
+                    {!isLast && <div className={`flex-1 h-px ${status === 'completed' ? 'bg-green-300' : 'bg-gray-200'}`} />}
                   </div>
-                  {!isLast && (
-                    <div className={`w-6 h-0.5 flex-shrink-0 self-center ${
-                      status === 'completed' ? 'bg-green-300' : 'bg-gray-200'
-                    }`} />
+                  {status === 'active' && detail && (
+                    <span className="text-[10px] text-amber-600 bg-amber-50 rounded-full px-2 py-0.5 font-medium animate-pulse whitespace-nowrap">
+                      {detail}
+                    </span>
                   )}
                 </div>
               )
             })}
           </div>
+          {video?.status === 'processing' && (
+            <div className="mt-1.5 pt-1.5 border-t border-amber-100">
+              <div className="w-full bg-gray-100 rounded-full h-1 overflow-hidden">
+                <div className="bg-accent h-full rounded-full transition-all duration-700 ease-out" style={{ width: `${Math.round((progress.upload + progress.parse + progress.strategy + progress.prompt + progress.creative) / 5)}%` }} />
+              </div>
+            </div>
+          )}
+          {video?.status === 'completed' && storyboardData?.status === 'ready' && (
+            <div className="mt-1.5 pt-1.5 border-t border-green-100 flex items-center justify-center gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+              <span className="text-[11px] text-green-600 font-medium">全部分析完成</span>
+            </div>
+          )}
         </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(340px,0.9fr)_minmax(460px,1.1fr)] gap-8">
         {/* Left: Video Player + Timeline + Segments */}
         <div className="space-y-4">
           {/* Video */}
@@ -876,9 +969,9 @@ export default function AnalysisPage() {
                         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4" />
                         <p className="text-sm text-gray-600">正在提取关键帧并拼接分镜图...</p>
                       </div>
-                    ) : (storyboardData.status === 'ready' && !storyboardData.replaced_storyboard_url) || storyboardData.status === 'generating' ? (
+                    ) : (storyboardData.status === 'ready' || storyboardData.status === 'generating') && !storyboardData.replaced_storyboard_url ? (
                       <div>
-                        <h3 className="text-sm font-semibold text-gray-700 mb-3">原始分镜图</h3>
+                        <h3 className="text-sm font-semibold text-gray-700 mb-3">分镜图</h3>
                         <img
                           src={storyboardData.storyboard_image_url}
                           alt="Storyboard"
@@ -888,57 +981,133 @@ export default function AnalysisPage() {
                           {storyboardData.frame_count} 个关键帧 · {storyboardData.layout_grid} 布局
                         </p>
 
-                        {storyboardData.status === 'generating' ? (
-                          <div className="flex items-center justify-center gap-3 py-6 bg-blue-50 rounded-xl">
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
-                            <p className="text-sm text-blue-600 font-medium">正在替换产品并生成提示词...</p>
-                          </div>
-                        ) : (
-                          <div className="max-w-xl mx-auto bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
-                            <h3 className="text-sm font-semibold text-gray-800 mb-4">上传您的产品</h3>
-
-                            <div className="mb-4">
-                              <label className="block text-xs font-medium text-gray-700 mb-1.5">产品图片</label>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                onChange={(e) => setProductFile(e.target.files?.[0] || null)}
-                                className="block w-full text-sm text-gray-700 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                              />
-                            </div>
-
-                            <div className="mb-5">
-                              <label className="block text-xs font-medium text-gray-700 mb-1.5">产品描述</label>
-                              <textarea
-                                value={productDesc}
-                                onChange={(e) => setProductDesc(e.target.value)}
-                                placeholder="例如：高端无线充电器，铝合金外壳，支持15W快充"
-                                rows={3}
-                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 resize-none"
-                              />
-                            </div>
-
-                            <div className="mb-5">
-                              <label className="block text-xs font-medium text-gray-700 mb-1.5">图片生成模型</label>
-                              <select
-                                value={selectedImageModel}
-                                onChange={(e) => setSelectedImageModel(e.target.value)}
-                                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
-                              >
-                                <option value="gpt-image-2-vip">老张 GPT Image 2 VIP</option>
-                                <option value="qwen-image-2.0-pro">阿里云 Qwen Image 2.0 Pro</option>
+                        {/* Creative prompt selector */}
+                        <div className="max-w-xl mx-auto bg-white border border-gray-200 p-5 rounded-xl shadow-sm">
+                          {/* Video model + params */}
+                          <div className="grid grid-cols-3 gap-3 mb-4 pb-4 border-b border-gray-100">
+                            <div>
+                              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">视频模型</label>
+                              <select value={selectedVideoModel} onChange={e => setSelectedVideoModel(e.target.value)}
+                                className="w-full px-2.5 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white">
+                                <option value="seedance-2.0">Seedance 2.0</option>
+                                <option value="omni_flash-10s">Omni Flash 10s</option>
+                                <option value="veo-3.1">Veo 3.1</option>
+                                <option value="happyhorse-1.0">HappyHorse 1.0</option>
+                                <option value="wan-2.6">Wan 2.6</option>
                               </select>
                             </div>
-
-                            <button
-                              onClick={handleGenerateReplacement}
-                              disabled={!productFile || generating}
-                              className="w-full px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-semibold"
-                            >
-                              {generating ? '生成中...' : '生成分镜复刻'}
-                            </button>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">比例</label>
+                              <select value={selectedAspectRatio} onChange={e => setSelectedAspectRatio(e.target.value)}
+                                className="w-full px-2.5 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white">
+                                <option value="9:16">9:16</option>
+                                <option value="16:9">16:9</option>
+                                <option value="1:1">1:1</option>
+                              </select>
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">时长</label>
+                              <select value={selectedDuration} onChange={e => setSelectedDuration(Number(e.target.value))}
+                                className="w-full px-2.5 py-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400 bg-white">
+                                <option value={5}>5s</option>
+                                <option value={10}>10s</option>
+                                <option value={15}>15s</option>
+                              </select>
+                            </div>
                           </div>
-                        )}
+
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-sm font-semibold text-gray-800">选择创意改写提示词</h3>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  const total = (() => {
+                                    let n = 0
+                                    for (const item of creativeHistory) {
+                                      if (item.results) n += item.results.length
+                                    }
+                                    return n
+                                  })()
+                                  setSelectedCreativeIndices(new Set(Array.from({length: total}, (_, i) => i)))
+                                }}
+                                className="text-[10px] text-blue-500 hover:text-blue-700 font-medium px-2 py-0.5 rounded hover:bg-blue-50 transition-colors"
+                              >全选</button>
+                              <button
+                                onClick={() => setSelectedCreativeIndices(new Set())}
+                                className="text-[10px] text-gray-400 hover:text-gray-600 font-medium px-2 py-0.5 rounded hover:bg-gray-50 transition-colors"
+                              >清空</button>
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-500 mb-4">勾选多个提示词版本，批量生成视频</p>
+                          
+                          {(() => {
+                            // Flatten all creative prompts from history
+                            const allPrompts: any[] = []
+                            for (const item of creativeHistory) {
+                              if (item.results) {
+                                for (let ri = 0; ri < item.results.length; ri++) {
+                                  const r = item.results[ri]
+                                  allPrompts.push({ ...r, _flatIdx: allPrompts.length, _historyId: item.id })
+                                }
+                              }
+                            }
+                            if (allPrompts.length === 0) {
+                              return <p className="text-xs text-gray-400 py-4 text-center">暂无创意改写记录，请先在「创意改写」Tab 中生成10个变体</p>
+                            }
+                            return (
+                              <div className="space-y-2 max-h-64 overflow-y-auto mb-4">
+                                {allPrompts.map((r: any) => {
+                                  const isSelected = selectedCreativeIndices.has(r._flatIdx)
+                                  return (
+                                    <button
+                                      key={r._flatIdx}
+                                      onClick={() => toggleCreativeSelection(r._flatIdx)}
+                                      className={`w-full text-left px-3 py-2.5 rounded-lg border transition-all ${
+                                        isSelected 
+                                          ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' 
+                                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      <div className="flex items-start gap-2.5">
+                                        {isSelected
+                                          ? <CheckSquare className="w-4 h-4 flex-shrink-0 mt-0.5 text-blue-500" />
+                                          : <Square className="w-4 h-4 flex-shrink-0 mt-0.5 text-gray-300" />
+                                        }
+                                        <div className="min-w-0 flex-1">
+                                          <div className="text-xs font-semibold text-gray-800 truncate">{r.title || r.angle?.title || `变体 ${r._flatIdx + 1}`}</div>
+                                          <div className="text-[10px] text-gray-400 mt-0.5 line-clamp-2">{typeof r.angle === 'object' ? r.angle?.concept : (r.angle || r.prompt?.slice(0, 100))}</div>
+                                        </div>
+                                      </div>
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                            )
+                          })()}
+
+                          <button
+                            onClick={handleStoryboardVideoGen}
+                            disabled={selectedCreativeIndices.size === 0 || videoGenLoading || creativeHistory.length === 0}
+                            className="w-full px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-sm font-semibold flex items-center justify-center gap-2"
+                          >
+                            {videoGenLoading ? (
+                              <><Loader2 className="w-4 h-4 animate-spin" />提交中…</>
+                            ) : (
+                              <><Clapperboard className="w-4 h-4" />生成视频{selectedCreativeIndices.size > 0 ? `（${selectedCreativeIndices.size}）` : ''}</>
+                            )}
+                          </button>
+                          
+                          {videoGenResult && parseInt(videoGenResult) > 0 && (
+                            <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                              <p className="text-xs text-green-700">已创建 {videoGenResult} 个视频任务，可在「视频生成」页面查看进度</p>
+                            </div>
+                          )}
+                          {videoGenResult && parseInt(videoGenResult) === 0 && (
+                            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                              <p className="text-xs text-red-700">视频生成全部失败，请检查模型配置</p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ) : storyboardData.status === 'completed' ? (
                       <div>
@@ -1019,7 +1188,39 @@ export default function AnalysisPage() {
                 {activeTab === 3 && (
                   <div className="space-y-4">
                     <div className="text-xs text-gray-500">
-                      AI 将读取本视频的完整分析（分镜结构、营销策略、镜头语言、情绪曲线），结合你的产品信息，生成可直接复刻的创意角度和视频提示词
+                      AI 已从爆款视频中提取核心创意公式，自动生成 10 个可复用的提示词变体。也可手动上传产品图生成定制化创意。
+                    </div>
+
+                    {/* Auto-generate button */}
+                    <button
+                      onClick={async () => {
+                        if (!videoId) return
+                        setAdaptLoading(true)
+                        try {
+                          await axios.post(`/api/videos/${videoId}/auto-creatives`)
+                          // Refresh history
+                          const historyRes = await axios.get(`/api/creative/history?video_id=${videoId}`)
+                          setCreativeHistory(historyRes.data)
+                        } catch (e: any) {
+                          alert('自动生成失败：' + (e.response?.data?.detail || e.message))
+                        } finally {
+                          setAdaptLoading(false)
+                        }
+                      }}
+                      disabled={adaptLoading || video?.status !== 'completed'}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-500 to-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-all hover:opacity-90"
+                    >
+                      {adaptLoading
+                        ? <><Loader2 className="w-4 h-4 animate-spin" />AI 分析核心创意中…</>
+                        : <><Sparkles className="w-4 h-4" />自动生成 10 个创意变体</>
+                      }
+                    </button>
+
+                    {/* Divider with manual option */}
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-white/10" />
+                      <span className="text-[10px] text-gray-400">或手动生成</span>
+                      <div className="flex-1 h-px bg-white/10" />
                     </div>
 
                     {/* Input row: image upload (top-left) + description */}
@@ -1060,7 +1261,7 @@ export default function AnalysisPage() {
                         >
                           {adaptLoading
                             ? <><Loader2 className="w-4 h-4 animate-spin" />生成中…</>
-                            : <><Sparkles className="w-4 h-4" />生成创意</>
+                            : <><Sparkles className="w-4 h-4" />手动生成创意</>
                           }
                         </button>
                       </div>
@@ -1105,7 +1306,7 @@ export default function AnalysisPage() {
                             const isExpanded = expandedHistoryId === item.id
                             const date = new Date(item.created_at)
                             const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
-                            const preview = item.description?.trim() || '（无产品描述）'
+                            const titlePreview = (item.results?.[0] as any)?.angle?.title || (item.results?.[0] as any)?.title || item.description?.trim()?.slice(0, 50) || '创意改写'; const preview = titlePreview
                             return (
                               <div key={item.id} className="rounded-xl border border-white/10 bg-white/3 overflow-hidden transition-all">
                                 {/* Row header — always visible */}
@@ -1116,7 +1317,7 @@ export default function AnalysisPage() {
                                   {/* Colored dot */}
                                   <span className="w-2 h-2 rounded-full bg-gradient-to-br from-accent to-purple-500 flex-shrink-0" />
                                   {/* Description preview */}
-                                  <span className="flex-1 text-xs text-gray-700 truncate">{preview}</span>
+                                  <span className="flex-1 text-xs text-gray-700 truncate">{preview}{item.results?.length > 1 ? ` +${item.results.length - 1} 更多` : ""}</span>
                                   {/* Angle count badge */}
                                   <span className="flex-shrink-0 text-[10px] font-medium text-purple-600 bg-purple-50 border border-purple-100 px-1.5 py-0.5 rounded-full">
                                     {item.results.length} 个角度
@@ -1161,15 +1362,16 @@ export default function AnalysisPage() {
 
 // ── StrategyView ──────────────────────────────────────────────────────────────
 
-const SECTION_STYLES: Record<string, { bg: string; border: string; title: string; icon: string }> = {
-  '核心营销策略': { bg: 'bg-blue-50',   border: 'border-blue-200',   title: 'text-blue-700',   icon: '🎯' },
-  '目标受众':     { bg: 'bg-green-50',  border: 'border-green-200',  title: 'text-green-700',  icon: '👥' },
-  '内容钩子':     { bg: 'bg-purple-50', border: 'border-purple-200', title: 'text-purple-700', icon: '🔗' },
-  '情感共鸣':     { bg: 'bg-pink-50',   border: 'border-pink-200',   title: 'text-pink-700',   icon: '💡' },
-  '传播潜力':     { bg: 'bg-yellow-50', border: 'border-yellow-200', title: 'text-yellow-700', icon: '📈' },
-  '复制建议':     { bg: 'bg-teal-50',   border: 'border-teal-200',   title: 'text-teal-700',   icon: '📋' },
-  '痛点':         { bg: 'bg-red-50',    border: 'border-red-200',    title: 'text-red-700',    icon: '⚡' },
-  'CTA':          { bg: 'bg-orange-50', border: 'border-orange-200', title: 'text-orange-700', icon: '📣' },
+const SECTION_STYLES: Record<string, { rail: string; chip: string; title: string; eyebrow: string }> = {
+  '核心营销策略': { rail: 'bg-blue-500',   chip: 'bg-blue-50 text-blue-700 border-blue-100',       title: 'text-blue-900',   eyebrow: 'Strategy' },
+  '整体脚本评估': { rail: 'bg-blue-500',   chip: 'bg-blue-50 text-blue-700 border-blue-100',       title: 'text-blue-900',   eyebrow: 'Assessment' },
+  '目标受众':     { rail: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 border-emerald-100', title: 'text-emerald-900', eyebrow: 'Audience' },
+  '内容钩子':     { rail: 'bg-violet-500', chip: 'bg-violet-50 text-violet-700 border-violet-100', title: 'text-violet-900', eyebrow: 'Hook' },
+  '情感共鸣':     { rail: 'bg-rose-500',   chip: 'bg-rose-50 text-rose-700 border-rose-100',       title: 'text-rose-900',   eyebrow: 'Emotion' },
+  '传播潜力':     { rail: 'bg-amber-500',  chip: 'bg-amber-50 text-amber-700 border-amber-100',    title: 'text-amber-900',  eyebrow: 'Growth' },
+  '复制建议':     { rail: 'bg-cyan-500',   chip: 'bg-cyan-50 text-cyan-700 border-cyan-100',       title: 'text-cyan-900',   eyebrow: 'Replication' },
+  '痛点':         { rail: 'bg-red-500',    chip: 'bg-red-50 text-red-700 border-red-100',          title: 'text-red-900',    eyebrow: 'Pain Point' },
+  'CTA':          { rail: 'bg-orange-500', chip: 'bg-orange-50 text-orange-700 border-orange-100', title: 'text-orange-900', eyebrow: 'CTA' },
 }
 
 function getSectionStyle(title: string) {
@@ -1177,28 +1379,37 @@ function getSectionStyle(title: string) {
   for (const key of Object.keys(SECTION_STYLES)) {
     if (title.includes(key) || key.includes(title)) return SECTION_STYLES[key]
   }
-  return { bg: 'bg-gray-50', border: 'border-gray-200', title: 'text-gray-700', icon: '📌' }
+  return { rail: 'bg-slate-400', chip: 'bg-slate-50 text-slate-600 border-slate-100', title: 'text-slate-900', eyebrow: 'Insight' }
+}
+
+function normalizeStrategyTitle(title: string) {
+  return title
+    .replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '')
+    .replace(/[*_]/g, '')
+    .replace(/^第?\s*\d+\s*[\.、:：\-]\s*/, '')
+    .replace(/^\d+\s+/, '')
+    .trim()
 }
 
 // Markdown components — explicit dark colors so they work on any background
 const mdComponents = {
-  table: ({ ...props }) => <div className="overflow-x-auto my-2"><table className="w-full text-xs border-collapse" {...props} /></div>,
-  thead: ({ ...props }) => <thead className="bg-gray-100" {...props} />,
-  th: ({ ...props }) => <th className="border border-gray-300 px-2 py-1.5 text-left font-semibold text-gray-800" {...props} />,
-  td: ({ ...props }) => <td className="border border-gray-300 px-2 py-1.5 text-gray-700" {...props} />,
-  tr: ({ ...props }) => <tr className="even:bg-gray-50" {...props} />,
-  p: ({ ...props }) => <p className="text-sm text-gray-800 leading-relaxed mb-1.5 last:mb-0" {...props} />,
-  li: ({ ...props }) => <li className="text-sm text-gray-800 leading-relaxed" {...props} />,
-  ul: ({ ...props }) => <ul className="list-disc list-inside space-y-0.5 mb-1.5 text-gray-800" {...props} />,
-  ol: ({ ...props }) => <ol className="list-decimal list-inside space-y-0.5 mb-1.5 text-gray-800" {...props} />,
+  table: ({ ...props }) => <div className="overflow-x-auto my-3 rounded-xl border border-slate-200"><table className="w-full text-[12px] border-collapse bg-white" {...props} /></div>,
+  thead: ({ ...props }) => <thead className="bg-slate-50" {...props} />,
+  th: ({ ...props }) => <th className="border-b border-slate-200 px-3 py-2 text-left font-semibold text-slate-800" {...props} />,
+  td: ({ ...props }) => <td className="border-b border-slate-100 px-3 py-2 text-slate-700 align-top" {...props} />,
+  tr: ({ ...props }) => <tr className="last:[&_td]:border-b-0" {...props} />,
+  p: ({ ...props }) => <p className="text-[13px] text-slate-700 leading-[1.85] mb-2.5 last:mb-0" {...props} />,
+  li: ({ ...props }) => <li className="text-[13px] text-slate-700 leading-[1.8] pl-1 marker:text-slate-400" {...props} />,
+  ul: ({ ...props }) => <ul className="list-disc list-outside pl-5 space-y-1.5 my-2.5 text-slate-700" {...props} />,
+  ol: ({ ...props }) => <ol className="list-decimal list-outside pl-5 space-y-1.5 my-2.5 text-slate-700" {...props} />,
   strong: ({ ...props }) => <strong className="font-semibold text-gray-900" {...props} />,
   em: ({ ...props }) => <em className="italic text-gray-700" {...props} />,
-  blockquote: ({ ...props }) => <blockquote className="border-l-2 border-gray-400 pl-3 text-gray-700 italic my-1.5" {...props} />,
-  code: ({ ...props }) => <code className="bg-gray-100 text-gray-800 px-1 py-0.5 rounded text-xs font-mono" {...props} />,
-  pre: ({ ...props }) => <pre className="bg-gray-100 text-gray-800 p-3 rounded-lg text-xs overflow-x-auto my-2 font-mono" {...props} />,
-  h3: ({ ...props }) => <h3 className="text-sm font-semibold text-gray-800 mt-3 mb-1 border-b border-gray-200 pb-0.5" {...props} />,
-  h4: ({ ...props }) => <h4 className="text-xs font-semibold text-gray-700 mt-2 mb-1" {...props} />,
-  hr: () => <hr className="border-gray-200 my-2" />,
+  blockquote: ({ ...props }) => <blockquote className="border-l-2 border-slate-300 pl-3 text-slate-600 italic my-2.5" {...props} />,
+  code: ({ ...props }) => <code className="bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded-md text-[11px] font-mono" {...props} />,
+  pre: ({ ...props }) => <pre className="bg-slate-950 text-slate-100 p-3 rounded-xl text-xs overflow-x-auto my-3 font-mono" {...props} />,
+  h3: ({ ...props }) => <h3 className="text-[13px] font-semibold text-slate-900 mt-4 mb-2 border-b border-slate-100 pb-1.5" {...props} />,
+  h4: ({ ...props }) => <h4 className="text-[12px] font-semibold text-slate-600 uppercase tracking-wide mt-3 mb-1.5" {...props} />,
+  hr: () => <hr className="border-slate-100 my-3" />,
 }
 
 function parseMarkdownSections(raw: string): Array<[string, string]> {
@@ -1212,7 +1423,7 @@ function parseMarkdownSections(raw: string): Array<[string, string]> {
     // Only split cards on ## (top-level sections); ### stays as content inside the card
     const hMatch = line.match(/^#{2}\s+(.+)/)
     if (hMatch) {
-      const t = hMatch[1].replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').replace(/[*_]/g, '').trim()
+      const t = normalizeStrategyTitle(hMatch[1])
       // Skip generic wrapper titles
       if (/^(TikTok|报告|模板|说明|预览|如果|请您|补充|⚠)/.test(t)) { title = ''; content = []; continue }
       if (title && content.join('').trim()) sections.push([title, content.join('\n').trim()])
@@ -1249,21 +1460,28 @@ function StrategyView({ strategy }: { strategy: string }) {
 
   if (sections.length > 0) {
     return (
-      <div className="space-y-3 overflow-y-auto max-h-[600px]">
+      <div className="space-y-4 overflow-y-auto max-h-[min(680px,calc(100vh-300px))] pr-2">
         {sections.map(([title, content], idx) => {
-          const style = getSectionStyle(title)
+          const cleanTitle = normalizeStrategyTitle(title)
+          const style = getSectionStyle(cleanTitle)
           return (
-            <div key={idx} className={`${style.bg} ${style.border} border rounded-xl p-4`}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0 ${style.title.replace('text-', 'bg-').replace('-700', '-500').replace('-600', '-500')}`}>
-                  {idx + 1}
+            <section key={idx} className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white/90 shadow-sm">
+              <div className={`absolute left-0 top-0 h-full w-1 ${style.rail}`} />
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/70 px-4 py-3 pl-5">
+                <div className="min-w-0">
+                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{style.eyebrow}</div>
+                  <h3 className={`truncate text-[15px] font-semibold leading-5 ${style.title}`}>{cleanTitle}</h3>
+                </div>
+                <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular-nums ${style.chip}`}>
+                  {String(idx + 1).padStart(2, '0')}
                 </span>
-                <span className={`text-xs font-bold ${style.title}`}>{style.icon} {title}</span>
               </div>
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
-                {content}
-              </ReactMarkdown>
-            </div>
+              <div className="px-5 py-4">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+                  {content}
+                </ReactMarkdown>
+              </div>
+            </section>
           )
         })}
       </div>
@@ -1272,7 +1490,7 @@ function StrategyView({ strategy }: { strategy: string }) {
 
   // Bare fallback — render as markdown too
   return (
-    <div className="text-sm text-gray-800 leading-relaxed p-2">
+    <div className="rounded-2xl border border-slate-200/80 bg-white/90 p-5 shadow-sm">
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
         {strategy.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()}
       </ReactMarkdown>
