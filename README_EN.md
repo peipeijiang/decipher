@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/favicon.svg?raw=1" width="80" alt="Decipher" />
+  <img src="https://github.com/peipeijiang/decipher/blob/main/frontend/public/favicon.svg?raw=true" width="80" alt="Decipher" />
 </p>
 <h1 align="center">Decipher</h1>
 <p align="center">
@@ -33,11 +33,11 @@
 
 | Workbench | Analysis Report |
 |:---:|:---:|
-| ![Workbench](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/02-workbench.png?raw=true) | ![Analysis](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/03-replica-analysis.png?raw=true) |
+| ![Workbench](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/02-workbench.jpg?raw=true) | ![Analysis](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/03-replica-analysis.jpg?raw=true) |
 
 | Creative Variants | Storyboard |
 |:---:|:---:|
-| ![Creative](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/04b-creative-v2.png?raw=true) | ![Storyboard](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/04-storyboard-v4.png?raw=true) |
+| ![Creative](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/04b-creative-v2.jpg?raw=true) | ![Storyboard](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/04-storyboard-v4.jpg?raw=true) |
 
 #### Deconstruct → Replicate → Generate
 
@@ -53,7 +53,7 @@
 
 > Paste a 1688 / Shopify / any e-commerce URL. AI scrapes product info, builds a structured product document, and generates 10 TikTok video script variants. Hook directly into video generation.
 
-![Product](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/06-product-video-v2.png?raw=true)
+![Product](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/06-product-video-v2.jpg?raw=true)
 
 1. **Link Scraping** — auto-extract title, price, images, selling points
 2. **Product Document** — AI-structured cognition: use cases, target audience, benefit ranking
@@ -66,7 +66,7 @@
 
 > Custom prompt templates, composable analysis pipeline. Every node is a configurable agent — swap the model, edit the prompt, define I/O independently.
 
-![Agent Workflow](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/07-agent-workflow-v2.png?raw=true)
+![Agent Workflow](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/07-agent-workflow-v2.jpg?raw=true)
 
 #### Built-in Agents
 
@@ -88,7 +88,7 @@ Each agent independently configures **vision model** and **text model** (DeepSee
 
 > The final step: turn ideas into actual videos. Accepts output from Viral Replication and Product Video, submits generation tasks to multiple models in parallel, polls for completion, and serves downloadable results.
 
-![Video Gen](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/08-video-gen.png?raw=true)
+![Video Gen](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/08-video-gen.jpg?raw=true)
 
 #### Two Work Modes
 
@@ -123,7 +123,7 @@ In the Video Generation page, type a prompt directly, optionally upload a refere
 
 > Centralized prompt template management: video script templates, image layout templates, hook templates — all version-controlled.
 
-![Templates](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/09-template-config-v2.png?raw=true)
+![Templates](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/09-template-config-v2.jpg?raw=true)
 
 ---
 
@@ -131,7 +131,7 @@ In the Video Generation page, type a prompt directly, optionally upload a refere
 
 Supports **DeepSeek / MiniMax / OpenAI / Claude / Doubao / Zhipu**. Vision and text models independently selectable. API Keys managed online.
 
-![Model Config](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/05-config.png?raw=true)
+![Model Config](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/05-config.jpg?raw=true)
 
 ---
 
