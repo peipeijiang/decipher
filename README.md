@@ -37,7 +37,7 @@
 
 | 创意变体 | 分镜复刻 |
 |:---:|:---:|
-| ![创意变体](docs/screenshots/04b-replica-creative.png?raw=1) | ![分镜复刻](docs/screenshots/04-replica-storyboard.png?raw=1) |
+| ![创意变体](docs/screenshots/04b-creative-variants-v2.png?raw=1) | ![分镜复刻](docs/screenshots/04-replica-storyboard.png?raw=1) |
 
 #### 三步走：拆解 → 复刻 → 出片
 
@@ -53,7 +53,7 @@
 
 > 粘贴 1688 / Shopify / 任意电商链接，AI 自动抓取产品信息、生成结构化产品文档、输出 10 个 TikTok 视频脚本变体，对接视频生成模型直接出片。
 
-![产品页](docs/screenshots/06-product.png?raw=1)
+![产品页](docs/screenshots/06-product-video-v2.png?raw=1)
 
 1. **链接抓取**：输入商品链接，自动提取标题、价格、主图、卖点
 2. **产品文档**：AI 分析产品特性 → 结构化产品认知（使用场景 · 目标人群 · 卖点排序）
@@ -66,7 +66,7 @@
 
 > 自定义 Prompt 模板，编排分析管线。把上面的所有流程拆成可配置的「智能体」，每个节点可独立调整模型、Prompt、输入输出。
 
-![智能体工作流](docs/screenshots/07-agent-workflow.png?raw=1)
+![智能体工作流](docs/screenshots/07-agent-workflow-v2.png?raw=1)
 
 #### 内置智能体
 
@@ -123,7 +123,7 @@
 
 > 所有 Prompt 模板集中管理，包括视频脚本模板、图片布局模板、Hook 模板，可版本化迭代。
 
-![模板配置](docs/screenshots/09-templates.png?raw=1)
+![模板配置](docs/screenshots/09-template-config-v2.png?raw=1)
 
 ---
 
