@@ -37,7 +37,7 @@
 
 | Creative Variants | Storyboard |
 |:---:|:---:|
-| ![Creative](docs/screenshots/04b-creative-variants-v2.png?raw=1) | ![Storyboard](docs/screenshots/04-replica-storyboard.png?raw=1) |
+| ![Creative](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/04b-creative-v2.png?raw=true) | ![Storyboard](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/04-storyboard-v2.png?raw=true) |
 
 #### Deconstruct → Replicate → Generate
 
