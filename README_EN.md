@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/peipeijiang/decipher/blob/main/frontend/public/favicon.svg?raw=true" width="80" alt="Decipher" />
+  <img src="https://github.com/peipeijiang/decipher/blob/main/frontend/public/logo/decipher-mark.svg?raw=true" width="80" alt="Decipher" />
 </p>
 <h1 align="center">Decipher</h1>
 <p align="center">
