@@ -37,7 +37,7 @@
 
 | 创意变体 | 分镜复刻 |
 |:---:|:---:|
-| ![创意变体](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/04b-creative-v2.png?raw=true) | ![分镜复刻](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/04-storyboard-v2.png?raw=true) |
+| ![创意变体](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/04b-creative-v2.png?raw=true) | ![分镜复刻](https://github.com/peipeijiang/decipher/blob/main/docs/screenshots/04-storyboard-v3.png?raw=true) |
 
 #### 三步走：拆解 → 复刻 → 出片
 
