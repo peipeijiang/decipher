@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/favicon.svg" width="80" alt="Decipher" />
+  <img src="frontend/public/favicon.svg?raw=1" width="80" alt="Decipher" />
 </p>
 <h1 align="center">Decipher</h1>
 <p align="center">
@@ -33,11 +33,11 @@
 
 | 工作台 | 分析报告 |
 |:---:|:---:|
-| ![工作台](docs/screenshots/02-workbench.png) | ![分析报告](docs/screenshots/03-replica-analysis.png) |
+| ![工作台](docs/screenshots/02-workbench.png?raw=1) | ![分析报告](docs/screenshots/03-replica-analysis.png?raw=1) |
 
 | 创意变体 | 分镜复刻 |
 |:---:|:---:|
-| ![创意变体](docs/screenshots/04b-replica-creative.png) | ![分镜复刻](docs/screenshots/04-replica-storyboard.png) |
+| ![创意变体](docs/screenshots/04b-replica-creative.png?raw=1) | ![分镜复刻](docs/screenshots/04-replica-storyboard.png?raw=1) |
 
 #### 三步走：拆解 → 复刻 → 出片
 
@@ -53,7 +53,7 @@
 
 > 粘贴 1688 / Shopify / 任意电商链接，AI 自动抓取产品信息、生成结构化产品文档、输出 10 个 TikTok 视频脚本变体，对接视频生成模型直接出片。
 
-![产品页](docs/screenshots/06-product.png)
+![产品页](docs/screenshots/06-product.png?raw=1)
 
 1. **链接抓取**：输入商品链接，自动提取标题、价格、主图、卖点
 2. **产品文档**：AI 分析产品特性 → 结构化产品认知（使用场景 · 目标人群 · 卖点排序）
@@ -66,7 +66,7 @@
 
 > 自定义 Prompt 模板，编排分析管线。把上面的所有流程拆成可配置的「智能体」，每个节点可独立调整模型、Prompt、输入输出。
 
-![智能体工作流](docs/screenshots/07-agent-workflow.png)
+![智能体工作流](docs/screenshots/07-agent-workflow.png?raw=1)
 
 #### 内置智能体
 
@@ -88,7 +88,7 @@
 
 > 把创意变成视频的最后一步。承接爆款复刻的分析结果和产品视频的脚本输出，一键提交视频生成任务，多模型并行，自动轮询状态，成品直接下载。
 
-![视频生成](docs/screenshots/08-video-gen.png)
+![视频生成](docs/screenshots/08-video-gen.png?raw=1)
 
 #### 两种工作模式
 
@@ -123,7 +123,7 @@
 
 > 所有 Prompt 模板集中管理，包括视频脚本模板、图片布局模板、Hook 模板，可版本化迭代。
 
-![模板配置](docs/screenshots/09-templates.png)
+![模板配置](docs/screenshots/09-templates.png?raw=1)
 
 ---
 
@@ -131,7 +131,7 @@
 
 支持 **DeepSeek / MiniMax / OpenAI / Claude / 豆包 / 智谱**，视觉模型和文本模型可独立选择，API Key 在线管理。
 
-![模型配置](docs/screenshots/05-config.png)
+![模型配置](docs/screenshots/05-config.png?raw=1)
 
 ---
 

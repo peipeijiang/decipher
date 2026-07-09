@@ -43,31 +43,69 @@ function useStaggerReveal(count: number) {
 export default function HomePage() {
   const [dragOver, setDragOver] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
   const { ref: featuresRef, visible } = useStaggerReveal(FEATURES.length)
 
-  const handleUpload = async (file: File) => {
-    setError('')
+  const validateFile = (file: File) => {
     const ext = file.name.split('.').pop()?.toLowerCase() || ''
     if (!SUPPORTED_FORMATS.includes(ext)) {
-      setError(`不支持的格式，仅支持：${SUPPORTED_FORMATS.join('、')}`)
-      return
+      return `「${file.name}」格式不支持，仅支持：${SUPPORTED_FORMATS.join('、')}`
     }
     if (file.size > MAX_SIZE) {
-      setError('文件大小不能超过 500MB')
+      return `「${file.name}」超过 500MB`
+    }
+    return ''
+  }
+
+  const uploadOne = async (file: File) => {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await axios.post('/api/videos/upload', form)
+    const videoId = res.data.video_id || res.data.id
+    if (!videoId) {
+      throw new Error('上传成功，但后端未返回视频任务 ID')
+    }
+    const duplicate = res.headers['x-video-duplicate'] === 'true'
+    if (!duplicate) {
+      await axios.post(`/api/videos/${videoId}/analyze`)
+    }
+    return { id: videoId as string, duplicate }
+  }
+
+  const handleUpload = async (filesInput: FileList | File[]) => {
+    setError('')
+    setUploadProgress('')
+    const files = Array.from(filesInput)
+    if (files.length === 0) return
+
+    const invalid = files.map(validateFile).find(Boolean)
+    if (invalid) {
+      setError(invalid)
       return
     }
+
     setUploading(true)
     try {
-      const form = new FormData()
-      form.append('file', file)
-      const res = await axios.post('/api/videos/upload', form)
-      navigate(`/replica/${res.data.video_id}`)
+      const uploadedIds: string[] = []
+      let duplicateCount = 0
+      for (let i = 0; i < files.length; i += 1) {
+        setUploadProgress(files.length > 1 ? `正在上传 ${i + 1}/${files.length}：${files[i].name}` : '')
+        const result = await uploadOne(files[i])
+        uploadedIds.push(result.id)
+        if (result.duplicate) duplicateCount += 1
+      }
+      setUploadProgress('')
+      navigate(
+        files.length === 1 ? `/replica/${uploadedIds[0]}` : '/workbench?type=replica',
+        { state: duplicateCount > 0 ? { duplicateCount } : undefined },
+      )
     } catch (err: any) {
       setError(err.response?.data?.detail || '上传失败，请重试')
     } finally {
       setUploading(false)
+      setUploadProgress('')
     }
   }
 
@@ -94,14 +132,15 @@ export default function HomePage() {
           onDragLeave={() => setDragOver(false)}
           onDrop={(e) => {
             e.preventDefault(); setDragOver(false)
-            if (e.dataTransfer.files[0]) handleUpload(e.dataTransfer.files[0])
+            handleUpload(e.dataTransfer.files)
           }}
           onClick={() => {
             if (uploading) return
             const input = document.createElement('input')
             input.type = 'file'
+            input.multiple = true
             input.accept = SUPPORTED_FORMATS.map(f => `.${f}`).join(',')
-            input.onchange = () => { if (input.files?.[0]) handleUpload(input.files[0]) }
+            input.onchange = () => { if (input.files?.length) handleUpload(input.files) }
             input.click()
           }}
           className={`relative rounded-[1.125rem] p-16 text-center cursor-pointer bg-white
@@ -116,8 +155,8 @@ export default function HomePage() {
           {uploading ? (
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="w-12 h-12 text-amber-500 animate-spin" />
-              <p className="text-base font-medium text-base-700">正在上传分析…</p>
-              <p className="text-sm text-base-400">较大文件可能需要几分钟</p>
+              <p className="text-base font-medium text-base-700">正在创建分析任务…</p>
+              <p className="text-sm text-base-400">{uploadProgress || '较大文件可能需要几分钟'}</p>
             </div>
           ) : (
             <>
@@ -135,9 +174,9 @@ export default function HomePage() {
                 />
               </div>
 
-              <h3 className="text-lg font-semibold text-base-800 mb-2">拖拽视频到此处或点击上传</h3>
+              <h3 className="text-lg font-semibold text-base-800 mb-2">拖拽一个或多个视频到此处</h3>
               <p className="text-[15px] text-base-400 mb-6">
-                支持 {SUPPORTED_FORMATS.join('、')}，最大 500MB
+                支持 {SUPPORTED_FORMATS.join('、')}，单个最大 500MB
               </p>
 
               {/* Button-in-button CTA */}

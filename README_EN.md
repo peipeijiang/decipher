@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/favicon.svg" width="80" alt="Decipher" />
+  <img src="frontend/public/favicon.svg?raw=1" width="80" alt="Decipher" />
 </p>
 <h1 align="center">Decipher</h1>
 <p align="center">
@@ -33,11 +33,11 @@
 
 | Workbench | Analysis Report |
 |:---:|:---:|
-| ![Workbench](docs/screenshots/02-workbench.png) | ![Analysis](docs/screenshots/03-replica-analysis.png) |
+| ![Workbench](docs/screenshots/02-workbench.png?raw=1) | ![Analysis](docs/screenshots/03-replica-analysis.png?raw=1) |
 
 | Creative Variants | Storyboard |
 |:---:|:---:|
-| ![Creative](docs/screenshots/04b-replica-creative.png) | ![Storyboard](docs/screenshots/04-replica-storyboard.png) |
+| ![Creative](docs/screenshots/04b-replica-creative.png?raw=1) | ![Storyboard](docs/screenshots/04-replica-storyboard.png?raw=1) |
 
 #### Deconstruct → Replicate → Generate
 
@@ -53,7 +53,7 @@
 
 > Paste a 1688 / Shopify / any e-commerce URL. AI scrapes product info, builds a structured product document, and generates 10 TikTok video script variants. Hook directly into video generation.
 
-![Product](docs/screenshots/06-product.png)
+![Product](docs/screenshots/06-product.png?raw=1)
 
 1. **Link Scraping** — auto-extract title, price, images, selling points
 2. **Product Document** — AI-structured cognition: use cases, target audience, benefit ranking
@@ -66,7 +66,7 @@
 
 > Custom prompt templates, composable analysis pipeline. Every node is a configurable agent — swap the model, edit the prompt, define I/O independently.
 
-![Agent Workflow](docs/screenshots/07-agent-workflow.png)
+![Agent Workflow](docs/screenshots/07-agent-workflow.png?raw=1)
 
 #### Built-in Agents
 
@@ -88,7 +88,7 @@ Each agent independently configures **vision model** and **text model** (DeepSee
 
 > The final step: turn ideas into actual videos. Accepts output from Viral Replication and Product Video, submits generation tasks to multiple models in parallel, polls for completion, and serves downloadable results.
 
-![Video Gen](docs/screenshots/08-video-gen.png)
+![Video Gen](docs/screenshots/08-video-gen.png?raw=1)
 
 #### Two Work Modes
 
@@ -123,7 +123,7 @@ In the Video Generation page, type a prompt directly, optionally upload a refere
 
 > Centralized prompt template management: video script templates, image layout templates, hook templates — all version-controlled.
 
-![Templates](docs/screenshots/09-templates.png)
+![Templates](docs/screenshots/09-templates.png?raw=1)
 
 ---
 
@@ -131,7 +131,7 @@ In the Video Generation page, type a prompt directly, optionally upload a refere
 
 Supports **DeepSeek / MiniMax / OpenAI / Claude / Doubao / Zhipu**. Vision and text models independently selectable. API Keys managed online.
 
-![Model Config](docs/screenshots/05-config.png)
+![Model Config](docs/screenshots/05-config.png?raw=1)
 
 ---
 

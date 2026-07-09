@@ -4,10 +4,12 @@ import re
 import tempfile
 import uuid
 import base64
+import hashlib
 import json
+import threading
 from datetime import datetime
 from pathlib import Path
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -25,10 +27,11 @@ router = APIRouter(prefix="/api/videos", tags=["videos"])
 
 ALLOWED_EXTENSIONS = {".mp4", ".mov", ".avi", ".webm"}
 MAX_SIZE = settings.max_file_size_mb * 1024 * 1024
+_upload_lock = threading.Lock()
 
 
 @router.post("/upload", response_model=VideoOut)
-async def upload_video(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_video(response: Response, file: UploadFile = File(...), db: Session = Depends(get_db)):
     ext = Path(file.filename).suffix.lower()
     if ext not in ALLOWED_EXTENSIONS:
         raise HTTPException(400, f"Unsupported format: {ext}. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
@@ -37,26 +40,43 @@ async def upload_video(file: UploadFile = File(...), db: Session = Depends(get_d
     if len(content) > MAX_SIZE:
         raise HTTPException(413, f"File too large. Max {settings.max_file_size_mb}MB")
 
-    video_id = str(uuid.uuid4())
-    upload_dir = Path(settings.upload_dir)
-    upload_dir.mkdir(exist_ok=True)
-    filepath = upload_dir / f"{video_id}{ext}"
-    filepath.write_bytes(content)
+    content_hash = hashlib.sha256(content).digest()
+    with _upload_lock:
+        candidates = (
+            db.query(Video)
+            .filter(Video.filesize == len(content))
+            .order_by(Video.created_at.asc())
+            .all()
+        )
+        for candidate in candidates:
+            candidate_path = Path(candidate.filepath)
+            if not candidate_path.is_file():
+                continue
+            if hashlib.sha256(candidate_path.read_bytes()).digest() == content_hash:
+                response.headers["X-Video-Duplicate"] = "true"
+                response.headers["X-Existing-Video-Id"] = candidate.id
+                return candidate
 
-    video = Video(
-        id=video_id,
-        filename=file.filename,
-        filepath=str(filepath),
-        filesize=len(content),
-        status="pending",
-    )
-    db.add(video)
-    db.commit()
-    db.refresh(video)
+        video_id = str(uuid.uuid4())
+        upload_dir = Path(settings.upload_dir)
+        upload_dir.mkdir(exist_ok=True)
+        filepath = upload_dir / f"{video_id}{ext}"
+        filepath.write_bytes(content)
 
-    report = Report(video_id=video_id)
-    db.add(report)
-    db.commit()
+        video = Video(
+            id=video_id,
+            filename=file.filename,
+            filepath=str(filepath),
+            filesize=len(content),
+            status="pending",
+        )
+        db.add(video)
+        db.commit()
+        db.refresh(video)
+
+        report = Report(video_id=video_id)
+        db.add(report)
+        db.commit()
 
     return video
 

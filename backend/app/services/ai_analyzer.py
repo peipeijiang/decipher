@@ -20,10 +20,11 @@ TASK_AGENT_MAP = {
 def run_ai_analysis(
     frames: list[str],
     script: str,
-    whisper_segments: list[dict],
     vision_model: AIModel,
     analysis_model: AIModel,
+    whisper_segments: list[dict] | None = None,
     db: Session | None = None,
+    duration: float | None = None,
 ) -> dict:
     """Run the full AI analysis pipeline.
 
@@ -45,7 +46,8 @@ def run_ai_analysis(
             text = seg.get("text", "").strip()
             segments_text += f"[{start:.1f}s - {end:.1f}s] {text}\n"
 
-    context = f"视频帧分析：\n{frame_text}\n\n语音文字稿：\n{script or '（无语音）'}{segments_text}"
+    duration_text = f"视频总时长：{duration:.1f}s\n\n" if duration else ""
+    context = f"{duration_text}视频帧分析：\n{frame_text}\n\n语音文字稿：\n{script or '（无语音）'}{segments_text}"
     logger.info("run_ai_analysis: frame_text length=%d, context length=%d", len(frame_text), len(context))
 
     # Load agent prompts from DB if available
